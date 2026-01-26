@@ -1,0 +1,381 @@
+<!-- purchase_orders.html - Updated with action buttons -->
+
+{% extends "base.html" %}
+{% block title %}Purchase Orders{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header with Create PO button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-cart-check"></i> Purchase Orders</h2>
+        <a href="{{ url_for('create_invoice') }}?type=purchase_order" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create Purchase Order
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total POs</h6>
+                    <h4>{{ orders|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Value</h6>
+                    <h4>{{ currency_symbol }}{{ "%.2f"|format(orders|sum(attribute='grand_total')) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Pending</h6>
+                    <h4>{{ orders|selectattr('status', 'equalto', 'pending')|list|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6 class="card-title">This Month</h6>
+                    <h4 id="thisMonthCount">
+                        {% set month = now().month %}
+                        {% set count = 0 %}
+                        {% for order in orders %}
+                            {% if order.order_date and order.order_date.month == month %}
+                                {% set count = count + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                        {{ count }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Orders Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Purchase Orders</h5>
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('download_inventory_report') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if orders %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>PO Number</th>
+                            <th>Supplier</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>
+                                <strong>{{ order.po_number }}</strong>
+                            </td>
+                            <td>
+                                {{ order.supplier_name }}
+                                {% if order.supplier_phone %}
+                                <br><small class="text-muted">{{ order.supplier_phone }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ order.order_date }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ order.item_count or 0 }} items</span>
+                            </td>
+                            <td>
+                                <strong>{{ currency_symbol }}{{ "%.2f"|format(order.grand_total) }}</strong>
+                            </td>
+                            <td>
+                                {% if order.status == 'completed' %}
+                                <span class="badge bg-success">{{ order.status }}</span>
+                                {% elif order.status == 'pending' %}
+                                <span class="badge bg-warning">{{ order.status }}</span>
+                                {% elif order.status == 'cancelled' %}
+                                <span class="badge bg-danger">{{ order.status }}</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <!-- Download PDF -->
+                                    <a href="{{ url_for('download_document', document_number=order.po_number, type='purchase_order') }}"
+                                       class="btn btn-outline-primary"
+                                       title="Download PDF">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+
+                                    <!-- View Details -->
+                                    <button type="button"
+                                            class="btn btn-outline-info view-po-details"
+                                            data-po-number="{{ order.po_number }}"
+                                            title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+
+                                    <!-- More Actions Dropdown -->
+                                    <div class="btn-group" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-secondary dropdown-toggle"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('download_document', document_number=order.po_number, type='purchase_order') }}">
+                                                    <i class="bi bi-file-pdf"></i> Download PDF
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('invoice_process') }}?invoice_number={{ order.po_number }}&invoice_type=P&action=preview">
+                                                    <i class="bi bi-printer"></i> Print Preview
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            {% if order.status == 'pending' %}
+                                            <li>
+                                                <a href="{{ url_for('mark_po_received', po_number=order.po_number) }}" class="btn btn-success">
+                                                    <i class="bi bi-truck"></i> Receive Goods
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item text-danger cancel-po"
+                                                        data-po-number="{{ order.po_number }}">
+                                                    <i class="bi bi-x-circle"></i> Cancel PO
+                                                </button>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if current_page > 1 or orders|length == limit %}
+            <nav aria-label="Purchase orders pagination" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    {% if current_page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ current_page - 1 }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ current_page }}</span>
+                    </li>
+
+                    {% if orders|length == limit %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ current_page + 1 }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="bi bi-cart-x" style="font-size: 3rem; color: #6c757d;"></i>
+                <h4 class="mt-3">No Purchase Orders Yet</h4>
+                <p class="text-muted">Create your first purchase order to track supplier purchases</p>
+                <a href="{{ url_for('create_invoice') }}?type=purchase_order" class="btn btn-primary mt-2">
+                    <i class="bi bi-plus-circle"></i> Create First Purchase Order
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal for PO Details -->
+<div class="modal fade" id="poDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Purchase Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="poDetailsContent">
+                <!-- Content will be loaded via AJAX -->
+                <div class="text-center py-4">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="downloadPoFromModal">
+                    <i class="bi bi-download"></i> Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for interactivity -->
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    // View PO Details
+    document.querySelectorAll('.view-po-details').forEach(button => {
+        button.addEventListener('click', function() {
+            const poNumber = this.dataset.poNumber;
+            const modal = new bootstrap.Modal(document.getElementById('poDetailsModal'));
+
+            // Load PO details via AJAX
+            fetch(`/api/purchase_order/${poNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    // FIX: Use regular data access, not .get('get', '')
+                    const items = data.items || [];
+
+                    document.getElementById('poDetailsContent').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Supplier Information</h6>
+                                <p><strong>Name:</strong> ${data.supplier_name || ''}</p>
+                                <p><strong>Contact:</strong> ${data.supplier_phone || 'N/A'}</p>
+                                <p><strong>Email:</strong> ${data.supplier_email || 'N/A'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Order Details</h6>
+                                <p><strong>PO Number:</strong> ${data.po_number || ''}</p>
+                                <p><strong>Date:</strong> ${data.order_date || ''}</p>
+                                <p><strong>Status:</strong> <span class="badge bg-${data.status === 'completed' ? 'success' : data.status === 'pending' ? 'warning' : 'info'}">${data.status || ''}</span></p>
+                            </div>
+                        </div>
+                        <hr>
+                        <h6>Items</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map(item => `
+                                    <tr>
+                                        <td>${item.name || ''}</td>
+                                        <td>${item.qty || 0}</td>
+                                        <td>${item.price || 0}</td>
+                                        <td>${item.total || 0}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Grand Total:</strong></td>
+                                    <td><strong>${data.grand_total || 0}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    `;
+
+                    // Set download button
+                    document.getElementById('downloadPoFromModal').onclick = () => {
+                        window.location.href = `/invoice/download/${poNumber}?type=purchase_order`;
+                    };
+
+                    modal.show();
+                })
+                .catch(error => {
+                    document.getElementById('poDetailsContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            Error loading purchase order details: ${error.message}
+                        </div>
+                    `;
+                    modal.show();
+                });
+        });
+    });
+
+    // Mark as Completed
+    document.querySelectorAll('.mark-completed').forEach(button => {
+        button.addEventListener('click', function() {
+            const poNumber = this.dataset.poNumber;
+            if (confirm(`Mark Purchase Order ${poNumber} as completed?`)) {
+                fetch(`/po/mark_completed/${poNumber}`, { method: 'POST' })  // FIXED: Use correct endpoint
+                    .then(response => {
+                        if (response.ok) {
+                            location.reload();
+                        } else {
+                            alert('Error marking PO as completed');
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error: ' + error.message);
+                    });
+            }
+        });
+    });
+
+    // Cancel PO (needs API endpoint)
+    document.querySelectorAll('.cancel-po').forEach(button => {
+        button.addEventListener('click', function() {
+            const poNumber = this.dataset.poNumber;
+            const reason = prompt('Please provide a reason for cancellation:');
+            if (reason) {
+                alert('Cancel PO functionality requires API endpoint implementation');
+                // TODO: Implement cancel PO endpoint
+                // fetch(`/api/purchase_order/${poNumber}/cancel`, {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ reason: reason })
+                // })
+                // .then(response => {
+                //     if (response.ok) {
+                //         location.reload();
+                //     }
+                // });
+            }
+        });
+    });
+});
+
+// Fix for duplicate variable declaration - use unique variable name
+document.addEventListener('DOMContentLoaded', function() {
+    // Fallback if template filter doesn't work
+    const thisMonthCountElement = document.getElementById('thisMonthCount');
+    if (thisMonthCountElement && thisMonthCountElement.textContent.includes('now')) {
+        const currentMonthNum = new Date().getMonth() + 1;
+        let monthCountNum = 0;
+
+        // Simple client-side calculation - use different variable names
+        // The template variable is processed server-side, this is just fallback
+        monthCountNum = document.querySelectorAll('tr').length - 1; // Simple estimate
+
+        thisMonthCountElement.textContent = monthCountNum;
+    }
+});
+</script>
+
+{% endblock %}

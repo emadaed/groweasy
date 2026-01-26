@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - GrowEasy Invoice{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Welcome, {{ user_email }}! 👋</h2>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary">Logout</a>
+            </div>
+
+            <!-- Business Summary Cards -->
+            {% set summary = get_business_summary(session['user_id']) %}
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center border-primary">
+                        <div class="card-body">
+                            <h3 class="text-primary">💰</h3>
+                            <h5 class="card-title">Total Revenue</h5>
+                            <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(summary.total_revenue) }}</h3>
+                            <p class="text-muted small">{{ summary.total_invoices }} invoices</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center border-info">
+                        <div class="card-body">
+                            <h3 class="text-info">📊</h3>
+                            <h5 class="card-title">Average Invoice</h5>
+                            <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(summary.avg_invoice) }}</h3>
+                            <p class="text-muted small">Per invoice</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center border-warning">
+                        <div class="card-body">
+                            <h3 class="text-warning">📅</h3>
+                            <h5 class="card-title">Business Since</h5>
+                            <h4 class="text-warning">
+                                {% if summary.first_invoice %}
+                                    {{ summary.first_invoice[:7] }}
+                                {% else %}
+                                    Today!
+                                {% endif %}
+                            </h4>
+                            <p class="text-muted small">First invoice</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center border-success">
+                        <div class="card-body">
+                            <h3 class="text-success">🎯</h3>
+                            <h5 class="card-title">Active</h5>
+                            <h4 class="text-success">
+                                {% if summary.last_invoice %}
+                                    {{ summary.last_invoice[:10] }}
+                                {% else %}
+                                    Ready!
+                                {% endif %}
+                            </h4>
+                            <p class="text-muted small">Last invoice</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5>📝 Create Invoice</h5>
+                            <p>Create a new professional invoice</p>
+                            <a href="{{ url_for('create_invoice') }}" class="btn btn-success">Get Started</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5>💝 Support Us</h5>
+                            <p>Help us improve the service</p>
+                            <a href="{{ url_for('donate') }}" class="btn btn-primary">Donate</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5>⚙️ Settings</h5>
+                            <p>Manage your account</p>
+                            <a href="{{ url_for('settings') }}" class="btn btn-outline-primary">Manage Settings</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5>📋 Invoice History</h5>
+                            <p>View and manage all invoices</p>
+                            <a href="{{ url_for('invoice_history') }}" class="btn btn-info">View History</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+    <div class="card text-center">
+        <div class="card-body">
+            <h5>👥 Customers</h5>
+            <p>Manage your client database</p>
+            <a href="{{ url_for('customers') }}" class="btn btn-outline-primary">View Customers</a>
+        </div>
+    </div>
+</div>
+
+<div class="col-md-3 mb-3">
+    <div class="card text-center">
+        <div class="card-body">
+            <h5>💰 Expenses</h5>
+            <p>Track business costs</p>
+            <a href="{{ url_for('expenses') }}" class="btn btn-outline-warning">Track Expenses</a>
+        </div>
+    </div>
+</div>
+            <!-- Recent Activity & Top Clients -->
+            <div class="row mt-4">
+                <!-- Recent Invoices Placeholder -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">📈 Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Business analytics dashboard coming soon!</p>
+                            <div class="text-center">
+                                <a href="{{ url_for('invoice_history') }}" class="btn btn-outline-primary">
+                                    View Detailed Analytics
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Clients -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">🏆 Top Clients</h5>
+                        </div>
+                        <div class="card-body">
+                            {% set top_clients = get_client_analytics(session['user_id']) %}
+                            {% if top_clients %}
+                                <div class="list-group list-group-flush">
+                                    {% for client in top_clients[:5] %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ client.client_name[:20] }}{% if client.client_name|length > 20 %}...{% endif %}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ client.invoice_count }} invoices</small>
+                                        </div>
+                                        <span class="badge bg-success rounded-pill">
+                                            {{ currency_symbol }}{{ "%.0f"|format(client.total_spent) }}
+                                        </span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center">No client data yet</p>
+                                <div class="text-center">
+                                    <a href="{{ url_for('create_invoice') }}" class="btn btn-sm btn-outline-success">
+                                        Create First Invoice
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

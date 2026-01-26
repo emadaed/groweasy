@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Support Us - GrowEasy Invoice{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark text-center">
+                    <h4 class="mb-0">💝 Support GrowEasy Invoice</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <p class="lead">We provide <strong>free professional invoices</strong> to help Pakistani small businesses and NGOs.</p>
+                        <p class="text-muted">Your support helps us cover server costs and develop new features.</p>
+                    </div>
+
+                    <!-- JazzCash -->
+                    <div class="card mb-3 border-success">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-8">
+                                    <h5 class="text-success mb-1">📱 JazzCash</h5>
+                                    <h4 class="mb-0" id="jazzNumber">+92 346 4499599</h4>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <button class="btn btn-success btn-sm" id="copyJazz">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EasyPaisa -->
+                    <div class="card mb-3 border-primary">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-8">
+                                    <h5 class="text-primary mb-1">💙 EasyPaisa</h5>
+                                    <h4 class="mb-0" id="easyNumber">0346 4499599</h4>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <button class="btn btn-primary btn-sm" id="copyEasy">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bank Transfer -->
+                    <div class="card mb-3 border-info">
+                        <div class="card-body">
+                            <h5 class="text-info mb-3">🏦 Bank Transfer (HBL)</h5>
+                            <table class="table table-sm mb-2">
+                                <tr>
+                                    <td><strong>Account Title:</strong></td>
+                                    <td>GrowEasy Invoice</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Account Number:</strong></td>
+                                    <td id="accountNumber">1234-5678901-234</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>IBAN:</strong></td>
+                                    <td id="ibanNumber">PK36HABB0012345678901234</td>
+                                </tr>
+                            </table>
+                            <button class="btn btn-info btn-sm" id="copyBank">Copy IBAN</button>
+                        </div>
+                    </div>
+
+                    <!-- Contact -->
+                    <div class="card border-secondary">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-3">Need Help?</h6>
+                            <a href="mailto:obaid_16@yahoo.com?subject=Donation Support" class="btn btn-outline-secondary btn-sm me-2">
+                                📧 Email Us
+                            </a>
+                            <a href="https://wa.me/923464499599?text=Hello! I need help with donation." target="_blank" class="btn btn-outline-success btn-sm">
+                                💬 WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Thank You Note -->
+                    <div class="text-center mt-4">
+                        <p class="text-muted small">
+                            🇵🇰 Thank you for supporting Pakistani small businesses!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    function copyToClipboard(text, buttonId) {
+        navigator.clipboard.writeText(text).then(function() {
+            var btn = document.getElementById(buttonId);
+            var originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.classList.add('btn-dark');
+            setTimeout(function() {
+                btn.textContent = originalText;
+                btn.classList.remove('btn-dark');
+            }, 2000);
+        }).catch(function() {
+            alert('Number: ' + text);
+        });
+    }
+
+    document.getElementById('copyJazz').addEventListener('click', function() {
+        copyToClipboard('+923464499599', 'copyJazz');
+    });
+
+    document.getElementById('copyEasy').addEventListener('click', function() {
+        copyToClipboard('03464499599', 'copyEasy');
+    });
+
+    document.getElementById('copyBank').addEventListener('click', function() {
+        copyToClipboard('PK36HABB0012345678901234', 'copyBank');
+    });
+});
+</script>
+{% endblock %}

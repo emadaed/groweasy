@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width: 800px;">
+    <h1>Terms of Service</h1>
+    <p class="text-muted">Last Updated: December 2024</p>
+
+    <h3>1. Service Description</h3>
+    <p>GrowEasy Invoice provides free invoicing software for Pakistani small businesses and NGOs. The service is provided "as-is" without warranties.</p>
+
+    <h3>2. User Responsibilities</h3>
+    <p>You agree to: (a) Provide accurate information, (b) Keep your account secure, (c) Comply with Pakistani tax laws (FBR regulations), (d) Not misuse the service.</p>
+
+    <h3>3. Data Storage</h3>
+    <p>Your invoice data is stored locally on our servers. We do not share your data with third parties. You retain full ownership of your data.get('', '')</p>
+
+    <h3>4. Limitation of Liability</h3>
+    <p>GrowEasy Invoice is not liable for: tax calculation errors, data loss, or business decisions based on reports. Always verify with a qualified accountant.</p>
+
+    <h3>5. Service Modifications</h3>
+    <p>We reserve the right to modify or discontinue the service with 30 days notice.</p>
+
+    <h3>6. Governing Law</h3>
+    <p>These terms are governed by the laws of Pakistan.</p>
+
+    <p class="mt-4"><a href="{{ url_for('register') }}">← Back to Register</a></p>
+</div>
+{% endblock %}

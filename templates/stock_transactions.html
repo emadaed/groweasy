@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Stock Transaction History{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📋 Stock Transaction History</h2>
+        <a href="{{ url_for('inventory') }}" class="btn btn-outline-secondary">← Back to Inventory</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Reference</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td><small>{{ tx[6] }}</small></td>
+                            <td><strong>{{ tx[1] }}</strong></td>
+                            <td>
+                                {% if tx[2] == 'sale' %}
+                                    <span class="badge bg-danger">📤 Sale</span>
+                                {% elif tx[2] == 'purchase' %}
+                                    <span class="badge bg-success">📥 Purchase</span>
+                                {% elif tx[2] == 'adjustment' %}
+                                    <span class="badge bg-warning">⚙️ Adjustment</span>
+                                {% elif tx[2] == 'initial_stock' %}
+                                    <span class="badge bg-info">🆕 Initial Stock</span>
+                                {% elif tx[2] == 'removal' %}
+                                    <span class="badge bg-dark">🗑️ Removed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ tx[2] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tx[3] > 0 %}
+                                    <span class="text-success">+{{ tx[3] }}</span>
+                                {% else %}
+                                    <span class="text-danger">{{ tx[3] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tx[4] %}
+                                    {% if tx[2] == 'sale' %}
+                                        <span class="badge bg-danger">📄 {{ tx[4] }}</span>
+                                    {% elif tx[2] == 'purchase' %}
+                                        <span class="badge bg-success">📦 {{ tx[4] }}</span>
+                                    {% else %}
+                                        <code>{{ tx[4] }}</code>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if tx[5] %}
+                                        {{ tx[5] }}
+                                    {% else %}
+                                        <em>No additional notes</em>
+                                    {% endif %}
+                                </small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <strong>ℹ️ Audit Trail Legend:</strong><br>
+                <small>
+                    📤 Sale = Stock decreased via invoice |
+                    📥 Purchase = Stock increased via PO |
+                    ⚙️ Adjustment = Manual stock change |
+                    🆕 Initial = Product creation |
+                    🗑️ Removed = Product deleted
+                </small>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <h5 class="text-muted">No transactions yet</h5>
+                <p>Start creating invoices or adjusting stock to see history</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

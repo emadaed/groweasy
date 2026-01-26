@@ -1,0 +1,30 @@
+<div class="card mt-4 border-0">
+    <div class="card-body p-0">
+        <div class="row justify-content-end">
+            <div class="col-md-6">
+                <table class="table table-borderless table-sm mb-0">
+                    <tr>
+                        <td class="text-end"><strong>Subtotal:</strong></td>
+                        <td class="text-end" width="35%">{{ currency_symbol }}{{ "%.2f"|format(data.get('subtotal', '')) }}</td>
+                    </tr>
+                    {% if data.get('discount_rate', '') > 0 %}
+                    <tr>
+                        <td class="text-end"><strong>Discount ({{ "%.1f"|format(data.get('discount_rate', '')) }}%):</strong></td>
+                        <td class="text-end">-{{ currency_symbol }}{{ "%.2f"|format(data.get('discount_amount', '')) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.get('tax_rate', '') > 0 %}
+                    <tr>
+                        <td class="text-end"><strong>Tax ({{ "%.1f"|format(data.get('tax_rate', '')) }}%):</strong></td>
+                        <td class="text-end">{{ currency_symbol }}{{ "%.2f"|format(data.get('tax_amount', '')) }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr class="border-top border-2">
+                        <td class="text-end"><strong>TOTAL:</strong></td>
+                        <td class="text-end"><strong>{{ currency_symbol }}{{ "%.2f"|format(data.get('grand_total', '')) }}</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

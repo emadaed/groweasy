@@ -1,0 +1,78 @@
+<!-- templates/po_preview.html -->
+{% extends "base.html" %}
+{% block title %}Purchase Order Preview{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                <i class="bi bi-cart-check"></i> Purchase Order Preview
+                <small class="text-white-50">#{{ po_number }}</small>
+            </h4>
+            <span class="badge bg-light text-primary">
+                <i class="bi bi-eye"></i> Preview Only
+            </span>
+        </div>
+        <div class="card-body">
+            {{ html | safe }}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="card mt-4">
+        <div class="card-body text-center">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('download_document', document_number=po_number, type='purchase_order') }}"
+                   class="btn btn-success btn-lg">
+                    <i class="bi bi-download"></i> Download PO PDF
+                </a>
+
+                <a href="{{ url_for('purchase_orders') }}"
+                   class="btn btn-outline-primary btn-lg ms-3">
+                    <i class="bi bi-list-check"></i> View All POs
+                </a>
+
+                <a href="{{ url_for('create_purchase_order') }}"
+                   class="btn btn-primary btn-lg ms-3">
+                    <i class="bi bi-plus-circle"></i> Create Another PO
+                </a>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-3">
+                <button class="btn btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print Preview
+                </button>
+
+                <button class="btn btn-outline-info ms-2" onclick="emailPO()">
+                    <i class="bi bi-envelope"></i> Email to Supplier
+                </button>
+            </div>
+
+            <!-- Make sure this is OUTSIDE any <form> -->
+            <div class="mt-3">
+                <a href="{{ url_for('mark_po_received', po_number=po_number) }}" class="btn btn-success">
+                    Receive Goods
+                </a>
+            </div>
+
+            <!-- Help Text -->
+            <p class="text-muted mt-3 small">
+                <i class="bi bi-info-circle"></i>
+                This purchase order has been saved. You can download, print, or email it to your supplier.
+                Stock will be updated when you mark the PO as "Received".
+            </p>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+function emailPO() {
+    if (confirm('This will open your email client with the PO attached. Continue?')) {
+        // In production, this would be an API call
+        window.location.href = `mailto:${encodeURIComponent(data.get('supplier_email', '') || '')}?subject=Purchase Order ${po_number}&body=Please find attached our purchase order.`;
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}About Us{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width: 900px;">
+    <h1 class="text-center mb-4">About GrowEasy Invoice</h1>
+
+    <div class="row mb-5">
+        <div class="col-md-6">
+            <h3>🇵🇰 Our Mission</h3>
+            <p>Empowering Pakistani small businesses and NGOs with <strong>free, FBR-compliant invoicing software</strong>.</p>
+            <p>We believe every shopkeeper, freelancer, and startup deserves professional tools without the cost barrier.</p>
+        </div>
+        <div class="col-md-6">
+            <h3>🎯 The Problem We Solve</h3>
+            <p><strong>82% of Pakistani SMBs</strong> struggle with:</p>
+            <ul>
+                <li>❌ Expensive accounting software (₹5,000-50,000/year)</li>
+                <li>❌ Complex FBR compliance requirements</li>
+                <li>❌ Manual inventory tracking</li>
+                <li>❌ No digital record-keeping</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4>✨ What Makes Us Different</h4>
+            <div class="row mt-3">
+                <div class="col-md-4 mb-3">
+                    <h5>🆓 100% Free</h5>
+                    <p class="small">No hidden charges. No premium plans. Community-funded.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>🛒️ FBR Compliant</h5>
+                    <p class="small">NTN/STRN fields. Auto QR codes. Tax calculations.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>📦 Inventory Built-in</h5>
+                    <p class="small">Track stock. Auto-deduct. Low stock alerts.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>🔒 Privacy First</h5>
+                    <p class="small">Your data stays in Pakistan. No tracking.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>📱 PWA Ready</h5>
+                    <p class="small">Works offline. Install like an app.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>🚀 Always Improving</h5>
+                    <p class="small">Open-source. Community-driven features.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <h4>💚 Support Our Mission</h4>
+        <p>Help us keep this free for the Pakistani business community.</p>
+        <a href="{{ url_for('donate') }}" class="btn btn-success btn-lg">Donate Now</a>
+    </div>
+</div>
+{% endblock %}

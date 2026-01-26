@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice Preview</title>
+    <style nonce="{{ nonce }}">
+        body { background: #f8f9fa; margin: 0; padding: 20px; }
+        .preview-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .preview-container { box-shadow: none; border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <h2 style="text-align:center; color:#28a745; margin-bottom:30px;">Document Preview</h2>
+        {{ html | safe }}
+    </div>
+    <div class="actions" style="text-align:center; margin:40px 0;">
+        <button onclick="window.print()" class="print-btn">🖨️ Print</button>
+        <button id="downloadBtn" class="download-btn">📥 Download PDF</button>
+    </div>
+
+    <script nonce="{{ nonce }}">
+    document.getElementById('downloadBtn').addEventListener('click', function() {
+        const invoiceNumber = '{{ data.get('invoice_number', '') }}';
+        window.location.href = '/invoice/download/' + invoiceNumber;
+    });
+    </script>
+</body>
+</html>

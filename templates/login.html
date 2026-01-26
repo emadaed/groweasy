@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Login - GrowEasy Invoice{% endblock %}
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card shadow-lg border-0" style="border-radius: 15px;">
+                    <div class="card-body p-5">
+                        <!-- Logo & Title -->
+                        <div class="text-center mb-4">
+                            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 20px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 40px; color: white;">📄</span>
+                            </div>
+                            <h3 class="fw-bold" style="color: #2c3e50;">GrowEasy Invoice</h3>
+                            <p class="text-muted small">Free FBR-Compliant Invoicing for Pakistan</p>
+                        </div>
+
+                        <!-- Greeting Message -->
+                        <div class="alert alert-info text-center mb-4" id="greeting"
+                            style="border-radius: 10px; font-size: 16px; font-weight: 500; padding: 15px;">
+                            <span style="font-size: 24px;">👋</span><br>
+                            <span id="greetingText">Welcome back!</span>
+                        </div>
+
+                        <!-- Error Message -->
+                        {% if error %}
+                        <div class="alert alert-danger" role="alert">{{ error }}</div>
+                        {% endif %}
+
+                        <!-- Login Form -->
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Email Address</label>
+                                <input type="email" name="email" class="form-control form-control-lg"
+                                       placeholder="you@company.com" required autofocus
+                                       style="border-radius: 10px;">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Password</label>
+                                <input type="password" name="password" class="form-control form-control-lg"
+                                       placeholder="••••••••" required
+                                       style="border-radius: 10px;">
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remember">
+                                    <label class="form-check-label small" for="remember">Remember me</label>
+                                </div>
+                                <a href="{{ url_for('forgot_password') }}" class="small text-decoration-none">Forgot Password?</a>
+                            </div>
+                            <button type="submit" class="btn btn-lg w-100 text-white fw-bold mb-3"
+                                    style="background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 10px;">
+                                Login
+                            </button>
+                        </form>
+
+                        <!-- Register Link -->
+                        <div class="text-center">
+                            <small class="text-muted">Don't have an account?
+                                <a href="{{ url_for('register') }}" class="text-decoration-none fw-bold">Register Free</a>
+                            </small>
+                        </div>
+
+                        <!-- Features -->
+                        <div class="mt-4 pt-4" style="border-top: 1px solid #dee2e6;">
+                            <small class="text-muted d-block text-center mb-2">✓ FBR Compliant • ✓ Free GST Billing • ✓ Inventory Management</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <small class="text-white">
+                        🔒 Secure Login • 🇵🇰 Made for Pakistan
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+// Timezone-based greeting
+function updateGreeting() {
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('greetingText');
+
+    let message = '';
+    if (hour < 5) message = 'Late night! Workiing so hard? 🌙<br>السلام علیکم';
+    else if (hour < 12) message = 'Good morning! ☀️<br>السلام علیکم';
+    else if (hour < 17) message = 'Good afternoon! 🌤️<br>السلام علیکم';
+    else if (hour < 21) message = 'Good evening! 🌆<br>السلام علیکم';
+    else message = 'Working late? 🌃<br>السلام علیکم';
+
+    greetingEl.innerHTML = message;
+}
+updateGreeting();
+</script>
+{% endblock %}

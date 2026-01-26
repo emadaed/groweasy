@@ -1,0 +1,25 @@
+<div class="card border-0">
+    <div class="card-body p-0">
+        <h6 class="text-success mb-3">Items & Services</h6>
+        <table class="table table-bordered align-middle mb-0">
+            <thead class="table-success">
+                <tr>
+                    <th class="border-end-0">Description</th>
+                    <th class="text-end border-start-0 border-end-0">Qty</th>
+                    <th class="text-end border-start-0 border-end-0">Unit Price</th>
+                    <th class="text-end border-start-0">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data.get('get', '')('items', []) %}
+                <tr>
+                    <td class="border-end-0">{{ item.name or item.code or '—' }}</td>
+                    <td class="text-end border-start-0 border-end-0">{{ item.qty }}</td>
+                    <td class="text-end border-start-0 border-end-0">{{ currency_symbol }}{{ '%.2f' % item.price }}</td>
+                    <td class="text-end border-start-0">{{ currency_symbol }}{{ '%.2f' % item.total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

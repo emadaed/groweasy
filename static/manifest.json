@@ -1,0 +1,23 @@
+{
+  "name": "GrowEasy Invoice",
+  "short_name": "InvoiceApp",
+  "description": "Free professional invoices for small businesses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#28a745",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/img/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/img/favicon-192.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}

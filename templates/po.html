@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Create Purchase Order{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Create Purchase Order</h2>
+        <p class="text-muted fs-5">Order from suppliers, track deliveries, manage inventory</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('create_po_process') }}" enctype="multipart/form-data" id="poForm">
+        <input type="hidden" name="document_type" value="purchase_order">
+
+        <!-- Supplier & PO Details -->
+        <div class="row g-5 mb-4">
+            <!-- Supplier Column -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Supplier Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Supplier Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Select Existing Supplier</label>
+                            <select class="form-select mb-3" id="supplierSelect">
+                                <option value="">-- Select Supplier --</option>
+                                {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}"
+                                        data-name="{{ supplier.name }}"
+                                        data-email="{{ supplier.email }}"
+                                        data-phone="{{ supplier.phone }}"
+                                        data-address="{{ supplier.address }}"
+                                        data-tax="{{ supplier.tax_id }}">
+                                    {{ supplier.name }} ({{ supplier.order_count or 0 }} orders)
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="showSupplierForm">
+                                + Add New Supplier
+                            </button>
+                        </div>
+
+                        <!-- New Supplier Form -->
+                        <div id="newSupplierForm" class="collapse">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Supplier Name *</label>
+                                    <input type="text" name="supplier_name" id="supplierName" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Contact Person</label>
+                                    <input type="text" name="contact_person" id="contactPerson" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone *</label>
+                                    <input type="text" name="supplier_phone" id="supplierPhone" class="form-control" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" name="supplier_email" id="supplierEmail" class="form-control">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Address</label>
+                                    <textarea name="supplier_address" id="supplierAddress" class="form-control" rows="2"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Tax ID / NTN</label>
+                                    <input type="text" name="supplier_tax_id" id="supplierTaxId" class="form-control" placeholder="1234567-8">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Payment Terms</label>
+                                    <select name="supplier_payment_terms" id="paymentTerms" class="form-select">
+                                        <option value="Net 30">Net 30</option>
+                                        <option value="Net 15">Net 15</option>
+                                        <option value="Due on Receipt">Due on Receipt</option>
+                                        <option value="50% Advance">50% Advance</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PO Details Column -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">PO Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">PO Number</label>
+                                <input type="text" class="form-control bg-light" value="Auto-generated" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">PO Date *</label>
+                                <input type="date" name="po_date" id="poDate" class="form-control" value="{{ today }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Expected Delivery Date</label>
+                                <input type="date" name="delivery_date" id="deliveryDate" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Delivery Method</label>
+                                <select name="delivery_method" class="form-select">
+                                    <option>Pickup</option>
+                                    <option>Supplier Delivery</option>
+                                    <option>Courier</option>
+                                    <option>Freight</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Shipping Terms</label>
+                                <input type="text" name="shipping_terms" class="form-control" value="FOB Destination">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">PO Notes</label>
+                                <textarea name="po_notes" class="form-control" rows="2" placeholder="Special instructions"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Section -->
+        <div class="card mb-5">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Purchase Order Items</h5>
+                <button type="button" class="btn btn-light btn-sm" id="showInventoryModal">
+                    <i class="bi bi-box-seam"></i> Add from Inventory
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="poItemsContainer">
+                    <!-- Items added here -->
+                </div>
+                <div id="noItemsMessage" class="text-center py-5 text-muted">
+                    No items added yet — click "Add from Inventory"
+                </div>
+            </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="row">
+            <div class="col-md-6 offset-md-6">
+                <table class="table table-bordered">
+                    <tr>
+                        <td><strong>Subtotal</strong></td>
+                        <td class="text-end">{{ currency_symbol }} <span id="subtotal">0.00</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tax (17%)</strong></td>
+                        <td class="text-end">{{ currency_symbol }} <span id="tax">0.00</span></td>
+                    </tr>
+                    <tr class="table-success">
+                        <td><strong>Grand Total</strong></td>
+                        <td class="text-end">{{ currency_symbol }} <span id="grandtotal">0.00</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Internal Notes -->
+        <div class="mb-4">
+            <label class="form-label">Internal Notes</label>
+            <textarea name="internal_notes" class="form-control" rows="3"></textarea>
+        </div>
+
+        <!-- Submit -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-success btn-lg px-5">Create Purchase Order</button>
+            <a href="{{ url_for('purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Inventory Modal -->
+<div class="modal fade" id="inventoryModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Items from Inventory</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th>Stock</th>
+                            <th>Cost Price</th>
+                            <th>Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in inventory_items %}
+                        <tr>
+                            <td><input type="checkbox" class="item-check" data-id="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.cost_price }}"></td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.sku or 'N/A' }}</td>
+                            <td>{{ item.current_stock }}</td>
+                            <td>{{ currency_symbol }}{{ item.cost_price }}</td>
+                            <td><input type="number" class="form-control qty-input" value="1" min="1"></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="addItemsBtn">Add Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsContainer = document.getElementById('poItemsContainer');
+    const noItemsMsg = document.getElementById('noItemsMessage');
+    let itemCounter = 0;
+
+    function addItem(productId, name, price, qty = 1) {
+        itemCounter++;
+        const total = price * qty;
+
+        const row = document.createElement('div');
+        row.className = 'card mb-3';
+        row.innerHTML = `
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <input type="hidden" name="item_id[]" value="${productId}">
+                        <strong>${name}</strong>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control qty-input" name="item_qty[]" value="${qty}" min="1">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control price-input" name="item_price[]" value="${price.toFixed(2)}" step="0.01">
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <strong class="item-total">{{ currency_symbol }}${total.toFixed(2)}</strong>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-danger btn-sm remove-item">×</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        itemsContainer.appendChild(row);
+        noItemsMsg.style.display = 'none';
+
+        // Events
+        row.querySelector('.qty-input').addEventListener('input', updateTotals);
+        row.querySelector('.price-input').addEventListener('input', updateTotals);
+        row.querySelector('.remove-item').addEventListener('click', () => {
+            row.remove();
+            if (itemsContainer.children.length === 0) noItemsMsg.style.display = 'block';
+            updateTotals();
+        });
+
+        updateTotals();
+    }
+
+    document.getElementById('addItemsBtn').addEventListener('click', function() {
+        document.querySelectorAll('.item-check:checked').forEach(cb => {
+            const row = cb.closest('tr');
+            const id = cb.dataset.id;
+            const name = cb.dataset.name;
+            const price = parseFloat(cb.dataset.price) || 0;
+            const qtyInput = row.querySelector('.qty-input');
+            const qty = parseInt(qtyInput.value) || 1;
+
+            addItem(id, name, price, qty);
+            cb.checked = false;
+        });
+        bootstrap.Modal.getInstance(document.getElementById('inventoryModal')).hide();
+    });
+
+    function updateTotals() {
+        let subtotal = 0;
+        document.querySelectorAll('.card.mb-3').forEach(card => {
+            const qty = parseFloat(card.querySelector('.qty-input').value) || 0;
+            const price = parseFloat(card.querySelector('.price-input').value) || 0;
+            const total = qty * price;
+            card.querySelector('.item-total').textContent = '{{ currency_symbol }}' + total.toFixed(2);
+            subtotal += total;
+        });
+        const tax = subtotal * 0.17;
+        const grand = subtotal + tax;
+
+        document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+        document.getElementById('tax').textContent = tax.toFixed(2);
+        document.getElementById('grandtotal').textContent = grand.toFixed(2);
+    }
+
+    // Auto date
+    document.getElementById('poDate').value = new Date().toISOString().split('T')[0];
+});
+</script>
+{% endblock %}

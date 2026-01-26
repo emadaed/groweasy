@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width: 800px;">
+    <h1>Privacy Policy</h1>
+    <p class="text-muted">Last Updated: December 2024</p>
+
+    <h3>1. Information We Collect</h3>
+    <p><strong>Account Data:</strong> Email, company name, tax IDs (NTN/STRN)</p>
+    <p><strong>Invoice Data:</strong> Customer names, amounts, products</p>
+    <p><strong>Technical Data:</strong> IP address, browser type, device info (for security)</p>
+
+    <h3>2. How We Use Your Data</h3>
+    <p>• Provide invoicing services<br>• Generate FBR-compliant documents<br>• Prevent fraud and abuse<br>• Improve our service</p>
+
+    <h3>3. Data Storage & Security</h3>
+    <p>Data stored in Pakistan. Encrypted in transit (HTTPS). Regular backups. Multi-device session management for security.</p>
+
+    <h3>4. Your Rights (GDPR/CCPA)</h3>
+    <p>• Access your data<br>• Delete your account<br>• Export your data (CSV)<br>• Opt-out of analytics</p>
+
+    <h3>5. Cookies</h3>
+    <p>We use essential cookies for login sessions. No tracking cookies.</p>
+
+    <h3>6. Third-Party Services</h3>
+    <p>• Cloudflare (DDoS protection, CDN)<br>• No advertising networks<br>• No data selling</p>
+
+    <h3>7. Contact</h3>
+    <p>Privacy questions: <a href="mailto:privacy@groweasy.com">privacy@groweasy.com</a></p>
+
+    <p class="mt-4"><a href="{{ url_for('register') }}">← Back to Register</a></p>
+</div>
+{% endblock %}

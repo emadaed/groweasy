@@ -1,0 +1,512 @@
+<!-- templates/inventory.html - ENHANCED VERSION WITH AUDIT TRAIL -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>📦 Inventory Management</h2>
+            <p class="text-muted">Manage your products, track stock levels, and get alerts</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                ➕ Add New Product
+            </button>
+            <a href="{{ url_for('download_inventory_report') }}" class="btn btn-success">
+                📊 Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Low Stock Alerts -->
+    {% if low_stock_alerts %}
+    <div class="row mb-4">
+        <div class="col">
+            <div class="alert alert-warning">
+                <h5>⚠️ Low Stock Alerts</h5>
+                <div class="row">
+                    {% for alert in low_stock_alerts %}
+                    <div class="col-md-6 mb-2">
+                        <strong>{{ alert.product_name }}</strong>:
+                        {{ alert.current_stock }} units (Min: {{ alert.min_stock }})
+                        <small class="text-muted">- {{ alert.created_at }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 🛡️ ACCURATE INVENTORY SUMMARY CARDS -->
+    <div class="row mb-4">
+        {% set inventory_summary = namespace(
+            total=0,
+            in_stock=0,
+            low_stock=0,
+            out_of_stock=0
+        ) %}
+
+        {% for item in inventory_items %}
+            {% set inventory_summary.total = inventory_summary.total + 1 %}
+            {% if item.current_stock == 0 %}
+                {% set inventory_summary.out_of_stock = inventory_summary.out_of_stock + 1 %}
+            {% elif item.current_stock > 0 and item.current_stock <= item.min_stock_level %}
+                {% set inventory_summary.low_stock = inventory_summary.low_stock + 1 %}
+            {% elif item.current_stock > 0 %}
+                {% set inventory_summary.in_stock = inventory_summary.in_stock + 1 %}
+            {% endif %}
+        {% endfor %}
+
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5>Total Products</h5>
+                    <h3>{{ inventory_summary.total }}</h3>
+                    <small>All inventory items</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5>In Stock</h5>
+                    <h3>{{ inventory_summary.in_stock }}</h3>
+                    <small>Stock > Min Level</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5>Low Stock</h5>
+                    <h3>{{ inventory_summary.low_stock }}</h3>
+                    <small>Stock ≤ Min Level</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <h5>Out of Stock</h5>
+                    <h3>{{ inventory_summary.out_of_stock }}</h3>
+                    <small>Stock = 0</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5>All Products</h5>
+        </div>
+        <div class="card-body">
+            {% if inventory_items %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>SKU</th>
+                            <th>Category</th>
+                            <th>Current Stock</th>
+                            <th>Min Stock</th>
+                            <th>Cost Price</th>
+                            <th>Selling Price</th>
+                            <th>Supplier</th>
+                            <th>Location</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in inventory_items %}
+                        <tr class="{% if item.current_stock == 0 %}table-danger{% elif item.current_stock <= item.min_stock_level %}table-warning{% endif %}">
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td><code>{{ item.sku or 'N/A' }}</code></td>
+                            <td>{{ item.category or 'General' }}</td>
+                            <td>
+                                <span class="badge {% if item.current_stock == 0 %}bg-danger{% elif item.current_stock <= item.min_stock_level %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ item.current_stock }}
+                                </span>
+                            </td>
+                            <td>{{ item.min_stock_level }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(item.cost_price or 0) }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(item.selling_price or 0) }}</td>
+                            <td>{{ item.supplier or 'N/A' }}</td>
+                            <td>{{ item.location or 'Main' }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editStockModal"
+                                            data-product-id="{{ item.id }}"
+                                            data-product-name="{{ item.name }}"
+                                            data-current-stock="{{ item.current_stock }}"
+                                            data-cost-price="{{ item.cost_price or '' }}"
+                                            data-selling-price="{{ item.selling_price or '' }}">
+                                        📝 Adjust
+                                    </button>
+                                    <button class="btn btn-outline-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteProductModal"
+                                            data-product-id="{{ item.id }}"
+                                            data-product-name="{{ item.name }}">
+                                        🗑️ Remove
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <h5>No products in inventory yet</h5>
+                <p class="text-muted">Add your first product to get started!</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    ➕ Add Your First Product
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal (KEEP EXACTLY AS IS) -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">➕ Add New Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_product') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Product Name *</label>
+                                <input type="text" class="form-control" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">SKU (Unique)</label>
+                                <input type="text" class="form-control" name="sku" placeholder="PROD-001">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <select class="form-control" name="category">
+                                    <option value="">Select Category</option>
+                                    <option value="Services">Services (Consulting, Labor, etc.)</option>
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Clothing">Clothing</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Office Supplies">Office Supplies</option>
+                                    <option value="Raw Materials">Raw Materials</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Supplier</label>
+                                <input type="text" class="form-control" name="supplier" placeholder="Supplier name">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Current Stock</label>
+                                <input type="number" class="form-control" name="current_stock" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Min Stock Level</label>
+                                <input type="number" class="form-control" name="min_stock_level" value="5" min="1">
+                                <small class="text-muted">Alert when stock ≤ this level</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Location</label>
+                                <input type="text" class="form-control" name="location" placeholder="Warehouse A">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Cost Price ({{ currency_symbol }})</label>
+                                <input type="number" step="0.01" class="form-control" name="cost_price" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Selling Price ({{ currency_symbol }})</label>
+                                <input type="number" step="0.01" class="form-control" name="selling_price" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2" placeholder="Product description..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Product Modal (KEEP EXACTLY AS IS) -->
+<div class="modal fade" id="deleteProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">🗑️ Remove Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('delete_product') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="product_id" id="deleteProductId">
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Warning:</strong> This will remove the product from active inventory.
+                        Transaction history will be preserved.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Product to Remove</label>
+                        <input type="text" class="form-control" id="deleteProductName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Removal *</label>
+                        <select name="reason" class="form-control" required>
+                            <option value="">Select reason...</option>
+                            <option value="Discontinued">Discontinued Product</option>
+                            <option value="Expired">Expired/Damaged</option>
+                            <option value="Low Demand">Low Demand</option>
+                            <option value="Supplier Issue">Supplier Issue</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Remove Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ENHANCED: Adjust Stock Modal with Price & Audit -->
+<div class="modal fade" id="editStockModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">📊 Stock & Price Adjustment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('adjust_stock_audit') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="product_id" id="editProductId">
+
+                    <!-- Product Info -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6>Product Details</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Product Name</label>
+                                    <input type="text" class="form-control" id="editProductName" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Current Stock</label>
+                                    <input type="number" class="form-control" id="editCurrentStock" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Adjustment Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0">Stock Adjustment</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Adjustment Type *</label>
+                                <select class="form-control" name="adjustment_type" required>
+                                    <option value="">Select type...</option>
+                                    <option value="add_stock">Add Stock</option>
+                                    <option value="remove_stock">Remove Stock</option>
+                                    <option value="set_stock">Set Exact Quantity</option>
+                                    <option value="damaged">Damaged Goods</option>
+                                    <option value="found_stock">Found Stock</option>
+                                </select>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label" id="quantityLabel">Quantity *</label>
+                                        <input type="number" class="form-control" name="quantity" min="0" step="1" required>
+                                        <small class="text-muted">Number of units</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Unit Cost (Optional)</label>
+                                        <input type="number" step="0.01" class="form-control" name="unit_cost" placeholder="0.00">
+                                        <small class="text-muted">Cost per unit for this batch</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Adjustment Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-info">
+                            <h6 class="mb-0">Price Adjustment (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">New Cost Price ({{ currency_symbol }})</label>
+                                        <input type="number" step="0.01" class="form-control" name="new_cost_price"
+                                               id="editCostPrice" placeholder="Keep current">
+                                        <small class="text-muted">Cost to you</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">New Selling Price ({{ currency_symbol }})</label>
+                                        <input type="number" step="0.01" class="form-control" name="new_selling_price"
+                                               id="editSellingPrice" placeholder="Keep current">
+                                        <small class="text-muted">Price to customers</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Information -->
+                    <div class="card">
+                        <div class="card-header bg-secondary">
+                            <h6 class="mb-0">Audit Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Adjustment *</label>
+                                <select class="form-control" name="reason" required>
+                                    <option value="">Select reason...</option>
+                                    <option value="purchase_order">Purchase Order Arrival</option>
+                                    <option value="damaged_goods">Damaged/Expired Goods</option>
+                                    <option value="stock_take">Stock Take/Count</option>
+                                    <option value="price_change">Supplier Price Change</option>
+                                    <option value="market_adjustment">Market Price Adjustment</option>
+                                    <option value="manual_correction">Manual Correction</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Additional Notes</label>
+                                <textarea class="form-control" name="notes" rows="2"
+                                          placeholder="e.g., Supplier: ABC Corp, Invoice #123, Quality issues, etc."></textarea>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="create_audit" id="createAudit" checked>
+                                <label class="form-check-label" for="createAudit">
+                                    Create audit trail for this adjustment
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Adjustments</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Modals -->
+<script nonce="{{ nonce }}">
+// Delete modal handler
+document.addEventListener('DOMContentLoaded', function() {
+    var deleteModal = document.getElementById('deleteProductModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var productId = button.getAttribute('data-product-id');
+            var productName = button.getAttribute('data-product-name');
+
+            document.getElementById('deleteProductId').value = productId;
+            document.getElementById('deleteProductName').value = productName;
+        });
+    }
+
+    // Enhanced Edit Stock Modal Handler
+    var editStockModal = document.getElementById('editStockModal');
+    if (editStockModal) {
+        editStockModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var productId = button.getAttribute('data-product-id');
+            var productName = button.getAttribute('data-product-name');
+            var currentStock = button.getAttribute('data-current-stock');
+            var costPrice = button.getAttribute('data-cost-price') || '';
+            var sellingPrice = button.getAttribute('data-selling-price') || '';
+
+            // Set basic info
+            document.getElementById('editProductId').value = productId;
+            document.getElementById('editProductName').value = productName;
+            document.getElementById('editCurrentStock').value = currentStock;
+            document.getElementById('editCostPrice').placeholder = costPrice ? 'Current: {{ currency_symbol }}' + parseFloat(costPrice).toFixed(2) : '';
+            document.getElementById('editSellingPrice').placeholder = sellingPrice ? 'Current: {{ currency_symbol }}' + parseFloat(sellingPrice).toFixed(2) : '';
+        });
+    }
+
+    // Dynamic quantity label based on adjustment type
+    const adjustmentType = document.querySelector('select[name="adjustment_type"]');
+    const quantityLabel = document.getElementById('quantityLabel');
+
+    if (adjustmentType && quantityLabel) {
+        adjustmentType.addEventListener('change', function() {
+            const type = this.value;
+
+            if (type === 'add_stock') quantityLabel.textContent = 'Quantity to Add *';
+            else if (type === 'remove_stock') quantityLabel.textContent = 'Quantity to Remove *';
+            else if (type === 'set_stock') quantityLabel.textContent = 'New Total Quantity *';
+            else if (type === 'damaged') quantityLabel.textContent = 'Damaged Quantity *';
+            else if (type === 'found_stock') quantityLabel.textContent = 'Found Quantity *';
+            else quantityLabel.textContent = 'Quantity *';
+        });
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Create Purchase Order{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="text-center mb-4">Create Purchase Order</h2>
+
+    <form method="POST" action="{{ url_for('create_po_process') }}" id="poForm">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Supplier</h5>
+                <select class="form-select mb-3" name="supplier_id">
+                    <option value="">Select Supplier</option>
+                    {% for supplier in suppliers %}
+                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#supplierModal">
+                    + Add New Supplier
+                </button>
+            </div>
+            <div class="col-md-6">
+                <h5>PO Details</h5>
+                <input type="date" class="form-control mb-3" name="po_date" value="{{ today }}" required>
+                <input type="date" class="form-control mb-3" name="delivery_date">
+                <select class="form-select mb-3" name="delivery_method">
+                    <option>Pickup</option>
+                    <option>Courier</option>
+                    <option>Supplier Delivery</option>
+                </select>
+            </div>
+        </div>
+
+        <hr>
+
+        <h5>Items</h5>
+        <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#inventoryModal">
+            Add from Inventory
+        </button>
+
+        <table class="table" id="itemsTable">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Items added here -->
+            </tbody>
+        </table>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-success btn-lg">Create PO</button>
+        </div>
+    </form>
+</div>
+
+<!-- Inventory Modal -->
+<div class="modal fade" id="inventoryModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Add from Inventory</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Name</th>
+                            <th>Stock</th>
+                            <th>Cost Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in inventory_items %}
+                        <tr>
+                            <td><input type="checkbox" class="item-check" data-id="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.cost_price }}"></td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.current_stock }}</td>
+                            <td>{{ item.cost_price }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="addInventoryItems">Add Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    const tbody = document.querySelector('#itemsTable tbody');
+
+    document.getElementById('addInventoryItems').addEventListener('click', function() {
+        document.querySelectorAll('.item-check:checked').forEach(cb => {
+            const id = cb.dataset.id;
+            const name = cb.dataset.name;
+            const price = cb.dataset.price;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="hidden" name="item_id[]" value="${id}">
+                    ${name}
+                </td>
+                <td><input type="number" name="item_qty[]" value="1" min="1" class="form-control"></td>
+                <td><input type="number" name="item_price[]" value="${price}" step="0.01" class="form-control"></td>
+                <td class="total">0.00</td>
+                <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+        bootstrap.Modal.getInstance(document.getElementById('inventoryModal')).hide();
+    });
+
+    tbody.addEventListener('input', function(e) {
+        if (e.target.name === 'item_qty[]' || e.target.name === 'item_price[]') {
+            const row = e.target.closest('tr');
+            const qty = parseFloat(row.querySelector('[name="item_qty[]"]').value) || 0;
+            const price = parseFloat(row.querySelector('[name="item_price[]"]').value) || 0;
+            row.querySelector('.total').textContent = (qty * price).toFixed(2);
+        }
+    });
+
+    tbody.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-row')) {
+            e.target.closest('tr').remove();
+        }
+    });
+});
+</script>
+{% endblock %}

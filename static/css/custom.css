@@ -1,0 +1,9 @@
+body { background: #f5f7fa; }
+.card { border: none; border-radius: 1.25rem; box-shadow: 0 8px 25px rgba(0,0,0,0.06); }
+.card-header { background: transparent; border-bottom: 1px solid #e2e8f0; font-weight: 600; }
+.form-control, .form-select { border-radius: 1rem; padding: 0.9rem 1.2rem; }
+.form-control:focus { border-color: #14b8a6; box-shadow: 0 0 0 0.25rem rgba(20,184,166,0.15); }
+.btn-success, .btn-primary { background: #14b8a6; border: none; border-radius: 1rem; }
+.btn-success:hover, .btn-primary:hover { background: #0d9488; }
+.table { font-size: 1rem; }
+@media (max-width: 768px) { .card-body { padding: 2rem; } .form-control { font-size: 1rem; } }

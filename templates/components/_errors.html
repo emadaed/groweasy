@@ -1,0 +1,10 @@
+{% if errors %}
+<div class="alert alert-danger">
+  <h5 class="mb-2">⚠️ Please fix the following before generating PDF:</h5>
+  <ul class="mb-0">
+    {% for e in errors %}
+    <li>{{ e }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

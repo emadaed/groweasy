@@ -1,0 +1,185 @@
+<!-- templates/purchase_order_pdf.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Purchase Order {{ data.get('po_number', data.get('invoice_number', '')) }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0.8cm;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+        .container { width: 100%; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: avoid;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+            page-break-inside: avoid;
+        }
+        thead { display: table-header-group; }
+        tfoot { display: table-footer-group; }
+        tr { page-break-inside: avoid; }
+        .po-header { background-color: #f8f9fa; border-left: 5px solid #0d6efd; padding: 15px; margin-bottom: 20px; }
+        .po-title { color: #0d6efd; border-bottom: 2px solid #0d6efd; padding-bottom: 8px; font-size: 24pt; }
+        .supplier-info { background-color: #e8f4fd; border: 1px solid #b6d4fe; padding: 12px; }
+        .terms-box { border: 1px dashed #6c757d; background-color: #f8f9fa; padding: 12px; }
+        .text-end { text-align: right; }
+        .text-center { text-align: center; }
+        h1, h2, h3, h4, h5 { margin: 0 0 8px 0; }
+        small { font-size: 8pt; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Prevent header from breaking -->
+        <div style="page-break-inside: avoid;">
+            <div class="po-header">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h1 class="po-title">PURCHASE ORDER</h1>
+                        <h3>PO #{{ data.get('po_number', data.get('invoice_number', 'N/A')) }}</h3>
+                    </div>
+                    <div class="text-end">
+                        <h4>{{ data.get('company_name', 'Your Company') }}</h4>
+                        <p>{{ data.get('company_address', '') }}<br>
+                        {{ data.get('company_phone', '') }} | {{ data.get('company_email', '') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;">
+                <div class="supplier-info" style="flex: 1; margin-right: 20px;">
+                    <h5>TO:</h5>
+                    <h4>{{ data.get('supplier_name', '') }}</h4>
+                    <p>{{ data.get('supplier_address', '') }}<br>
+                    Phone: {{ data.get('supplier_phone', '') }}<br>
+                    Email: {{ data.get('supplier_email', '') }}</p>
+                    {% if data.get('contact_person', '') %}
+                    <p><strong>Contact:</strong> {{ data.get('contact_person', '') }}</p>
+                    {% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <table>
+                        <tr><th>PO Date:</th><td>{{ data.get('po_date', '') }}</td></tr>
+                        <tr><th>Delivery Date:</th><td>{{ data.get('delivery_date', '') }}</td></tr>
+                        <tr><th>Delivery Method:</th><td>{{ data.get('delivery_method', '') }}</td></tr>
+                        <tr><th>Status:</th><td><strong>{{ data.get('po_status', '')|upper }}</strong></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical: Wrap entire table to prevent page break in middle -->
+        <div style="page-break-inside: avoid;">
+            <table>
+                <thead style="background: #343a40; color: white;">
+                    <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th>SKU</th>
+                        <th>Supplier</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in data.get('items', []) %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ item.name }}
+                            {% if item.notes %}<br><small>{{ item.notes }}</small>{% endif %}
+                        </td>
+                        <td>{{ item.sku or 'N/A' }}</td>
+                        <td>{{ item.supplier or data.get('supplier_name', '') }}</td>
+                        <td>{{ item.qty }}</td>
+                        <td>{{ currency_symbol }}{{ "%.2f"|format(item.price) }}</td>
+                        <td>{{ currency_symbol }}{{ "%.2f"|format(item.total) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot style="background: #f8f9fa;">
+                    <tr>
+                        <td colspan="6" class="text-end"><strong>Subtotal:</strong></td>
+                        <td><strong>{{ currency_symbol }}{{ "%.2f"|format(data.get('subtotal', 0)) }}</strong></td>
+                    </tr>
+                    {% if data.get('tax_amount', 0)|float > 0 %}
+                    <tr>
+                        <td colspan="6" class="text-end"><strong>Tax:</strong></td>
+                        <td><strong>{{ currency_symbol }}{{ "%.2f"|format(data.get('tax_amount', 0)) }}</strong></td>
+                    </tr>
+                    {% endif %}
+                    {% if data.get('shipping_cost', 0)|float > 0 %}
+                    <tr>
+                        <td colspan="6" class="text-end"><strong>Shipping:</strong></td>
+                        <td><strong>{{ currency_symbol }}{{ "%.2f"|format(data.get('shipping_cost', 0)) }}</strong></td>
+                    </tr>
+                    {% endif %}
+                    <tr style="background: #0d6efd; color: white;">
+                        <td colspan="6" class="text-end"><strong>GRAND TOTAL:</strong></td>
+                        <td><strong>{{ currency_symbol }}{{ "%.2f"|format(data.get('grand_total', 0)) }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Terms & Signatures -->
+        <div style="margin-top: 20px; page-break-inside: avoid;">
+            <div style="display: flex; justify-content: space-between;">
+                <div class="terms-box" style="flex: 1; margin-right: 20px;">
+                    <h5>TERMS & CONDITIONS</h5>
+                    <ul style="font-size: 9pt; margin: 8px 0;">
+                        <li>Payment Terms: {{ data.get('supplier_payment_terms', 'N/A') }}</li>
+                        <li>Shipping Terms: {{ data.get('shipping_terms', 'N/A') }}</li>
+                        <li>Delivery Method: {{ data.get('delivery_method', 'N/A') }}</li>
+                        {% if data.get('po_notes', '') %}
+                        <li>Special Instructions: {{ data.get('po_notes', '') }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div style="flex: 1;">
+                    {% if data.get('internal_notes', '') %}
+                    <div style="background: #d1ecf1; padding: 10px; border-radius: 5px;">
+                        <h6>Internal Notes:</h6>
+                        <p style="font-size: 9pt;">{{ data.get('internal_notes', '') }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 20px;">
+                <div>
+                    <p>_________________________<br><strong>Authorized Signature</strong><br>{{ data.get('company_name', '') }}</p>
+                </div>
+                <div class="text-end">
+                    <p>_________________________<br><strong>Supplier Acknowledgment</strong><br>{{ data.get('supplier_name', '') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code -->
+        {% if custom_qr_b64 %}
+        <div class="text-center" style="margin-top: 20px;">
+            <img src="data:image/png;base64,{{ custom_qr_b64 }}"
+                 alt="PO QR Code"
+                 style="width: 120px; height: 120px; border: 1px solid #ddd; padding: 8px;">
+            <p style="font-size: 9pt; color: #666; margin-top: 8px;">
+                Scan to verify PO #{{ data.get('po_number', data.get('invoice_number', '')) }}
+            </p>
+        </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

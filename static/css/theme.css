@@ -1,0 +1,33 @@
+/* Inventory Grid Hover Effects */
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 767px) {
+    /* Mobile: Full width list */
+    .col-12.col-md-6.col-lg-4 {
+        margin-bottom: 1rem;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    /* Tablet: 2 columns */
+    .col-12.col-md-6.col-lg-4 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+@media (min-width: 992px) {
+    /* Desktop: 3 columns */
+    .col-12.col-md-6.col-lg-4 {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+    }
+}

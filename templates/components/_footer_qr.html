@@ -1,0 +1,15 @@
+<div class="invoice-footer mt-4 pt-3 border-top">
+  <div class="row align-items-center">
+    <div class="col-6 text-start">
+      <p class="mb-1"><strong>Thank you for your business!</strong></p>
+      <p class="mb-0 text-muted">Generated via GrowEasy Invoice</p>
+    </div>
+    <div class="col-6 text-end">
+      {% if qr_b64 %}
+      <img src="data:image/png;base64,{{ qr_b64 }}" class="qr-footer" alt="QR Code">
+      {% else %}
+      <img src="{{ url_for('static', filename='assets/qr/qr_800.png') }}" class="qr-footer" alt="QR Code">
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Reset Instructions - GrowEasy Invoice{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">📧 Check Your Email</h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-envelope fa-4x text-success mb-3"></i>
+                        <h5>Password Reset Instructions Sent</h5>
+                    </div>
+
+                    <p class="text-muted">
+                        We've sent password reset instructions to:<br>
+                        <strong>{{ email }}</strong>
+                    </p>
+
+                    <div class="alert alert-info">
+                        <small>
+                            <strong>Development Mode:</strong><br>
+                            In production, you would receive an email with a secure reset link.
+                            For now, please contact support or use your current password.
+                        </small>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{{ url_for('login') }}" class="btn btn-success">Back to Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

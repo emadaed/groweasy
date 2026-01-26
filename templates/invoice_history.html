@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice History - GrowEasy Invoice{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>📋 Invoice History</h2>
+                <div>
+                    <a href="{{ url_for('create_invoice') }}" class="btn btn-success btn-sm me-2">➕ New Invoice</a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+                </div>
+            </div>
+
+            <!-- Search Box -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-8">
+                            <input type="text" name="search" class="form-control"
+                                   placeholder="Search by invoice number or client name..."
+                                   value="{{ search_query }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">🔍 Search</button>
+                        </div>
+                        <div class="col-md-2">
+                            <a href="{{ url_for('invoice_history') }}" class="btn btn-outline-secondary w-100">🔄 Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Summary -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>
+                    {% if search_query %}
+                        🔍 {{ total_invoices }} invoice(s) found for "{{ search_query }}"
+                    {% else %}
+                        📊 All Invoices ({{ total_invoices }} total)
+                    {% endif %}
+                </h5>
+            </div>
+
+            <!-- Invoices Table -->
+            {% if invoices %}
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Client</th>
+                                    <th>Date</th>
+                                    <th>Due Date</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ invoice.invoice_number }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ invoice.created_at[:10] if invoice.created_at else '' }}</small>
+                                    </td>
+                                    <td>{{ invoice.client_name }}</td>
+                                    <td>{{ invoice.invoice_date }}</td>
+                                    <td>
+                                        {% if invoice.due_date %}
+                                            {{ invoice.due_date }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>{{ currency_symbol }}{{ "%.2f"|format(invoice.grand_total) }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">Paid</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary"
+                                                    onclick="downloadInvoice({{ invoice.id }})"
+                                                    title="Download PDF">
+                                                📄
+                                            </button>
+                                            <button class="btn btn-outline-info"
+                                                    onclick="viewInvoice({{ invoice.id }})"
+                                                    title="View Details">
+                                                👁️
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            {% if total_pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if current_page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ current_page-1 }}{% if search_query %}&search={{ search_query }}{% endif %}">← Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {% if p == current_page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if current_page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ current_page+1 }}{% if search_query %}&search={{ search_query }}{% endif %}">Next →</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-file-invoice fa-4x text-muted mb-3"></i>
+                    <h4>No Invoices Found</h4>
+                </div>
+                <p class="text-muted mb-4">
+                    {% if search_query %}
+                        No invoices match your search criteria.
+                    {% else %}
+                        You haven't created any invoices yet.
+                    {% endif %}
+                </p>
+                <a href="{{ url_for('create_invoice') }}" class="btn btn-success btn-lg">
+                    🧾 Create Your First Invoice
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Invoice Modal -->
+<div class="modal fade" id="invoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Invoice Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="invoiceModalBody">
+                <!-- Content loaded by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+function viewInvoice(invoiceId) {
+    // Simple alert for now - we'll enhance this later
+    alert('Invoice details view coming soon! For now, use the download button.');
+}
+
+function downloadInvoice(invoiceId) {
+    // Simple alert for now - we'll implement actual download later
+    alert('Invoice download functionality coming in next update!');
+}
+
+// Quick actions for demo
+document.addEventListener('DOMContentLoaded', function() {
+    // Add some interactive features here later
+});
+</script>
+{% endblock %}

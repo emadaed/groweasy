@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Professional Invoice{% endblock %}
+
+{% block content %}
+            <td valign="top" style="padding-right: 8px;">
+                {% if data.get('logo_b', '')64 %}
+                    <img src="data:image/png;base64,{{ data.get('logo_b', '')64 | replace('data:image/png;base64,', '') | replace('data:image/jpeg;base64,', '') }}"
+                        style="width: 40px; height: 40px; border: 1px solid #ddd; border-radius: 3px;"
+                        alt="{{ data.get('company_name', '') }}">
+                {% else %}
+                    <img src="{{ url_for('static', filename='assets/logo.png') }}"
+                        style="width: 40px; height: 40px; border: 1px solid #ddd; border-radius: 3px;"
+                        alt="{{ data.get('company_name', '') }}"
+                        onerror="this.style.display='none'">
+                {% endif %}
+            </td>
+
+            <!-- Invoice Number & Title -->
+            <td width="40%" valign="top" align="right">
+                <h2 style="margin: 0 0 6px 0; font-size: 18px; color: #2c5aa0; text-align: right;">
+                    {% if data.get('invoice_type', '') == 'P' %}
+                        PURCHASE INVOICE
+                    {% elif data.get('invoice_type', '') == 'E' %}
+                        EXPORT INVOICE
+                    {% else %}
+                        INVOICE
+                    {% endif %}
+                </h2>
+                <table cellpadding="1" cellspacing="0" border="0" style="font-size: 9px;">
+                    <tr>
+                        <td align="right" style="padding: 1px 4px 1px 0;"><strong>Invoice #:</strong></td>
+                        <td style="padding: 1px 0;">{{ data.get('invoice_number', '') }}</td>
+                    </tr>
+                    <tr>
+                        <td align="right" style="padding: 1px 4px 1px 0;"><strong>Date:</strong></td>
+                        <td style="padding: 1px 0;">{{ data.get('invoice_date', '') }}</td>
+                    </tr>
+                    {% if data.get('due_date', '') %}
+                    <tr>
+                        <td align="right" style="padding: 1px 4px 1px 0;"><strong>Due Date:</strong></td>
+                        <td style="padding: 1px 0;">{{ data.get('due_date', '') }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Separator -->
+    <hr style="margin: 8px 0; border: none; border-top: 1px solid #2c5aa0;">
+
+    <!-- FBR Compliance Badge - More Compact -->
+    {% if data.get('seller_ntn', '') %}
+    <div style="background: #d4edda; padding: 4px 8px; border-radius: 3px; border-left: 3px solid #28a745; margin-bottom: 10px; font-size: 9px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td valign="middle">
+                    <strong style="color: #155724;">🛒️ FBR COMPLIANT
+                        {% if data.get('invoice_type', '') == 'P' %}PURCHASE{% elif data.get('invoice_type', '') == 'E' %}EXPORT{% else %}SALE{% endif %} INVOICE
+                    </strong>
+                </td>
+                <td align="right" valign="middle">
+                    <span style="color: #155724;">
+                        {% if data.get('invoice_type', '') == 'P' %}
+                            Supplier NTN: {{ data.get('seller_ntn', '') }}
+                        {% else %}
+                            Seller NTN: {{ data.get('seller_ntn', '') }}
+                        {% endif %}
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Compact Client & Payment Info Side-by-Side -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px;">
+        <tr>
+            <!-- Bill To (Compact) -->
+            <td width="48%" valign="top">
+                <h3 style="margin: 0 0 4px 0; font-size: 10px; color: #2c5aa0; font-weight: bold;">BILL TO</h3>
+                <p style="margin: 1px 0; font-size: 9px; font-weight: bold;">{{ data.get('client_name', '') }}</p>
+                {% if data.get('client_email', '') %}
+                <p style="margin: 1px 0; font-size: 8px; color: #666;">{{ data.get('client_email', '') }}</p>
+                {% endif %}
+                {% if data.get('client_phone', '') %}
+                <p style="margin: 1px 0; font-size: 8px; color: #666;">{{ data.get('client_phone', '') }}</p>
+                {% endif %}
+                {% if data.get('client_address', '') %}
+                <p style="margin: 1px 0 0 0; font-size: 7px; color: #666;">{{ data.get('client_address', '') }}</p>
+                {% endif %}
+
+                <!-- Buyer Tax Info -->
+                {% if data.get('buyer_ntn', '') %}
+                <div style="margin-top: 6px; padding: 3px; background: #f8f9fa; border-radius: 2px;">
+                    <p style="margin: 1px 0; font-size: 7px; color: #666;"><strong>Buyer NTN:</strong> {{ data.get('buyer_ntn', '') }}</p>
+                    {% if data.get('buyer_strn', '') %}
+                    <p style="margin: 1px 0; font-size: 7px; color: #666;"><strong>Buyer STRN:</strong> {{ data.get('buyer_strn', '') }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </td>
+
+            <!-- Spacer -->
+            <td width="4%"><!-- Spacer --></td>
+
+            <!-- Payment Info (Compact) -->
+            <td width="48%" valign="top">
+                <h3 style="margin: 0 0 4px 0; font-size: 10px; color: #28a745; font-weight: bold;">PAYMENT INFO</h3>
+                <p style="margin: 1px 0; font-size: 8px;"><strong>Terms:</strong> {{ data.get('payment_terms', '') }}</p>
+                <p style="margin: 1px 0; font-size: 8px;"><strong>Methods:</strong> {{ data.get('payment_methods', '') }}</p>
+
+                <!-- Seller Tax Info -->
+                <div style="margin-top: 6px; padding: 3px; background: #f8f9fa; border-radius: 2px;">
+                    <p style="margin: 1px 0; font-size: 7px; color: #666;"><strong>Seller NTN:</strong> {{ data.get('seller_ntn', '') }}</p>
+                    {% if data.get('seller_strn', '') %}
+                    <p style="margin: 1px 0; font-size: 7px; color: #666;"><strong>Seller STRN:</strong> {{ data.get('seller_strn', '') }}</p>
+                    {% endif %}
+                </div>
+
+                <p style="margin: 3px 0 0 0; font-size: 7px; color: #666;">
+                    Include invoice #{{ data.get('invoice_number', '') }}
+                </p>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Items Table - More Compact -->
+    <h3 style="margin: 0 0 6px 0; font-size: 10px; color: #2c5aa0; font-weight: bold;">ITEMS & SERVICES</h3>
+
+    <table width="100%" cellpadding="4" cellspacing="0" border="1" style="border-collapse: collapse; border: 1px solid #2c5aa0; margin: 0 0 10px 0; font-size: 8px;">
+        <thead>
+            <tr style="background-color: #2c5aa0; color: white;">
+                <th align="left" style="border: 1px solid #1e3d6d; padding: 6px; font-weight: bold;">DESCRIPTION</th>
+                <th width="8%" align="center" style="border: 1px solid #1e3d6d; padding: 6px; font-weight: bold;">QTY</th>
+                <th width="15%" align="right" style="border: 1px solid #1e3d6d; padding: 6px; font-weight: bold;">UNIT PRICE</th>
+                <th width="15%" align="right" style="border: 1px solid #1e3d6d; padding: 6px; font-weight: bold;">AMOUNT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data.get('get', '')('items', []) %}
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 6px; font-size: 8px;">{{ item.name or item.code or '—' }}</td>
+                <td align="center" style="border: 1px solid #ddd; padding: 6px; font-size: 8px;">{{ item.qty }}</td>
+                <td align="right" style="border: 1px solid #ddd; padding: 6px; font-size: 8px;">{{ currency_symbol }}{{ "%.2f"|format(item.price) }}</td>
+                <td align="right" style="border: 1px solid #ddd; padding: 6px; font-size: 8px;"><strong>{{ currency_symbol }}{{ "%.2f"|format(item.total) }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals & QR Codes in Single Row - Optimized -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <!-- Notes & Terms - More Compact -->
+            <td width="50%" valign="top">
+                {% if data.get('notes', '') %}
+                <div style="background: #fff3cd; padding: 4px; border-radius: 3px; border-left: 2px solid #ffc107; margin-bottom: 6px;">
+                    <p style="margin: 0; font-size: 7px; color: #856404;"><strong>Note:</strong> {{ data.get('notes', '') }}</p>
+                </div>
+                {% endif %}
+
+                <!-- FBR Compliance Notice -->
+                {% if data.get('seller_ntn', '') %}
+                <div style="background: #d1ecf1; padding: 4px; border-radius: 3px; border-left: 2px solid #17a2b8; margin-bottom: 6px;">
+                    <p style="margin: 0; font-size: 7px; color: #0c5460;">
+                        <strong>FBR Compliant:</strong> This invoice meets FBR requirements for electronic invoicing.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Terms & Conditions -->
+                <div style="font-size: 7px; color: #666; line-height: 1.1;">
+                    <p style="margin: 1px 0;"><strong>Terms:</strong> Payment due upon receipt. Late payments subject to 1.5% monthly interest.</p>
+                    <p style="margin: 1px 0;">This is an computer generated invoice and requires no signature.</p>
+                </div>
+            </td>
+
+            <!-- Totals & QR Codes -->
+            <td width="50%" valign="top">
+                <table width="100%" cellpadding="3" cellspacing="0" border="0" style="background: #f8f9fa; border-radius: 3px; margin-bottom: 8px;">
+                    <tr>
+                        <td style="padding: 3px; border-bottom: 1px solid #ddd; font-size: 8px;"><strong>Subtotal:</strong></td>
+                        <td align="right" style="padding: 3px; border-bottom: 1px solid #ddd; font-size: 8px;">{{ currency_symbol }}{{ "%.2f"|format(data.get('subtotal', '')) }}</td>
+                    </tr>
+                    {% if data.get('discount_rate', '') > 0 %}
+                    <tr>
+                        <td style="padding: 3px; border-bottom: 1px solid #ddd; font-size: 8px;"><strong>Discount ({{ "%.1f"|format(data.get('discount_rate', '')) }}%):</strong></td>
+                        <td align="right" style="padding: 3px; border-bottom: 1px solid #ddd; font-size: 8px;">-{{ currency_symbol }}{{ "%.2f"|format(data.get('discount_amount', '')) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.get('tax_rate', '') > 0 %}
+                    <tr>
+                        <td style="padding: 3px; border-bottom: 1px solid #ddd; font-size: 8px;"><strong>Tax ({{ "%.1f"|format(data.get('tax_rate', '')) }}%):</strong></td>
+                        <td align="right" style="padding: 3px; border-bottom: 1px solid #ddd; font-size: 8px;">{{ currency_symbol }}{{ "%.2f"|format(data.get('tax_amount', '')) }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr style="background: #2c5aa0; color: white;">
+                        <td style="padding: 6px 3px; font-size: 10px; font-weight: bold;">TOTAL DUE:</td>
+                        <td align="right" style="padding: 6px 3px; font-size: 10px; font-weight: bold;">{{ currency_symbol }}{{ "%.2f"|format(data.get('grand_total', '')) }}</td>
+                    </tr>
+                </table>
+
+                <!-- Both QR Codes Side by Side -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <!-- Custom QR Code -->
+                        <td width="50%" align="center" valign="top">
+                            <div style="text-align: center;">
+                                <h4 style="margin: 0 0 4px 0; font-size: 9px; color: #2c5aa0;">PAYMENT QR</h4>
+                                {% if custom_qr_b64 %}
+                                <img src="data:image/png;base64,{{ custom_qr_b64 }}" style="width: 70px; height: 70px; border-radius: 5px;" alt="Payment QR Code">
+                                {% endif %}
+                                <p style="margin: 2px 0; font-size: 7px; color: #666;">Scan to pay</p>
+                            </div>
+                        </td>
+
+                        <!-- FBR QR Code -->
+                        {% if fbr_compliant and fbr_qr_code %}
+                        <td width="50%" align="center" valign="top">
+                            <div style="text-align: center;">
+                                <h4 style="margin: 0 0 4px 0; font-size: 9px; color: #155724;">FBR QR</h4>
+                                <img src="data:image/png;base64,{{ fbr_qr_code }}" style="width: 70px; height: 70px; border: 1px solid #ddd; border-radius: 5px;" alt="FBR QR Code">
+                                <p style="margin: 2px 0; font-size: 7px; color: #666;">Verify with FBR</p>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Compact Footer -->
+    <div style="margin-top: 10px; padding-top: 6px; border-top: 1px solid #ddd; text-align: center;">
+        <p style="margin: 1px 0; font-size: 7px; color: #2c5aa0; font-weight: bold;">Thank you for your business!</p>
+        <p style="margin: 0; font-size: 6px; color: #666;">Generated via GrowEasy Invoice • FBR Compliant Format • www.groweasy.com</p>
+    </div>
+</div>
+
+{% if preview %}
+<div class="text-center my-4">
+    <!-- Stock Warnings -->
+    {% if stock_warnings %}
+    <div class="alert alert-danger mb-3">
+        <strong>⚠️ Stock Issues:</strong>
+        <ul class="mb-0">
+            {% for warning in stock_warnings %}
+            <li>{{ warning }}</li>
+            {% endfor %}
+        </ul>
+        <small>Please adjust quantities before downloading PDF</small>
+    </div>
+    {% endif %}
+
+    <!-- FBR Compliance Status -->
+    {% if fbr_compliant %}
+    <div class="alert alert-success mb-3">
+        <strong>✅ FBR Compliant:</strong> This invoice meets all FBR format requirements.
+    </div>
+    {% else %}
+    <div class="alert alert-warning mb-3">
+        <strong>⚠️ FBR Notice:</strong> {{ fbr_errors[0] if fbr_errors else 'FBR compliance requires seller NTN' }}
+    </div>
+    {% endif %}
+
+    <!-- Download Button (No Form) -->
+    <button id="downloadBtn" class="btn btn-success btn-lg px-5"
+            {% if stock_warnings %}disabled{% endif %}>
+        {% if stock_warnings %}
+            ⚠️ Fix Stock Issues First
+        {% else %}
+            ⬇️ Download FBR-Compliant PDF
+        {% endif %}
+    </button>
+
+    <p class="mt-3">
+        <a href="{{ url_for('cancel_invoice') }}" class="btn btn-outline-secondary btn-sm">Cancel & Start Over</a>
+    </p>
+</div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (!downloadBtn) return;
+
+    downloadBtn.addEventListener('click', async function() {
+        if (downloadBtn.disabled) return;
+
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '⏳ Generating PDF...';
+
+        try {
+            const invoiceData = {{ data | tojson }};
+
+            const response = await fetch('{{ url_for("download_invoice") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(invoiceData)
+            });
+
+            if (!response.ok) throw new Error('Server error');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'invoice_{{ data.get('invoice_number', '') }}.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            downloadBtn.innerHTML = '✅ Download Complete!';
+            setTimeout(() => {
+                window.location.href = '{{ url_for("create_invoice") }}';
+            }, 1000);
+
+        } catch (err) {
+            console.error('Download failed:', err);
+            alert('Download failed. Please try again.');
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = '⬇️ Download FBR-Compliant PDF';
+        }
+    });
+});
+</script>
+{% endif %}
+
+<style>
+@media print {
+    footer { display: none !important; }
+}
+</style>
+{% endblock %}

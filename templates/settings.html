@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - GrowEasy Invoice{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>⚙️ Account Settings</h2>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">← Back to Dashboard</a>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row">
+                <!-- Company Information -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">🏢 Company Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <input type="hidden" name="update_profile" value="1">
+
+                                <div class="mb-3">
+                                    <label class="form-label">Company Name</label>
+                                    <input type="text" name="company_name" class="form-control"
+                                           value="{{ user_profile['company_name'] or '' }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Company Address</label>
+                                    <textarea name="company_address" class="form-control" rows="3">{{ user_profile['company_address'] or '' }}</textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="text" name="company_phone" class="form-control"
+                                           value="{{ user_profile['company_phone'] or '' }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Tax ID</label>
+                                    <input type="text" name="company_tax_id" class="form-control"
+                                           value="{{ user_profile['company_tax_id'] or '' }}">
+                                </div>
+
+                                <!-- 🆕 FBR Tax Fields (Moved from accordion) -->
+                                <hr>
+                                <h6 class="text-primary">🛒️ FBR Tax Information (Pakistan)</h6>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Seller NTN</label>
+                                    <input type="text" name="seller_ntn" class="form-control"
+                                           value="{{ user_profile.get('seller_ntn', '') }}"
+                                           pattern="[0-9]{7}-[0-9]{1}"
+                                           placeholder="1234567-8">
+                                    <div class="form-text">National Tax Number (Format: 1234567-8)</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Seller STRN</label>
+                                    <input type="text" name="seller_strn" class="form-control"
+                                           value="{{ user_profile.get('seller_strn', '') }}"
+                                           placeholder="Sales Tax Registration Number">
+                                    <div class="form-text">Required if registered for sales tax</div>
+                                </div>
+                                <hr>
+                                <h6 class="text-primary">💱 Currency Preference</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Display Currency</label>
+                                    <select name="preferred_currency" class="form-control">
+                                        <option value="PKR" {% if user_profile.get('preferred_currency') == 'PKR' %}selected{% endif %}>🇵🇰 Pakistani Rupee (Rs.)</option>
+                                        <option value="USD" {% if user_profile.get('preferred_currency') == 'USD' %}selected{% endif %}>🇺🇸 US Dollar ($)</option>
+                                        <option value="EUR" {% if user_profile.get('preferred_currency') == 'EUR' %}selected{% endif %}>🇪🇺 Euro (€)</option>
+                                        <option value="GBP" {% if user_profile.get('preferred_currency') == 'GBP' %}selected{% endif %}>🇬🇧 British Pound (£)</option>
+                                        <option value="AED" {% if user_profile.get('preferred_currency') == 'AED' %}selected{% endif %}>🇦🇪 UAE Dirham (د.إ)</option>
+                                        <option value="SAR" {% if user_profile.get('preferred_currency') == 'SAR' %}selected{% endif %}>🇸🇦 Saudi Riyal (﷼)</option>
+                                    </select>
+                                    <small class="text-muted">Selected Currency will be used for display purposes</small>
+                                </div>
+                                <button type="submit" class="btn btn-success">Update Profile</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Settings -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">🔒 Security</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <input type="hidden" name="change_password" value="1">
+
+                                <div class="mb-3">
+                                    <label class="form-label">Current Password</label>
+                                    <input type="password" name="current_password" class="form-control" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">New Password</label>
+                                    <input type="password" name="new_password" class="form-control" required minlength="6">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                                </div>
+
+                                <button type="submit" class="btn btn-warning">Change Password</button>
+                            </form>
+
+                            <hr>
+                            <div class="text-center">
+                                <a href="{{ url_for('forgot_password') }}" class="btn btn-outline-danger btn-sm">🔓 Forgot Password?</a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Active Devices -->
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">📱 Active Devices</h5>
+                            </div>
+                            <div class="card-body">
+                                <a href="{{ url_for('devices') }}" class="btn btn-primary">Manage Devices</a>
+                                <p class="small text-muted mt-2">View and revoke access from other devices</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Account Info -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">📊 Account Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Email:</strong> {{ user_profile['email'] }}</p>
+                            <p><strong>Member since:</strong> {{ user_profile['created_at'][:10] if user_profile['created_at'] else 'N/A' }}</p>
+                            <p><strong>User ID:</strong> {{ user_profile['id'] }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

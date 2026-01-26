@@ -1,0 +1,43 @@
+<div class="company-header mb-4">
+    <div class="row">
+        <!-- Company Info -->
+        <div class="col-8">
+            <div class="d-flex align-items-start">
+                <!-- Logo -->
+                {% if data.get('logo_b', '')64 %}
+                <img src="data:image/png;base64,{{ data.get('logo_b', '')64 }}" class="company-logo me-3" alt="{{ data.get('company_name', '') }}">
+                {% else %}
+                <img src="{{ url_for('static', filename='assets/logo.png') }}" class="company-logo me-3" alt="{{ data.get('company_name', '') }}" onerror="this.style.display='none'">
+                {% endif %}
+
+                <!-- Company Details -->
+                <div class="company-info">
+                    <h2 class="company-name text-dark mb-1">{{ data.get('company_name', '') }}</h2>
+                    <p class="company-address text-muted mb-1 small">{{ data.get('company_address', '') }}</p>
+                    <p class="company-contact text-muted mb-1 small">
+                        {{ data.get('company_phone', '') }}
+                        {% if data.get('company_email', '') %} | {{ data.get('company_email', '') }}{% endif %}
+                    </p>
+                    {% if data.get('company_tax_id', '') %}
+                    <p class="company-tax mb-0 small text-muted"><strong>Tax ID:</strong> {{ data.get('company_tax_id', '') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Details -->
+        <div class="col-4">
+            <div class="invoice-meta text-end">
+                <h1 class="invoice-title text-success mb-2">INVOICE</h1>
+                <div class="invoice-details">
+                    <p class="mb-1"><strong>Invoice #:</strong> {{ data.get('invoice_number', '') }}</p>
+                    <p class="mb-1"><strong>Date:</strong> {{ data.get('invoice_date', '') }}</p>
+                    {% if data.get('due_date', '') %}
+                    <p class="mb-0"><strong>Due Date:</strong> {{ data.get('due_date', '') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <hr class="my-3">
+</div>

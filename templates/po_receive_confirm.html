@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Receive PO {{ po_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card border-success">
+        <div class="card-header bg-success text-white">
+            <h4>✅ Confirm Goods Receipt</h4>
+        </div>
+        <div class="card-body">
+            <p>Are you sure you want to mark <strong>PO #{{ po_number }}</strong> as Received?</p>
+            <p>This action will:
+                <ul>
+                    <li>Change status to <strong>Received</strong></li>
+                    <li>Add items to inventory stock</li>
+                    <li>Cannot be undone</li>
+                </ul>
+            </p>
+            <p><strong>{{ po_data.get('items', [])|length }} items</strong> will be added to stock.</p>
+
+            <!-- FINAL FIX: action forces POST to correct route -->
+            <form method="POST" action="{{ url_for('mark_po_received', po_number=po_number) }}">
+                <input type="hidden" name="confirm" value="yes">
+                <button type="submit" class="btn btn-success btn-lg">Yes, Receive Goods</button>
+                <a href="{{ url_for('purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

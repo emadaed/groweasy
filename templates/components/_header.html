@@ -1,0 +1,17 @@
+<div class="invoice-header mb-4">
+  <div class="row align-items-center">
+    <div class="col-6">
+      {% if data.get('logo_b', '')64 %}
+      <img src="data:image/png;base64,{{ data.get('logo_b', '')64 }}" class="logo-top" alt="Logo">
+      {% else %}
+      <img src="{{ url_for('static', filename='assets/logo.png') }}" class="logo-top" alt="Logo">
+      {% endif %}
+    </div>
+    <div class="col-6 text-end">
+      <h3 class="text-success mb-1">INVOICE</h3>
+      <p class="mb-0"><strong>No:</strong> {{ data.get('invoice_number', '') }}</p>
+      <p class="mb-0"><strong>Date:</strong> {{ data.get('invoice_date', '') }}</p>
+    </div>
+  </div>
+  <hr class="my-3">
+</div>

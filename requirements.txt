@@ -1,0 +1,46 @@
+# Core Flask
+Flask==3.0.3
+Werkzeug==3.0.3
+Jinja2==3.1.4
+
+# Database
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.11
+
+# Sessions & Cache
+Flask-Session==0.8.0
+redis==5.0.1
+Flask-Caching==2.1.0
+
+# Rate Limiting
+Flask-Limiter==3.5.1
+
+# Compression & Performance
+Flask-Compress==1.23
+gunicorn==21.2.0
+gevent==24.2.1
+greenlet==3.0.3
+
+# PDF Generation – WeasyPrint (critical for preview-matching PDFs)
+weasyprint==66.0
+Pillow==11.3.0  # Required by WeasyPrint and qrcode
+
+# QR Codes
+qrcode[pil]==7.4.2
+
+# Monitoring
+sentry-sdk[flask]==1.40.0
+
+# Utilities & Environment
+python-dotenv==1.0.1
+python-dateutil==2.9.0.post0
+pytz==2024.1
+
+# Optional but recommended for better PDFs
+premailer==3.10.0  # Helps with CSS inlining if needed
+
+
+celery==5.3.6   # (or latest: celery==5.6.2  newest)
+
+# Optional but recommended for monitoring Celery tasks
+flower==2.0.1

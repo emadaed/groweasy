@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>{% block title %}GrowEasy Invoice{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+
+    <!-- PWA Meta Tags (no service worker) -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#28a745">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="GrowEasy Invoice">
+    <meta name="description" content="Free professional invoices for small businesses and NGOs">
+
+    <!-- Bootstrap CSS -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Custom Invoice CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/invoice.min.css') }}?v=8">
+
+    <!-- Correct CSP - frame-ancestors removed (it's ignored in meta anyway) -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'nonce-{{ nonce }}' https://cdn.jsdelivr.net;
+                   style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                   img-src 'self' data: blob:;
+                   font-src 'self' https://cdn.jsdelivr.net;
+                   connect-src 'self';">
+
+    <!--original inline styles with nonce -->
+    <style nonce="{{ nonce }}">
+        .container-main {
+            max-width: 980px;
+            margin: 30px auto;
+            background: #fff;
+            padding: 30px 36px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+        }
+        .user-nav {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 12px 12px;
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem 0;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        footer a {
+            color: #6c757d;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        footer a:hover {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <!-- Navigation -ORIGINAL full version restored -->
+    <nav class="user-nav">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <span class="text-white fw-bold">GrowEasy Invoice</span>
+                    {% if session.get('user_id') %}
+                        <small class="text-white-50 ms-2">Welcome, {{ session.get('user_email', 'User') }}</small>
+                    {% endif %}
+                </div>
+                <div class="mt-2 mt-md-0">
+                    {% if session.get('user_id') %}
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+
+                        <!-- Create Dropdown -->
+                        <div class="btn-group me-1 mb-1" role="group">
+                            <button type="button" class="btn btn-outline-light btn-sm dropdown-toggle"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-plus-circle"></i> Create
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('create_invoice') }}">
+                                        <i class="bi bi-file-earmark-text"></i> New Invoice
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('create_purchase_order') }}">
+                                        <i class="bi bi-cart-plus"></i> New Purchase Order
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- All original links -->
+                        <a href="{{ url_for('invoice_history') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
+                            <i class="bi bi-receipt"></i> Invoices
+                        </a>
+                        <a href="{{ url_for('purchase_orders') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
+                            <i class="bi bi-cart-check"></i> POs
+                        </a>
+                        <a href="{{ url_for('inventory') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
+                            <i class="bi bi-box"></i> Inventory
+                        </a>
+                        <a href="{{ url_for('expenses') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
+                            <i class="bi bi-wallet2"></i> Expenses
+                        </a>
+                        <a href="{{ url_for('customers') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
+                            <i class="bi bi-people"></i> Customers
+                        </a>
+                        <a href="{{ url_for('suppliers') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
+                            <i class="bi bi-truck"></i> Suppliers
+                        </a>
+
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm mb-1">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm me-1">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                        <a href="{{ url_for('register') }}" class="btn btn-success btn-sm me-1">
+                            <i class="bi bi-person-plus"></i> Register
+                        </a>
+                        <a href="{{ url_for('about') }}" class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-info-circle"></i> About
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <a href="{{ url_for('about') }}" class="me-3">About Us</a>
+                    <a href="{{ url_for('terms') }}" class="me-3">Terms of Service</a>
+                    <a href="{{ url_for('privacy') }}" class="me-3">Privacy Policy</a>
+                    <a href="mailto:support@groweasy.com">Contact</a>
+                </div>
+                <div class="col-md-12">
+                    <small class="text-muted">
+                        © 2026 GrowEasy Invoice - Free FBR-Compliant Invoicing for Pakistan 🇵🇰
+                    </small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cookie Consent -->
+    <div id="cookieConsent" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #2c3e50; color: white; padding: 15px; z-index: 9999;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-9">
+                    <small>We use essential cookies for login sessions only. No tracking cookies.
+                        <a href="{{ url_for('privacy') }}" style="color: #3498db;">Learn more</a>
+                    </small>
+                </div>
+                <div class="col-md-3 text-end">
+                    <button type="button" class="btn btn-sm btn-success" id="acceptCookiesBtn">Accept</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+    <!-- Cookie Consent Script -->
+    <script nonce="{{ nonce }}">
+    (function() {
+        var CONSENT_KEY = 'groweasy_cookie_consent';
+
+        function hasConsent() {
+            return localStorage.getItem(CONSENT_KEY) === 'accepted';
+        }
+
+        function acceptCookies() {
+            localStorage.setItem(CONSENT_KEY, 'accepted');
+            var banner = document.getElementById('cookieConsent');
+            if (banner) {
+                banner.style.display = 'none';
+            }
+        }
+
+        function init() {
+            if (!hasConsent()) {
+                var banner = document.getElementById('cookieConsent');
+                if (banner) {
+                    banner.style.display = 'block';
+                }
+            }
+
+            var btn = document.getElementById('acceptCookiesBtn');
+            if (btn) {
+                btn.addEventListener('click', acceptCookies);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+    </script>
+</body>
+</html>
