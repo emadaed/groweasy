@@ -136,17 +136,5 @@ Thumbs.db
 # Railway
 railway.toml
 railway.jsonusers.db
-
-# Database
-users.db
-*.sqlite3
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env
-
-# Secrets
 .secrets.baseline
+
