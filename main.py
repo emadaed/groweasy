@@ -23,10 +23,10 @@ import redis
 # Local application
 from fbr_integration import FBRInvoice
 from core.inventory import InventoryManager
-from core.invoice_logic import prepare_invoice_data
-from core.invoice_logic_po import prepare_po_data
-from core.qr_engine import generate_qr_base64
-from core.pdf_engine import generate_pdf, HAS_WEASYPRINT
+from app.services.invoice_logic import prepare_invoice_data
+from app.services.invoice_logic_po import prepare_po_data
+from app.services.qr_engine import generate_qr_base64
+from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
 from core.auth import create_user, verify_user, get_user_profile, update_user_profile, change_user_password, save_user_invoice
 from core.purchases import save_purchase_order, get_purchase_orders, get_suppliers
 from core.middleware import security_headers
