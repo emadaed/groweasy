@@ -1,6 +1,6 @@
 # invoice_logic.py
 
-from core.utils import process_uploaded_logo  # ← NEW IMPORT
+from app.services.utils import process_uploaded_logo  # ← NEW IMPORT
 
 def prepare_invoice_data(form_data, files=None):
     """Prepare complete invoice data with FBR fields - INVENTORY ITEMS ONLY"""
