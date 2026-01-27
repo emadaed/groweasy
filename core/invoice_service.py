@@ -6,8 +6,8 @@ from core.number_generator import NumberGenerator
 from core.auth import save_user_invoice
 from core.purchases import save_purchase_order
 from core.inventory import InventoryManager
-from core.invoice_logic import prepare_invoice_data
-from core.invoice_logic_po import prepare_po_data
+from app.services.invoice_logic import prepare_invoice_data
+from app.services.invoice_logic_po import prepare_po_data
 
 logger = logging.getLogger(__name__)
 

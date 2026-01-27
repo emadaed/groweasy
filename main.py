@@ -29,7 +29,7 @@ from app.services.qr_engine import generate_qr_base64
 from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
 from core.auth import create_user, verify_user, get_user_profile, update_user_profile, change_user_password, save_user_invoice
 from core.purchases import save_purchase_order, get_purchase_orders, get_suppliers
-from core.middleware import security_headers
+from app.services.middleware import security_headers
 from core.db import DB_ENGINE
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -1488,7 +1488,7 @@ def download_document(document_number):
 
 
             # Generate PDF
-            from core.pdf_generator import generate_purchase_order_pdf
+            from app.services.pdf_generator import generate_purchase_order_pdf
             pdf_bytes = generate_purchase_order_pdf(service_data)
 
         else:  # Sales Invoice
@@ -1524,7 +1524,7 @@ def download_document(document_number):
             document_type_name = "Invoice"
 
             # Generate PDF
-            from core.pdf_generator import generate_invoice_pdf
+            from app.services.pdf_generator import generate_invoice_pdf
             pdf_bytes = generate_invoice_pdf(service_data)
 
         # Create filename
