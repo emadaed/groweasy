@@ -30,7 +30,7 @@ from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
 from core.auth import create_user, verify_user, get_user_profile, update_user_profile, change_user_password, save_user_invoice
 from core.purchases import save_purchase_order, get_purchase_orders, get_suppliers
 from app.services.middleware import security_headers
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
