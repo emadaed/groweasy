@@ -6,7 +6,7 @@ import json
 from app.services.invoice_logic import prepare_invoice_data
 from app.services.qr_engine import make_qr_with_logo as generate_simple_qr  # Use existing, but no logo
 from sqlalchemy import text
-from core.db import DB_ENGINE #added now
+from app.services.db import DB_ENGINE #added now
 
 class InvoiceService:
     def __init__(self, user_id):

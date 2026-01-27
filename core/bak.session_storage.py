@@ -2,7 +2,7 @@
 import time
 import json
 from datetime import datetime
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 from sqlalchemy import text
 
 class SessionStorage:

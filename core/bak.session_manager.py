@@ -1,7 +1,7 @@
 # core/session_manager.py - PostgreSQL compatible
 import secrets
 from datetime import datetime, timedelta
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 from sqlalchemy import text
 
 class SessionManager:

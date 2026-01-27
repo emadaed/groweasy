@@ -1,5 +1,5 @@
 # core/reports.py - Fixed version
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 from sqlalchemy import text
 from datetime import datetime, timedelta
 

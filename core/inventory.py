@@ -1,6 +1,6 @@
 # core/inventory.py - FINAL COMPLETE & TESTED VERSION
 
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 from sqlalchemy import text
 from datetime import datetime
 import logging

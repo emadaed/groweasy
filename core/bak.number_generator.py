@@ -1,7 +1,7 @@
 # core/number_generator.py
 import time
 from sqlalchemy import text
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 
 class NumberGenerator:
     @staticmethod
@@ -23,7 +23,7 @@ class NumberGenerator:
     def _generate_number(user_id, prefix, table, column):
         """Generic number generator"""
         try:
-            from core.db import DB_ENGINE
+            from app.services.db import DB_ENGINE
             with DB_ENGINE.begin() as conn:
                 # PostgreSQL-safe query
                 result = conn.execute(text(f"""

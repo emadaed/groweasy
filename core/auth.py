@@ -1,5 +1,5 @@
 # core/auth.py - Fully Postgres Ready
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 from sqlalchemy import text
 import hashlib
 import os

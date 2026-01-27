@@ -1,7 +1,7 @@
 # core/invoice_service.py - FINAL PROFESSIONAL VERSION
 
 import logging
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 from core.number_generator import NumberGenerator
 from core.auth import save_user_invoice
 from core.purchases import save_purchase_order

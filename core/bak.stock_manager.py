@@ -4,7 +4,7 @@ Stock Management System with Audit Trail
 import logging
 from datetime import datetime
 from sqlalchemy import text
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 
 logger = logging.getLogger(__name__)
 

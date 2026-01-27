@@ -1,5 +1,5 @@
 # core/purchases.py - Purchase Order & Supplier Management (Postgres Ready) - FIXED
-from core.db import DB_ENGINE
+from app.services.db import DB_ENGINE
 from sqlalchemy import text
 import json
 from datetime import datetime
