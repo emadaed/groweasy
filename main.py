@@ -22,13 +22,13 @@ from dotenv import load_dotenv
 import redis
 # Local application
 from fbr_integration import FBRInvoice
-from core.inventory import InventoryManager
+from app.services.inventory import InventoryManager
 from app.services.invoice_logic import prepare_invoice_data
 from app.services.invoice_logic_po import prepare_po_data
 from app.services.qr_engine import generate_qr_base64
 from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
-from core.auth import create_user, verify_user, get_user_profile, update_user_profile, change_user_password, save_user_invoice
-from core.purchases import save_purchase_order, get_purchase_orders, get_suppliers
+from app.services.auth import create_user, verify_user, get_user_profile, update_user_profile, change_user_password, save_user_invoice
+from app.services.purchases import save_purchase_order, get_purchase_orders, get_suppliers
 from app.services.middleware import security_headers
 from app.services.db import DB_ENGINE
 import sentry_sdk
@@ -94,7 +94,7 @@ app.static_folder = str(app_root / "static")
 print(f"✅ Templates folder: {app.template_folder}")
 print(f"✅ Static folder: {app.static_folder}")
 
-from core.cache import init_cache, get_user_profile_cached
+from app.services.cache import init_cache, get_user_profile_cached
 init_cache(app)
 
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -236,7 +236,7 @@ logging.getLogger('PIL').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 # Initialize purchase tables
-from core.purchases import init_purchase_tables
+from app.services.purchases import init_purchase_tables
 try:
     init_purchase_tables()
     print("✅ Purchase tables initialized successfully")
@@ -513,7 +513,7 @@ def create_purchase_order():
 
     user_id = session['user_id']
 
-    from core.inventory import InventoryManager
+    from app.services.inventory import InventoryManager
 
     # Get inventory items for dropdown/modal
     inventory_items = InventoryManager.get_inventory_items(user_id)
@@ -540,7 +540,7 @@ def create_po_process():
     user_id = session['user_id']
 
     try:
-        from core.invoice_service import InvoiceService
+        from app.services.invoice_service import InvoiceService
 
         print("DEBUG: Starting PO creation for user", user_id)
         print("DEBUG: Form keys:", list(request.form.keys()))
@@ -610,7 +610,7 @@ def po_preview(po_number):
         po_data['invoice_number'] = po_number
 
         # === FULL ENRICHMENT ===
-        from core.inventory import InventoryManager
+        from app.services.inventory import InventoryManager
         inventory_items = InventoryManager.get_inventory_items(user_id)
 
         product_lookup = {str(p['id']): p for p in inventory_items}
@@ -659,8 +659,8 @@ def mark_po_received(po_number):
     user_id = session['user_id']
 
     try:
-        from core.purchases import get_purchase_order
-        from core.inventory import InventoryManager
+        from app.services.purchases import get_purchase_order
+        from app.services.inventory import InventoryManager
 
         # Load the existing PO data
         po_data = get_purchase_order(user_id, po_number)
@@ -841,7 +841,7 @@ def inventory_reports():
         return redirect(url_for('login'))
 
     try:
-        from core.reports import InventoryReports
+        from app.services.reports import InventoryReports
         # Try to get reports, but don't crash if they fail
         bcg_matrix = []
         turnover = []
@@ -885,7 +885,7 @@ def add_product():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.inventory import InventoryManager
+    from app.services.inventory import InventoryManager
 
     product_data = {
         'name': request.form.get('name'),
@@ -926,7 +926,7 @@ def delete_product():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.inventory import InventoryManager
+    from app.services.inventory import InventoryManager
 
     product_id = request.form.get('product_id')
     reason = request.form.get('reason')
@@ -984,7 +984,7 @@ def adjust_stock_audit():
     notes = request.form.get('notes', '')
 
     try:
-        from core.inventory import InventoryManager
+        from app.services.inventory import InventoryManager
         from flask import current_app as app  # ← Fix logger
 
         # Get product - use your existing method
@@ -1061,7 +1061,7 @@ def download_inventory_report():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.inventory import InventoryManager
+    from app.services.inventory import InventoryManager
     import csv
     import io
 
@@ -1097,7 +1097,7 @@ def settings():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.auth import get_user_profile, update_user_profile, change_user_password, verify_user
+    from app.services.auth import get_user_profile, update_user_profile, change_user_password, verify_user
 
     user_profile = get_user_profile_cached(session['user_id'])
 
@@ -1279,7 +1279,7 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.auth import get_business_summary, get_client_analytics
+    from app.services.auth import get_business_summary, get_client_analytics
 
     with DB_ENGINE.connect() as conn:
         total_products = conn.execute(text("""
@@ -1322,9 +1322,9 @@ def donate():
 
 # preview and download
 from flask.views import MethodView
-from core.services import InvoiceService
+from app.services.services import InvoiceService
 from app.services.number_generator import NumberGenerator
-from core.purchases import save_purchase_order
+from app.services.purchases import save_purchase_order
 
 class InvoiceView(MethodView):
     """Handles invoice creation and preview - RESTful design"""
@@ -1370,7 +1370,7 @@ class InvoiceView(MethodView):
         invoice_type = request.form.get('invoice_type', 'S')
 
         try:
-            from core.invoice_service import InvoiceService
+            from app.services.invoice_service import InvoiceService
             service = InvoiceService(user_id)
 
             if invoice_type == 'P':
@@ -1468,7 +1468,7 @@ def download_document(document_number):
             document_type_name = "Purchase Order"
 
             # === ENRICH PO ITEMS WITH REAL PRODUCT DATA (same as preview) ===
-            from core.inventory import InventoryManager
+            from app.services.inventory import InventoryManager
             inventory_items = InventoryManager.get_inventory_items(user_id)
 
             product_lookup = {}
@@ -1941,7 +1941,7 @@ app.add_url_rule('/invoice/process', view_func=InvoiceView.as_view('invoice_proc
 @app.route('/invoice/status/<user_id>')
 def status(user_id):
     try:
-        from core.services import InvoiceService
+        from app.services.services import InvoiceService
         service = InvoiceService(int(user_id))
         result = service.redis_client.get(f"preview:{user_id}")
         if result:
@@ -2035,7 +2035,7 @@ def purchase_orders():
         return redirect(url_for('login'))
 
     try:
-        from core.purchases import get_purchase_orders
+        from app.services.purchases import get_purchase_orders
 
         page = request.args.get('page', 1, type=int)
         limit = 10
@@ -2111,7 +2111,7 @@ def suppliers():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.purchases import get_suppliers
+    from app.services.purchases import get_suppliers
     supplier_list = get_suppliers(session['user_id'])
 
     return render_template("suppliers.html",
@@ -2125,7 +2125,7 @@ def customers():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.auth import get_customers
+    from app.services.auth import get_customers
     customer_list = get_customers(session['user_id'])
 
     return render_template("customers.html", customers=customer_list, nonce=g.nonce)
@@ -2137,7 +2137,7 @@ def expenses():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.auth import get_expenses, get_expense_summary
+    from app.services.auth import get_expenses, get_expense_summary
     from datetime import datetime
 
     expense_list = get_expenses(session['user_id'])
@@ -2157,7 +2157,7 @@ def add_expense():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.auth import save_expense
+    from app.services.auth import save_expense
 
     expense_data = {
         'description': request.form.get('description'),
