@@ -87,10 +87,11 @@ def random_success_message(category='default'):
 # App creation
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
-# Fix template/static path for Railway
+# Fix: Point to the NEW paths inside the app/ folder
 app_root = Path(__file__).parent
-app.template_folder = str(app_root / "templates")
-app.static_folder = str(app_root / "static")
+app.template_folder = str(app_root / "app" / "templates")
+app.static_folder = str(app_root / "app" / "static")
+
 print(f"✅ Templates folder: {app.template_folder}")
 print(f"✅ Static folder: {app.static_folder}")
 
