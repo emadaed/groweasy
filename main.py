@@ -288,7 +288,7 @@ def clear_pending_invoice(user_id):
     try:
         # This function should be in services module
         # For now, implementing a simple version
-        from core.session_storage import SessionStorage
+        from app.services.session_storage import SessionStorage
         SessionStorage.clear_data(user_id, 'last_invoice')
         print(f"Cleared pending invoice for user {user_id}")
         return True
@@ -565,7 +565,7 @@ def create_po_process():
             print("DEBUG: PO data before save:", po_data)
             print("DEBUG: Items in po_data:", po_data.get('items', []))
 
-            from core.session_storage import SessionStorage
+            from app.services.session_storage import SessionStorage
             session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
             session['last_po_ref'] = session_ref
 
@@ -1158,7 +1158,7 @@ def devices():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.session_manager import SessionManager
+    from app.services.session_manager import SessionManager
     active_sessions = SessionManager.get_active_sessions(session['user_id'])
 
     return render_template("devices.html",
@@ -1173,7 +1173,7 @@ def revoke_device(token):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.session_manager import SessionManager
+    from app.services.session_manager import SessionManager
 
     # Don't allow revoking current session
     if token == session.get('session_token'):
@@ -1191,7 +1191,7 @@ def revoke_all_devices():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    from core.session_manager import SessionManager
+    from app.services.session_manager import SessionManager
     SessionManager.revoke_all_sessions(session['user_id'], except_token=session.get('session_token'))
 
     flash('✅ All other devices logged out', 'success')
@@ -1207,7 +1207,7 @@ def login():
 
         user_id = verify_user(email, password)
         if user_id:
-            from core.session_manager import SessionManager
+            from app.services.session_manager import SessionManager
 
             # Check location restrictions
             if not SessionManager.check_location_restrictions(user_id, request.remote_addr):
@@ -1323,7 +1323,7 @@ def donate():
 # preview and download
 from flask.views import MethodView
 from core.services import InvoiceService
-from core.number_generator import NumberGenerator
+from app.services.number_generator import NumberGenerator
 from core.purchases import save_purchase_order
 
 class InvoiceView(MethodView):
@@ -1334,7 +1334,7 @@ class InvoiceView(MethodView):
             return redirect(url_for('login'))
 
         if 'last_invoice_ref' in session and request.args.get('preview'):
-            from core.session_storage import SessionStorage
+            from app.services.session_storage import SessionStorage
             invoice_data = SessionStorage.get_data(session['user_id'], session['last_invoice_ref'])
             if not invoice_data:
                 flash("Invoice preview expired or not found", "error")
@@ -1384,7 +1384,7 @@ class InvoiceView(MethodView):
 
                 if po_data:
                     # Store for preview
-                    from core.session_storage import SessionStorage
+                    from app.services.session_storage import SessionStorage
                     session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
                     session['last_po_ref'] = session_ref
 
@@ -1401,7 +1401,7 @@ class InvoiceView(MethodView):
 
                 if invoice_data:
                     # Store for preview
-                    from core.session_storage import SessionStorage
+                    from app.services.session_storage import SessionStorage
                     session_ref = SessionStorage.store_large_data(user_id, 'last_invoice', invoice_data)
                     session['last_invoice_ref'] = session_ref
 

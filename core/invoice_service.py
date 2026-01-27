@@ -2,7 +2,7 @@
 
 import logging
 from app.services.db import DB_ENGINE
-from core.number_generator import NumberGenerator
+from app.services.number_generator import NumberGenerator
 from core.auth import save_user_invoice
 from core.purchases import save_purchase_order
 from core.inventory import InventoryManager

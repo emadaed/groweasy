@@ -45,7 +45,7 @@ def save_purchase_order(user_id, order_data):
     """Save purchase order and auto-update supplier - FIXED"""
     with DB_ENGINE.begin() as conn:
         # Generate fresh PO number
-        from core.number_generator import NumberGenerator
+        from app.services.number_generator import NumberGenerator
         po_number = NumberGenerator.generate_po_number(user_id)
 
         print(f"🔍 Generated fresh PO number: {po_number}")
