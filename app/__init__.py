@@ -200,32 +200,32 @@ def update_stock_on_invoice(user_id, invoice_items, invoice_type='S', invoice_nu
 
 # --- Helper functions (Outside the create_app function) ---
 
-##def generate_simple_qr(data):
-##    """Generate a simple QR code for document data"""
-##    try:
-##        import qrcode
-##        from io import BytesIO
-##        import base64
-##        import json
-##
-##        qr_data = {
-##            'doc_number': data.get('invoice_number', ''),
-##            'date': data.get('invoice_date', ''),
-##            'total': data.get('grand_total', 0)
-##        }
-##
-##        qr = qrcode.QRCode(version=1, box_size=5, border=2)
-##        qr.add_data(json.dumps(qr_data))
-##        qr.make(fit=True)
-##
-##        img = qr.make_image(fill_color="black", back_color="white")
-##        buffered = BytesIO()
-##        img.save(buffered, format="PNG")
-##
-##        return base64.b64encode(buffered.getvalue()).decode('utf-8')
-##    except Exception as e:
-##        print(f"QR generation error: {e}")
-##        return None
+def generate_simple_qr(data):
+    """Generate a simple QR code for document data"""
+    try:
+        import qrcode
+        from io import BytesIO
+        import base64
+        import json
+
+        qr_data = {
+            'doc_number': data.get('invoice_number', ''),
+            'date': data.get('invoice_date', ''),
+            'total': data.get('grand_total', 0)
+        }
+
+        qr = qrcode.QRCode(version=1, box_size=5, border=2)
+        qr.add_data(json.dumps(qr_data))
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+
+        return base64.b64encode(buffered.getvalue()).decode('utf-8')
+    except Exception as e:
+        print(f"QR generation error: {e}")
+        return None
 
 def clear_pending_invoice(user_id):
     """Clear pending invoice data"""

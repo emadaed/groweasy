@@ -9,10 +9,11 @@ from flask import render_template, session, redirect, url_for, request, flash, j
 from sqlalchemy import text
 
 # Import the Factory and Global Extensions
-from app import create_app, limiter
+from app import create_app, limiter, generate_simple_qr
 from app.services.db import DB_ENGINE
 
 # Business Logic Services
+from app.services.cache import get_user_profile_cached
 from app.services.inventory import InventoryManager
 from app.services.invoice_logic import prepare_invoice_data
 from app.services.invoice_logic_po import prepare_po_data
@@ -33,13 +34,6 @@ app = create_app()
 
 # Helper functions
 
-##from flask import g
-##import secrets
-##
-##@app.before_request
-##def before_request():
-##    """Set nonce for CSP"""
-##    g.nonce = secrets.token_hex(16)
 
 # password reset
 @app.route("/forgot_password", methods=['GET', 'POST'])
