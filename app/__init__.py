@@ -80,25 +80,39 @@ def create_app():
     CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
 
     @app.context_processor
-    def inject_globals():
-        # Get the current time once to avoid multiple calls
-        current_dt = datetime.now() 
+    def inject_template_utilities():
+        # 1. Internal logic (uses a different variable name to avoid collision)
+        _current_time = datetime.now()
         
+        # 2. Handle Profile/Currency
         currency, symbol = 'PKR', 'Rs.'
         if 'user_id' in session:
             profile = get_user_profile_cached(session['user_id'])
             if profile:
                 currency = profile.get('preferred_currency', 'PKR')
                 symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
-        
+
+        # 3. Define utility functions internally
+        def get_now():
+            return datetime.now()
+
+        def get_today():
+            return datetime.now().date()
+
+        # 4. Return everything to templates
+        # Note: We keep the keys 'now' and 'today' for the templates, 
+        # but the functions are defined safely.
         return dict(
-            now=current_dt,
-            today=current_dt.date(),
+            now=_current_time,
+            today=_current_time.date(),
+            get_now=get_now,
+            get_today=get_today,
             currency=currency,
             currency_symbol=symbol,
             nonce=getattr(g, 'nonce', '')
         )
 
+    
     @app.before_request
     def set_nonce():
         g.nonce = secrets.token_hex(16)
