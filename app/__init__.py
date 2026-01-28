@@ -81,15 +81,19 @@ def create_app():
 
     @app.context_processor
     def inject_globals():
+        # Get the current time once to avoid multiple calls
+        current_dt = datetime.now() 
+        
         currency, symbol = 'PKR', 'Rs.'
         if 'user_id' in session:
             profile = get_user_profile_cached(session['user_id'])
             if profile:
                 currency = profile.get('preferred_currency', 'PKR')
                 symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
+        
         return dict(
-            now=datetime.now(),
-            today=datetime.now().date(),
+            now=current_dt,
+            today=current_dt.date(),
             currency=currency,
             currency_symbol=symbol,
             nonce=getattr(g, 'nonce', '')
