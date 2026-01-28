@@ -3,9 +3,11 @@
 # main.py - COMPLETE FIXED VERSION 29--01-2026 12:23 AM
 # ============================================================================
 import os
+import time
+import io
 import json
 from datetime import datetime, date
-from flask import render_template, session, redirect, url_for, request, flash, jsonify, g, send_file, make_response
+from flask import render_template, session, redirect, url_for, request, flash, jsonify, g, send_file, make_response, current_app
 from sqlalchemy import text
 
 # Import the Factory and Global Extensions
@@ -13,6 +15,7 @@ from app import create_app, limiter, generate_simple_qr
 from app.services.db import DB_ENGINE
 
 # Business Logic Services
+from app.services.utils import random_success_message
 from app.services.cache import get_user_profile_cached
 from app.services.inventory import InventoryManager
 from app.services.invoice_logic import prepare_invoice_data
