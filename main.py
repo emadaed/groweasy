@@ -30,6 +30,9 @@ from app.services.purchases import save_purchase_order, get_purchase_orders, get
 
 # Local application
 #from fbr_integration import FBRInvoice
+# Since this is used for logic in main.py, define it here too # (or move it to a config.py later)
+
+CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
 
 app = create_app()
 
