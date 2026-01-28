@@ -1,13 +1,11 @@
 # app/routes/auth.py
-from flask import Blueprint, render_template,g, request, redirect, url_for, flash, session
-from app.services.db import DB_ENGINE
-from sqlalchemy import text
-import logging
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
 from app import limiter
-from app.services.auth import verify_user
+from app.services.auth import verify_user, get_user_profile
 from app.services.utils import random_success_message
+from app.services.cache import get_user_profile_cached
 
-# 1. Define the Blueprint
+# Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)
 
 # 2. @app.route('/login')

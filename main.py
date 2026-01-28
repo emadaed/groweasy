@@ -3,19 +3,29 @@
 # main.py - COMPLETE FIXED VERSION 29--01-2026 12:23 AM
 # ============================================================================
 import os
-from flask import render_template, session, redirect, url_for, request, flash
-from app import create_app, limiter
+import json
+from datetime import datetime, date
+from flask import render_template, session, redirect, url_for, request, flash, jsonify, g, send_file, make_response
+from sqlalchemy import text
 
-# Local application
-#from fbr_integration import FBRInvoice
+# Import the Factory and Global Extensions
+from app import create_app, limiter
 from app.services.db import DB_ENGINE
+
+# Business Logic Services
 from app.services.inventory import InventoryManager
 from app.services.invoice_logic import prepare_invoice_data
 from app.services.invoice_logic_po import prepare_po_data
 from app.services.qr_engine import generate_qr_base64
 from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
-from app.services.auth import create_user, verify_user, get_user_profile, update_user_profile, change_user_password, save_user_invoice
+from app.services.auth import (
+    create_user, verify_user, get_user_profile, 
+    update_user_profile, change_user_password, save_user_invoice
+)
 from app.services.purchases import save_purchase_order, get_purchase_orders, get_suppliers
+
+# Local application
+#from fbr_integration import FBRInvoice
 
 app = create_app()
 
