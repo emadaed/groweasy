@@ -122,54 +122,6 @@ def setup_redis_sessions(app):
         app.config.update(SESSION_TYPE='filesystem', SESSION_FILE_DIR='/tmp/flask_sessions')
         Session(app)
 
-# Helper functions
-def generate_simple_qr(data):
-    """Generate a simple QR code for document data"""
-    try:
-        import qrcode
-        from io import BytesIO
-        import base64
-
-        # Create minimal data for QR
-        qr_data = {
-            'doc_number': data.get('invoice_number', ''),
-            'date': data.get('invoice_date', ''),
-            'total': data.get('grand_total', 0)
-        }
-
-        qr = qrcode.QRCode(version=1, box_size=5, border=2)
-        qr.add_data(json.dumps(qr_data))
-        qr.make(fit=True)
-
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffered = BytesIO()
-        img.save(buffered, format="PNG")
-
-        return base64.b64encode(buffered.getvalue()).decode('utf-8')
-    except Exception as e:
-        print(f"QR generation error: {e}")
-        return None
-
-def clear_pending_invoice(user_id):
-    """Clear pending invoice data"""
-    try:
-        # This function should be in services module
-        # For now, implementing a simple version
-        from app.services.session_storage import SessionStorage
-        SessionStorage.clear_data(user_id, 'last_invoice')
-        print(f"Cleared pending invoice for user {user_id}")
-        return True
-    except Exception as e:
-        print(f"Error clearing pending invoice: {e}")
-        return False
-
-def template_exists(template_name):
-    """Check if a template exists"""
-    try:
-        app.jinja_env.get_template(template_name)
-        return True
-    except Exception:
-        return False
 
 # STOCK VALIDATION
 def validate_stock_availability(user_id, invoice_items, invoice_type='S'):
@@ -244,62 +196,51 @@ def update_stock_on_invoice(user_id, invoice_items, invoice_type='S', invoice_nu
     except Exception as e:
         print(f"Stock update error: {e}")
 
-#context processor
-@app.context_processor
-def inject_currency():
-    """Make currency available in all templates"""
-    currency = 'PKR'
-    symbol = 'Rs.'
 
-    if 'user_id' in session:
-        profile = get_user_profile_cached(session['user_id'])
-        if profile:
-            currency = profile.get('preferred_currency', 'PKR')
-            symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
+# --- Helper functions (Outside the create_app function) ---
 
-    return dict(currency=currency, currency_symbol=symbol)
+##def generate_simple_qr(data):
+##    """Generate a simple QR code for document data"""
+##    try:
+##        import qrcode
+##        from io import BytesIO
+##        import base64
+##        import json
+##
+##        qr_data = {
+##            'doc_number': data.get('invoice_number', ''),
+##            'date': data.get('invoice_date', ''),
+##            'total': data.get('grand_total', 0)
+##        }
+##
+##        qr = qrcode.QRCode(version=1, box_size=5, border=2)
+##        qr.add_data(json.dumps(qr_data))
+##        qr.make(fit=True)
+##
+##        img = qr.make_image(fill_color="black", back_color="white")
+##        buffered = BytesIO()
+##        img.save(buffered, format="PNG")
+##
+##        return base64.b64encode(buffered.getvalue()).decode('utf-8')
+##    except Exception as e:
+##        print(f"QR generation error: {e}")
+##        return None
 
-@app.context_processor
-def inject_nonce():
-    if not hasattr(g, 'nonce'):
-        g.nonce = base64.b64encode(secrets.token_bytes(16)).decode('utf-8')
-    return dict(nonce=g.nonce)
+def clear_pending_invoice(user_id):
+    """Clear pending invoice data"""
+    try:
+        from app.services.session_storage import SessionStorage
+        SessionStorage.clear_data(user_id, 'last_invoice')
+        return True
+    except Exception as e:
+        print(f"Error clearing pending invoice: {e}")
+        return False
 
-@app.context_processor
-def utility_processor():
-    """Add utility functions to all templates"""
-    def now():
-        return datetime.now()
-
-    def today():
-        return datetime.now().date()
-
-    def month_equalto_filter(value, month):
-        """Custom filter for month comparison - FIXED"""
-        try:
-            if hasattr(value, 'month'):
-                return value.month == month
-            elif isinstance(value, str):
-                # Try to parse date string
-                from datetime import datetime as dt
-                # Handle different date formats
-                for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f']:
-                    try:
-                        date_obj = dt.strptime(value, fmt)
-                        return date_obj.month == month
-                    except:
-                        continue
-                return False
-            elif hasattr(value, 'order_date'):
-                # Handle purchase order objects
-                return value.order_date.month == month if hasattr(value.order_date, 'month') else False
-            return False
-        except:
-            return False
-
-    return {
-        'now': now,
-        'today': today,
-        'month_equalto': month_equalto_filter
-    }
-
+def template_exists(template_name):
+    """Check if a template exists using current_app to avoid NameError"""
+    try:
+        from flask import current_app
+        current_app.jinja_env.get_template(template_name)
+        return True
+    except Exception:
+        return False
