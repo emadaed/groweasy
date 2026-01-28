@@ -48,3 +48,38 @@ def process_uploaded_logo(logo_file, max_kb=150, max_width=150, max_height=150):
     except Exception as e:
         logging.error(f"Logo processing FAILED: {e}")
         raise ValueError("Invalid image. Try a simple JPG/PNG under 150KB.")
+
+
+# Fun success messages
+SUCCESS_MESSAGES = {
+    'invoice_created': [
+        "🎉 Invoice created! You're a billing boss!",
+        "💰 Cha-ching! Another invoice done!",
+        "✨ Invoice magic complete!",
+        "🚀 Invoice sent to the moon!",
+        "🎊 You're on fire! Invoice created!"
+    ],
+    'stock_updated': [
+        "📦 Stock updated! Inventory ninja at work!",
+        "✅ Stock levels looking good!",
+        "🎯 Bullseye! Stock updated perfectly!",
+        "💪 Stock management on point!"
+    ],
+    'login': [
+        "🎉 Welcome back, superstar!",
+        "👋 Great to see you again!",
+        "✨ You're logged in! Let's make money!",
+        "🚀 Ready to conquer the day?"
+    ],
+    'product_added': [
+        "📦 Product added! Your inventory grows!",
+        "✨ New product in the house!",
+        "🎉 Inventory expanded successfully!",
+        "💪 Another product conquered!"
+    ]
+}
+
+def random_success_message(category='default'):
+    import random
+    messages = SUCCESS_MESSAGES.get(category, SUCCESS_MESSAGES['invoice_created'])
+    return random.choice(messages)
