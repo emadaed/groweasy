@@ -25,6 +25,8 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from app.services.db import DB_ENGINE
 from app.services.middleware import security_headers
 from app.services.cache import init_cache, get_user_profile_cached
+from app.services.purchases import save_purchase_order, get_purchase_orders, get_suppliers
+
 
 # Global Limiter instance
 limiter = Limiter(key_func=get_remote_address)
@@ -79,39 +81,32 @@ def create_app():
     # --- Global Context Processor ---
     CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
 
-##    @app.context_processor
-##    def inject_template_utilities():
-##        # 1. Internal logic (uses a different variable name to avoid collision)
-##        _current_time = datetime.now()
-##        
-##        # 2. Handle Profile/Currency
-##        currency, symbol = 'PKR', 'Rs.'
-##        if 'user_id' in session:
-##            profile = get_user_profile_cached(session['user_id'])
-##            if profile:
-##                currency = profile.get('preferred_currency', 'PKR')
-##                symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
-##
-##        # 3. Define utility functions internally
-##        def get_now():
-##            return datetime.now()
-##
-##        def get_today():
-##            return datetime.now().date()
-##
-##        # 4. Return everything to templates
-##        # Note: We keep the keys 'now' and 'today' for the templates, 
-##        # but the functions are defined safely.
-##        return dict(
-##            now=_current_time,
-##            today=_current_time.date(),
-##            get_now=get_now,
-##            get_today=get_today,
-##            currency=currency,
-##            currency_symbol=symbol,
-##            nonce=getattr(g, 'nonce', '')
-##        )
+    @app.context_processor
+    def inject_globals():
+        # 1. Use an internal name that doesn't exist anywhere else
+        safe_now_value = datetime.now()
+        
+        # 2. Get profile data
+        currency, symbol = 'PKR', 'Rs.'
+        if 'user_id' in session:
+            try:
+                profile = get_user_profile_cached(session['user_id'])
+                if profile:
+                    currency = profile.get('preferred_currency', 'PKR')
+                    symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
+            except Exception:
+                pass
 
+        # 3. Return the exact keys templates expect
+        # This makes 'now' and 'today' available to HTML 
+        # BUT it does not overwrite the 'datetime' module in  PO route.
+        return {
+            'now': safe_now_value,
+            'today': safe_now_value.date(),
+            'currency': currency,
+            'currency_symbol': symbol,
+            'nonce': getattr(g, 'nonce', '')
+        }
     
     @app.before_request
     def set_nonce():
