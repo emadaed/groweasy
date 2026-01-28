@@ -81,32 +81,65 @@ def create_app():
     # --- Global Context Processor ---
     CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
 
+    #context processor
     @app.context_processor
-    def inject_globals():
-        # 1. Use an internal name that doesn't exist anywhere else
-        safe_now_value = datetime.now()
-        
-        # 2. Get profile data
-        currency, symbol = 'PKR', 'Rs.'
-        if 'user_id' in session:
-            try:
-                profile = get_user_profile_cached(session['user_id'])
-                if profile:
-                    currency = profile.get('preferred_currency', 'PKR')
-                    symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
-            except Exception:
-                pass
+    def inject_currency():
+        """Make currency available in all templates"""
+        currency = 'PKR'
+        symbol = 'Rs.'
 
-        # 3. Return the exact keys templates expect
-        # This makes 'now' and 'today' available to HTML 
-        # BUT it does not overwrite the 'datetime' module in  PO route.
+        if 'user_id' in session:
+            profile = get_user_profile_cached(session['user_id'])
+            if profile:
+                currency = profile.get('preferred_currency', 'PKR')
+                symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
+
+        return dict(currency=currency, currency_symbol=symbol)
+
+    @app.context_processor
+    def inject_nonce():
+        if not hasattr(g, 'nonce'):
+            g.nonce = base64.b64encode(secrets.token_bytes(16)).decode('utf-8')
+        return dict(nonce=g.nonce)
+
+    @app.context_processor
+    def utility_processor():
+        """Add utility functions to all templates"""
+        def now():
+            return datetime.now()
+
+        def today():
+            return datetime.now().date()
+
+        def month_equalto_filter(value, month):
+            """Custom filter for month comparison - FIXED"""
+            try:
+                if hasattr(value, 'month'):
+                    return value.month == month
+                elif isinstance(value, str):
+                    # Try to parse date string
+                    from datetime import datetime as dt
+                    # Handle different date formats
+                    for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f']:
+                        try:
+                            date_obj = dt.strptime(value, fmt)
+                            return date_obj.month == month
+                        except:
+                            continue
+                    return False
+                elif hasattr(value, 'order_date'):
+                    # Handle purchase order objects
+                    return value.order_date.month == month if hasattr(value.order_date, 'month') else False
+                return False
+            except:
+                return False
+
         return {
-            'now': safe_now_value,
-            'today': safe_now_value.date(),
-            'currency': currency,
-            'currency_symbol': symbol,
-            'nonce': getattr(g, 'nonce', '')
+            'now': now,
+            'today': today,
+            'month_equalto': month_equalto_filter
         }
+
     
     @app.before_request
     def set_nonce():
