@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
 import logging
+from app import limiter
 from app.services.auth import verify_user
 from app.services.utils import random_success_message
 
