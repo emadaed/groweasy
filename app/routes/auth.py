@@ -1,5 +1,5 @@
 # app/routes/auth.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template,g, request, redirect, url_for, flash, session
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
 import logging
@@ -40,7 +40,7 @@ def login():
             return render_template('login.html', error='Invalid credentials', nonce=g.nonce)
 
     # GET request - show login form
-    return render_template('login.html', nonce=g.nonce)
+    return render_template('auth.login.html', nonce=g.nonce)
 
 
 # 3. @auth_bp.route('/logout')

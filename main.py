@@ -8,6 +8,7 @@ from app import create_app, limiter
 
 # Local application
 #from fbr_integration import FBRInvoice
+from app.services.db import DB_ENGINE
 from app.services.inventory import InventoryManager
 from app.services.invoice_logic import prepare_invoice_data
 from app.services.invoice_logic_po import prepare_po_data
