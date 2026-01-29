@@ -33,12 +33,12 @@ def login():
             session['session_token'] = session_token
 
             flash(random_success_message('login'), 'success')
-            return redirect(url_for('auth.dashboard'))
+            return redirect(url_for('dashboard'))
         else:
             return render_template('login.html', error='Invalid credentials', nonce=g.nonce)
 
     # GET request - show login form
-    return render_template('auth.login.html', nonce=g.nonce)
+    return render_template('login.html', nonce=g.nonce)
 
 
 # 3. @auth_bp.route('/logout')
@@ -46,5 +46,5 @@ def login():
 def logout():
     session.clear()
     flash('You have been logged out successfully.', 'info')
-    return redirect(url_for('auth.login'))  # Changed from 'home' to 'login'
+    return redirect(url_for('login'))  # Changed from 'home' to 'login'
 
