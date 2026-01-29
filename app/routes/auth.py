@@ -46,5 +46,5 @@ def login():
 def logout():
     session.clear()
     flash('You have been logged out successfully.', 'info')
-    return redirect(url_for('login'))  # Changed from 'home' to 'login'
+    return redirect(url_for('auth.login'))  # Changed from 'home' to 'login'
 
