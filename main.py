@@ -1,4 +1,3 @@
-
 # ============================================================================
 # main.py - COMPLETE FIXED VERSION 29--01-2026 12:23 AM
 # ============================================================================
@@ -38,11 +37,7 @@ CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 
 app = create_app()
 
 
-
-# Helper functions
-
-
-# password reset
+# password reset- Auth
 @app.route("/forgot_password", methods=['GET', 'POST'])
 @limiter.limit("3 per hour")
 def forgot_password():
@@ -61,7 +56,7 @@ def forgot_password():
             flash('❌ No account found with this email address.', 'error')
     return render_template('forgot_password.html', nonce=g.nonce)
 
-#PW token
+#PW token -Auth
 @app.route("/reset_password/<token>", methods=['GET', 'POST'])
 def reset_password(token):
     """Password reset page (placeholder)"""
@@ -69,7 +64,7 @@ def reset_password(token):
     flash('Password reset functionality coming soon!', 'info')
     return redirect(url_for('login'))
 
-# home
+# home -Auth
 @app.route('/')
 def home():
     """Home page - redirect to login or dashboard"""
@@ -103,7 +98,7 @@ def create_invoice():
                          prefill_data=prefill_data,
                          nonce=g.nonce)
 
-#create po
+#create po = 1
 @app.route("/create_purchase_order")
 def create_purchase_order():
     if 'user_id' not in session:
@@ -128,7 +123,7 @@ def create_purchase_order():
                          today=today_str,
                          nonce=g.nonce)
 
-#create po process
+#create po process ==2 
 @app.route('/create_po_process', methods=['POST'])
 @limiter.limit("10 per minute")
 def create_po_process():
@@ -181,7 +176,7 @@ def create_po_process():
         flash("❌ An unexpected error occurred", "error")
         return redirect(url_for('create_purchase_order'))
 
-# po preview
+# po preview =3 
 @app.route('/po/preview/<po_number>')
 def po_preview(po_number):
     """Final Preview & Print - with full product enrichment"""
@@ -247,7 +242,7 @@ def po_preview(po_number):
         flash("Error loading purchase order", "error")
         return redirect(url_for('purchase_orders'))
 
-# GRN - Goods Received Note (Receive Purchase Order)
+# GRN - Goods Received Note (Receive Purchase Order) 4
 @app.route("/po/mark_received/<po_number>", methods=['GET', 'POST'])
 def mark_po_received(po_number):
     """Handle receiving goods for an existing Purchase Order"""
@@ -333,13 +328,13 @@ def email_po_to_supplier(po_number):
 
 
 
-# Print preview
+# Print preview -5
 @app.route('/po/print/<po_number>')
 def print_po_preview(po_number):
     """Print preview for PO"""
     return redirect(url_for('po_preview', po_number=po_number))
 
-# po api
+# po api -6
 @app.route('/api/purchase_order/<po_number>/complete', methods=['POST'])
 def complete_purchase_order(po_number):
     """Mark PO as completed - API endpoint"""
@@ -358,7 +353,7 @@ def complete_purchase_order(po_number):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# PO cancel endpoint
+# PO cancel endpoint -1/7
 @app.route('/api/purchase_order/<po_number>/cancel', methods=['POST'])
 def cancel_purchase_order(po_number):
     """Cancel purchase order"""
@@ -395,6 +390,7 @@ def cancel_purchase_order(po_number):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Debug
 @app.route('/debug')
 def debug():
     """Debug route to check what's working"""
@@ -405,7 +401,7 @@ def debug():
     }
     return jsonify(debug_info)
 
-# INVENTORY
+# INVENTORY =1
 @app.route("/inventory")
 def inventory():
     if 'user_id' not in session:
@@ -431,7 +427,7 @@ def inventory():
                          low_stock_alerts=low_stock_alerts,
                          nonce=g.nonce)
 
-# inventory reports - SIMPLIFIED TO AVOID ERRORS
+# inventory reports - SIMPLIFIED TO AVOID ERRORS =2
 @app.route("/inventory_reports")
 def inventory_reports():
     """Inventory analytics and reports dashboard - SIMPLIFIED"""
@@ -477,6 +473,7 @@ def inventory_reports():
         flash("Reports temporarily unavailable", "info")
         return redirect(url_for('inventory'))
 
+#add products = 3
 @app.route("/add_product", methods=['POST'])
 def add_product():
     """Add new product to inventory"""
@@ -517,7 +514,7 @@ def add_product():
 
     return redirect(url_for('inventory'))
 
-#delete
+#delete 4
 @app.route("/delete_product", methods=['POST'])
 def delete_product():
     """Remove product from inventory with audit trail"""
@@ -541,7 +538,7 @@ def delete_product():
 
     return redirect(url_for('inventory'))
 
-# API inventory items
+# API inventory items 5
 @app.route("/api/inventory_items")
 def get_inventory_items_api():
     """API endpoint for inventory items (for invoice form)"""
@@ -565,7 +562,7 @@ def get_inventory_items_api():
 
     return jsonify(inventory_data)
 
-# stock adjustment - FINAL WORKING VERSION
+# stock adjustment - FINAL WORKING VERSION 6
 @app.route("/adjust_stock_audit", methods=['POST'])
 @limiter.limit("10 per minute")
 def adjust_stock_audit():
@@ -652,7 +649,7 @@ def adjust_stock_audit():
         flash('❌ Error updating product', 'error')
         return redirect(url_for('inventory'))
 
-# inventory report
+# inventory report =7
 @app.route("/download_inventory_report")
 def download_inventory_report():
     """Download inventory as CSV"""
@@ -689,7 +686,7 @@ def download_inventory_report():
         headers={"Content-Disposition": "attachment;filename=inventory_report.csv"}
     )
 
-#SETTINGS
+#SETTINGS -1
 @app.route("/settings", methods=['GET', 'POST'])
 def settings():
     if 'user_id' not in session:
@@ -749,7 +746,7 @@ def settings():
 
     return render_template("settings.html", user_profile=user_profile, nonce=g.nonce)
 
-#device management
+#device management - 2
 @app.route("/devices")
 def devices():
     """Manage active devices"""
@@ -764,7 +761,7 @@ def devices():
                          current_token=session.get('session_token'),
                          nonce=g.nonce)
 
-# revoke tokens
+# revoke tokens =3
 @app.route("/revoke_device/<token>")
 def revoke_device(token):
     """Revoke specific device session"""
@@ -782,7 +779,7 @@ def revoke_device(token):
 
     return redirect(url_for('devices'))
 
-# revoke devices
+# revoke devices =4
 @app.route("/revoke_all_devices")
 def revoke_all_devices():
     """Revoke all other sessions"""
@@ -795,37 +792,37 @@ def revoke_all_devices():
     flash('✅ All other devices logged out', 'success')
     return redirect(url_for('devices'))
 
-# Login
-@app.route("/login", methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
-def login():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        user_id = verify_user(email, password)
-        if user_id:
-            from app.services.session_manager import SessionManager
-
-            # Check location restrictions
-            if not SessionManager.check_location_restrictions(user_id, request.remote_addr):
-                flash('❌ Login not allowed from this location', 'error')
-                return render_template('login.html', nonce=g.nonce)
-
-            # Create secure session
-            session_token = SessionManager.create_session(user_id, request)
-
-            session['user_id'] = user_id
-            session['user_email'] = email
-            session['session_token'] = session_token
-
-            flash(random_success_message('login'), 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            return render_template('login.html', error='Invalid credentials', nonce=g.nonce)
-
-    # GET request - show login form
-    return render_template('login.html', nonce=g.nonce)
+### Login
+##@app.route("/login", methods=['GET', 'POST'])
+##@limiter.limit("5 per minute")
+##def login():
+##    if request.method == 'POST':
+##        email = request.form.get('email')
+##        password = request.form.get('password')
+##
+##        user_id = verify_user(email, password)
+##        if user_id:
+##            from app.services.session_manager import SessionManager
+##
+##            # Check location restrictions
+##            if not SessionManager.check_location_restrictions(user_id, request.remote_addr):
+##                flash('❌ Login not allowed from this location', 'error')
+##                return render_template('login.html', nonce=g.nonce)
+##
+##            # Create secure session
+##            session_token = SessionManager.create_session(user_id, request)
+##
+##            session['user_id'] = user_id
+##            session['user_email'] = email
+##            session['session_token'] = session_token
+##
+##            flash(random_success_message('login'), 'success')
+##            return redirect(url_for('dashboard'))
+##        else:
+##            return render_template('login.html', error='Invalid credentials', nonce=g.nonce)
+##
+##    # GET request - show login form
+##    return render_template('login.html', nonce=g.nonce)
 
 # leagal pages
 @app.route("/terms")
@@ -840,7 +837,7 @@ def privacy():
 def about():
     return render_template("about.html", nonce=g.nonce)
 
-# register
+# register -Auth
 @app.route("/register", methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def register():
@@ -871,7 +868,7 @@ def register():
     # GET request - show form
     return render_template('register.html', nonce=g.nonce)
 
-# dashboard
+# dashboard -Auth
 @app.route("/dashboard")
 def dashboard():
     if 'user_id' not in session:
@@ -906,19 +903,19 @@ def dashboard():
         nonce=g.nonce
     )
 
-# logout
-@app.route("/logout")
-def logout():
-    session.clear()
-    flash('You have been logged out successfully.', 'info')
-    return redirect(url_for('login'))  # Changed from 'home' to 'login'
+# logout -Auth
+##@app.route("/logout")
+##def logout():
+##    session.clear()
+##    flash('You have been logged out successfully.', 'info')
+##    return redirect(url_for('login'))  # Changed from 'home' to 'login'
 
 # donate
 @app.route("/donate")
 def donate():
     return render_template("donate.html", nonce=g.nonce)
 
-# preview and download
+# 1 preview and download
 from flask.views import MethodView
 from app.services.services import InvoiceService
 from app.services.number_generator import NumberGenerator
@@ -1018,7 +1015,7 @@ class InvoiceView(MethodView):
 
 
 
-#invoice/download/<document_number>')
+# 2 invoice/download/<document_number>')
 @app.route('/invoice/download/<document_number>')
 @limiter.limit("10 per minute")
 def download_document(document_number):
@@ -1153,7 +1150,7 @@ def download_document(document_number):
         flash("❌ Download failed. Please try again.", 'error')
         return redirect(url_for('invoice_history' if document_type != 'purchase_order' else 'purchase_orders'))
 
-# NEW: Direct PDF Creation Functions
+# NEW: Direct PDF Creation Functions =1/8
 def create_purchase_order_pdf_direct(data):
     """Create purchase order PDF directly from data"""
     buffer = io.BytesIO()
@@ -1625,7 +1622,7 @@ def invoice_history():
         nonce=g.nonce
     )
 
-# purchase order - FIXED VERSION
+# purchase order - FIXED VERSION =1/9
 @app.route("/purchase_orders")
 def purchase_orders():
     """Purchase order history with download options - FIXED"""
