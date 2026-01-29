@@ -30,7 +30,7 @@ def inventory():
 
     low_stock_alerts = InventoryManager.get_low_stock_alerts(user_id)
 
-    return render_template("inventory.html",
+    return render_template("inventory.inventory.html",
                          inventory_items=inventory_items,
                          low_stock_alerts=low_stock_alerts,
                          nonce=g.nonce)

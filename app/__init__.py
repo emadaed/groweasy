@@ -98,6 +98,19 @@ def create_app():
 
         return dict(currency=currency, currency_symbol=symbol)
 
+
+    # --- Custom Jinja Filters ---
+    @app.template_filter('escapejs')
+    def escapejs_filter(s):
+        if not s:
+            return ""
+        # Simple escape logic for JS strings
+        return (str(s).replace('\\', '\\\\')
+                .replace("'", "\\'")
+                .replace('"', '\\"')
+                .replace('\n', '\\n')
+                .replace('\r', '\\r'))
+
     @app.context_processor
     def inject_nonce():
         if not hasattr(g, 'nonce'):
