@@ -62,7 +62,7 @@ def reset_password(token):
     """Password reset page (placeholder)"""
     # In production, you'd verify the token
     flash('Password reset functionality coming soon!', 'info')
-    return redirect(url_for('login'))
+    return redirect(url_for('auth.login'))
 
 # home -Auth
 @app.route('/')
@@ -71,14 +71,14 @@ def home():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     else:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
 # create invoice
 @app.route('/create_invoice')
 def create_invoice():
     """Dedicated route for creating sales invoices ONLY"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     prefill_data = {}
     user_profile = get_user_profile_cached(session['user_id'])
@@ -102,7 +102,7 @@ def create_invoice():
 @app.route("/create_purchase_order")
 def create_purchase_order():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
 
@@ -128,7 +128,7 @@ def create_purchase_order():
 @limiter.limit("10 per minute")
 def create_po_process():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
 
@@ -181,7 +181,7 @@ def create_po_process():
 def po_preview(po_number):
     """Final Preview & Print - with full product enrichment"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
 
@@ -247,7 +247,7 @@ def po_preview(po_number):
 def mark_po_received(po_number):
     """Handle receiving goods for an existing Purchase Order"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
 
@@ -405,7 +405,7 @@ def debug():
 @app.route("/inventory")
 def inventory():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
 
@@ -432,7 +432,7 @@ def inventory():
 def inventory_reports():
     """Inventory analytics and reports dashboard - SIMPLIFIED"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     try:
         from app.services.reports import InventoryReports
@@ -478,7 +478,7 @@ def inventory_reports():
 def add_product():
     """Add new product to inventory"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.inventory import InventoryManager
 
@@ -519,7 +519,7 @@ def add_product():
 def delete_product():
     """Remove product from inventory with audit trail"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.inventory import InventoryManager
 
@@ -567,7 +567,7 @@ def get_inventory_items_api():
 @limiter.limit("10 per minute")
 def adjust_stock_audit():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
     product_id = request.form.get('product_id')
@@ -654,7 +654,7 @@ def adjust_stock_audit():
 def download_inventory_report():
     """Download inventory as CSV"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.inventory import InventoryManager
     import csv
@@ -690,7 +690,7 @@ def download_inventory_report():
 @app.route("/settings", methods=['GET', 'POST'])
 def settings():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.auth import get_user_profile, update_user_profile, change_user_password, verify_user
 
@@ -751,7 +751,7 @@ def settings():
 def devices():
     """Manage active devices"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.session_manager import SessionManager
     active_sessions = SessionManager.get_active_sessions(session['user_id'])
@@ -766,7 +766,7 @@ def devices():
 def revoke_device(token):
     """Revoke specific device session"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.session_manager import SessionManager
 
@@ -784,7 +784,7 @@ def revoke_device(token):
 def revoke_all_devices():
     """Revoke all other sessions"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.session_manager import SessionManager
     SessionManager.revoke_all_sessions(session['user_id'], except_token=session.get('session_token'))
