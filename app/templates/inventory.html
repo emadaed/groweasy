@@ -183,7 +183,7 @@
                 <h5 class="modal-title">➕ Add New Product</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('add_product') }}">
+            <form method="POST" action="{{ url_for('inventory.add_product') }}">
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
@@ -327,7 +327,7 @@
                 <h5 class="modal-title">📊 Stock & Price Adjustment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('adjust_stock_audit') }}">
+            <form method="POST" action="{{ url_for('inventory.adjust_stock_audit') }}">
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="editProductId">
 
