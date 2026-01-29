@@ -792,45 +792,6 @@ def revoke_all_devices():
     flash('✅ All other devices logged out', 'success')
     return redirect(url_for('devices'))
 
-### Login
-##@app.route("/login", methods=['GET', 'POST'])
-##@limiter.limit("5 per minute")
-##def login():
-##    if request.method == 'POST':
-##        email = request.form.get('email')
-##        password = request.form.get('password')
-##
-##        user_id = verify_user(email, password)
-##        if user_id:
-##            from app.services.session_manager import SessionManager
-##
-##            # Check location restrictions
-##            if not SessionManager.check_location_restrictions(user_id, request.remote_addr):
-##                flash('❌ Login not allowed from this location', 'error')
-##                return render_template('login.html', nonce=g.nonce)
-##
-##            # Create secure session
-##            session_token = SessionManager.create_session(user_id, request)
-##
-##            session['user_id'] = user_id
-##            session['user_email'] = email
-##            session['session_token'] = session_token
-##
-##            flash(random_success_message('login'), 'success')
-##            return redirect(url_for('dashboard'))
-##        else:
-##            return render_template('login.html', error='Invalid credentials', nonce=g.nonce)
-##
-##    # GET request - show login form
-##    return render_template('login.html', nonce=g.nonce)
-##
-###logout -Auth
-##@app.route("/logout")
-##def logout():
-##    session.clear()
-##    flash('You have been logged out successfully.', 'info')
-##    return redirect(url_for('login'))  # Changed from 'home' to 'login'
-
 # leagal pages
 @app.route("/terms")
 def terms():
@@ -867,7 +828,7 @@ def register():
 
         if user_created:
             flash('✅ Account created! Please login.', 'success')
-            return redirect(url_for('login'))
+            return redirect(url_for('auth.login'))
         else:
             flash('❌ User already exists or registration failed', 'error')
             return render_template('register.html', nonce=g.nonce)
@@ -879,7 +840,7 @@ def register():
 @app.route("/dashboard")
 def dashboard():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.auth import get_business_summary, get_client_analytics
 
@@ -928,7 +889,7 @@ class InvoiceView(MethodView):
 
     def get(self):
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            return redirect(url_for('auth.login'))
 
         if 'last_invoice_ref' in session and request.args.get('preview'):
             from app.services.session_storage import SessionStorage
@@ -961,7 +922,7 @@ class InvoiceView(MethodView):
         POST /invoice/process - Create invoice or purchase order using service layer
         """
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            return redirect(url_for('auth.login'))
 
         user_id = session['user_id']
         invoice_type = request.form.get('invoice_type', 'S')
@@ -1025,7 +986,7 @@ def download_document(document_number):
     Dedicated endpoint for document downloads - FIXED VERSION
     """
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
     document_type = request.args.get('type', 'invoice')  # 'invoice' or 'purchase_order'
@@ -1562,7 +1523,7 @@ def cancel_invoice():
 def invoice_history():
     """Invoice history and management page"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
@@ -1629,7 +1590,7 @@ def invoice_history():
 def purchase_orders():
     """Purchase order history with download options - FIXED"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     try:
         from app.services.purchases import get_purchase_orders
@@ -1706,7 +1667,7 @@ def get_purchase_order_details(po_number):
 def suppliers():
     """Supplier management"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.purchases import get_suppliers
     supplier_list = get_suppliers(session['user_id'])
@@ -1720,7 +1681,7 @@ def suppliers():
 def customers():
     """Customer management page"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.auth import get_customers
     customer_list = get_customers(session['user_id'])
@@ -1732,7 +1693,7 @@ def customers():
 def expenses():
     """Expense tracking page"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.auth import get_expenses, get_expense_summary
     from datetime import datetime
@@ -1752,7 +1713,7 @@ def expenses():
 def add_expense():
     """Add new expense"""
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     from app.services.auth import save_expense
 
