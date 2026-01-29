@@ -824,7 +824,7 @@ def login():
     # GET request - show login form
     return render_template('login.html', nonce=g.nonce)
 
- logout -Auth
+#logout -Auth
 @app.route("/logout")
 def logout():
     session.clear()
