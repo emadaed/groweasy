@@ -13,7 +13,7 @@
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
                 ➕ Add New Product
             </button>
-            <a href="{{ url_for('download_inventory_report') }}" class="btn btn-success">
+            <a href="{{ url_for('inventory.download_inventory_report') }}" class="btn btn-success">
                 📊 Export CSV
             </a>
         </div>
@@ -283,7 +283,7 @@
                 <h5 class="modal-title">🗑️ Remove Product</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('delete_product') }}">
+            <form method="POST" action="{{ url_for('inventory.delete_product') }}">
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="deleteProductId">
                     <div class="alert alert-warning">

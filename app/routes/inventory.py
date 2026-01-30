@@ -30,7 +30,7 @@ def inventory():
 
     low_stock_alerts = InventoryManager.get_low_stock_alerts(user_id)
 
-    return render_template("inventory.inventory.html",
+    return render_template("inventory.html",
                          inventory_items=inventory_items,
                          low_stock_alerts=low_stock_alerts,
                          nonce=g.nonce)
@@ -120,7 +120,7 @@ def add_product():
     else:
         flash('Error adding product. SKU might already exist.', 'error')
 
-    return redirect(url_for('inventory'))
+    return redirect(url_for('inventory.inventory'))
 
 #delete 4
 @inventory_bp.route("/delete_product", methods=['POST'])
@@ -144,7 +144,7 @@ def delete_product():
     else:
         flash('❌ Error removing product', 'error')
 
-    return redirect(url_for('inventory'))
+    return redirect(url_for('inventory.inventory'))
 
 # API inventory items 5
 @inventory_bp.route("/api/inventory_items")
@@ -217,7 +217,7 @@ def adjust_stock_audit():
             movement_type = 'adjustment'
         else:
             flash('❌ Invalid adjustment type', 'error')
-            return redirect(url_for('inventory'))
+            return redirect(url_for('inventory.inventory'))
 
         # Update stock using delta
         success = InventoryManager.update_stock_delta(
@@ -250,7 +250,7 @@ def adjust_stock_audit():
         else:
             flash('❌ Failed to update stock (negative not allowed)', 'error')
 
-        return redirect(url_for('inventory'))
+        return redirect(url_for('inventory.inventory'))
 
     except Exception as e:
         app.logger.error(f"Stock adjustment error: {e}", exc_info=True)
