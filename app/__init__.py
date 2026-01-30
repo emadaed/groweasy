@@ -80,6 +80,8 @@ def create_app():
     app.register_blueprint(main_bp)
     from app.routes.crm import crm_bp
     app.register_blueprint(crm_bp)
+    from app.routes.finance import finance_bp
+    app.register_blueprint(finance_bp)
 
 
     

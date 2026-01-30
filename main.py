@@ -147,49 +147,7 @@ def dashboard():
 
 # Finance.py
 
-# EXPENSE TRACKING ROUTES
-@app.route("/expenses")
-def expenses():
-    """Expense tracking page"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import get_expenses, get_expense_summary
-    from datetime import datetime
-
-    expense_list = get_expenses(session['user_id'])
-    expense_summary = get_expense_summary(session['user_id'])
-    today_date = datetime.now().strftime('%Y-%m-%d')
-
-    return render_template("expenses.html",
-                         expenses=expense_list,
-                         expense_summary=expense_summary,
-                         today_date=today_date,
-                         nonce=g.nonce)
-
-#add expense
-@app.route("/add_expense", methods=['POST'])
-def add_expense():
-    """Add new expense"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import save_expense
-
-    expense_data = {
-        'description': request.form.get('description'),
-        'amount': float(request.form.get('amount', 0)),
-        'category': request.form.get('category'),
-        'expense_date': request.form.get('expense_date'),
-        'notes': request.form.get('notes', '')
-    }
-
-    if save_expense(session['user_id'], expense_data):
-        flash('Expense added successfully!', 'success')
-    else:
-        flash('Error adding expense', 'error')
-
-    return redirect(url_for('expenses'))
+#CRM
 
 
 
