@@ -78,6 +78,8 @@ def create_app():
     app.register_blueprint(inventory_bp)
     from app.routes.main import main_bp
     app.register_blueprint(main_bp)
+    from app.routes.crm import crm_bp
+    app.register_blueprint(crm_bp)
 
 
     

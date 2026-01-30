@@ -144,32 +144,6 @@ def dashboard():
 
 
 #CRM
-# supplier management
-@app.route("/suppliers")
-def suppliers():
-    """Supplier management"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.purchases import get_suppliers
-    supplier_list = get_suppliers(session['user_id'])
-
-    return render_template("suppliers.html",
-                         suppliers=supplier_list,
-                         nonce=g.nonce)
-
-# CUSTOMER MANAGEMENT ROUTES
-@app.route("/customers")
-def customers():
-    """Customer management page"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import get_customers
-    customer_list = get_customers(session['user_id'])
-
-    return render_template("customers.html", customers=customer_list, nonce=g.nonce)
-
 
 # Finance.py
 
