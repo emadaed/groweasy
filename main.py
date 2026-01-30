@@ -37,7 +37,7 @@ CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 
 app = create_app()
 
 
-# password reset- Auth
+# 1 password reset- Auth
 @app.route("/forgot_password", methods=['GET', 'POST'])
 @limiter.limit("3 per hour")
 def forgot_password():
@@ -56,7 +56,7 @@ def forgot_password():
             flash('❌ No account found with this email address.', 'error')
     return render_template('forgot_password.html', nonce=g.nonce)
 
-#PW token -Auth
+# 2 PW token -Auth
 @app.route("/reset_password/<token>", methods=['GET', 'POST'])
 def reset_password(token):
     """Password reset page (placeholder)"""
@@ -64,7 +64,7 @@ def reset_password(token):
     flash('Password reset functionality coming soon!', 'info')
     return redirect(url_for('auth.login'))
 
-# home -Auth
+# 3 home -Auth
 @app.route('/')
 def home():
     """Home page - redirect to login or dashboard"""
@@ -72,6 +72,199 @@ def home():
         return redirect(url_for('dashboard'))
     else:
         return redirect(url_for('auth.login'))
+
+
+# register -Auth
+@app.route("/register", methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
+def register():
+    if request.method == 'POST':
+        # Validate terms acceptance
+        if not request.form.get('agree_terms'):
+            flash('❌ You must agree to Terms of Service to register', 'error')
+            return render_template('register.html', nonce=g.nonce)
+
+        email = request.form.get('email')
+        password = request.form.get('password')
+        company_name = request.form.get('company_name', '')
+
+        # 🆕 ADD DEBUG LOGGING
+        print(f"📝 Attempting to register user: {email}")
+        print(f"🔑 Password length: {len(password) if password else 0}")
+
+        user_created = create_user(email, password, company_name)
+        print(f"✅ User creation result: {user_created}")
+
+        if user_created:
+            flash('✅ Account created! Please login.', 'success')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('❌ User already exists or registration failed', 'error')
+            return render_template('register.html', nonce=g.nonce)
+
+    # GET request - show form
+    return render_template('register.html', nonce=g.nonce)
+
+
+
+# dashboard
+@app.route("/dashboard")
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    from app.services.auth import get_business_summary, get_client_analytics
+
+    with DB_ENGINE.connect() as conn:
+        total_products = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items
+            WHERE user_id = :user_id AND is_active = TRUE
+        """), {"user_id": session['user_id']}).scalar()
+
+        low_stock_items = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items
+            WHERE user_id = :user_id AND current_stock <= min_stock_level AND current_stock > 0
+        """), {"user_id": session['user_id']}).scalar()
+
+        out_of_stock_items = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items
+            WHERE user_id = :user_id AND current_stock = 0
+        """), {"user_id": session['user_id']}).scalar()
+
+    return render_template(
+        "dashboard.html",
+        user_email=session['user_email'],
+        get_business_summary=get_business_summary,
+        get_client_analytics=get_client_analytics,
+        total_products=total_products,
+        low_stock_items=low_stock_items,
+        out_of_stock_items=out_of_stock_items,
+        nonce=g.nonce
+    )
+
+
+#CRM
+# supplier management
+@app.route("/suppliers")
+def suppliers():
+    """Supplier management"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    from app.services.purchases import get_suppliers
+    supplier_list = get_suppliers(session['user_id'])
+
+    return render_template("suppliers.html",
+                         suppliers=supplier_list,
+                         nonce=g.nonce)
+
+# CUSTOMER MANAGEMENT ROUTES
+@app.route("/customers")
+def customers():
+    """Customer management page"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    from app.services.auth import get_customers
+    customer_list = get_customers(session['user_id'])
+
+    return render_template("customers.html", customers=customer_list, nonce=g.nonce)
+
+
+# Finance.py
+
+# EXPENSE TRACKING ROUTES
+@app.route("/expenses")
+def expenses():
+    """Expense tracking page"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    from app.services.auth import get_expenses, get_expense_summary
+    from datetime import datetime
+
+    expense_list = get_expenses(session['user_id'])
+    expense_summary = get_expense_summary(session['user_id'])
+    today_date = datetime.now().strftime('%Y-%m-%d')
+
+    return render_template("expenses.html",
+                         expenses=expense_list,
+                         expense_summary=expense_summary,
+                         today_date=today_date,
+                         nonce=g.nonce)
+
+#add expense
+@app.route("/add_expense", methods=['POST'])
+def add_expense():
+    """Add new expense"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    from app.services.auth import save_expense
+
+    expense_data = {
+        'description': request.form.get('description'),
+        'amount': float(request.form.get('amount', 0)),
+        'category': request.form.get('category'),
+        'expense_date': request.form.get('expense_date'),
+        'notes': request.form.get('notes', '')
+    }
+
+    if save_expense(session['user_id'], expense_data):
+        flash('Expense added successfully!', 'success')
+    else:
+        flash('Error adding expense', 'error')
+
+    return redirect(url_for('expenses'))
+
+
+
+
+
+# Debug
+@app.route('/debug')
+def debug():
+    """Debug route to check what's working"""
+    debug_info = {
+        'session': dict(session),
+        'routes': [str(rule) for rule in app.url_map.iter_rules()],
+        'user_authenticated': bool(session.get('user_id'))
+    }
+    return jsonify(debug_info)
+
+#Backup Route (Manual Trigger)
+@app.route('/admin/backup')
+def admin_backup():
+    """Manual database backup trigger (admin only)"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    # Simple admin check (first user is admin)
+    if session['user_id'] != 1:
+        return jsonify({'error': 'Admin only'}), 403
+
+    try:
+        import subprocess
+        result = subprocess.run(['python', 'backup_db.py'],
+                              capture_output=True,
+                              text=True,
+                              timeout=30)
+
+        if result.returncode == 0:
+            return jsonify({
+                'success': True,
+                'message': 'Backup created successfully',
+                'output': result.stdout
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.stderr
+            }), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # create invoice
 @app.route('/create_invoice')
@@ -327,7 +520,6 @@ def email_po_to_supplier(po_number):
     return jsonify({'success': True, 'message': 'Email queued'})
 
 
-
 # Print preview -5
 @app.route('/po/print/<po_number>')
 def print_po_preview(po_number):
@@ -390,19 +582,10 @@ def cancel_purchase_order(po_number):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Debug
-@app.route('/debug')
-def debug():
-    """Debug route to check what's working"""
-    debug_info = {
-        'session': dict(session),
-        'routes': [str(rule) for rule in app.url_map.iter_rules()],
-        'user_authenticated': bool(session.get('user_id'))
-    }
-    return jsonify(debug_info)
+
 
 #inventory 7
-
+#SETTINGS
 
 #SETTINGS -1
 @app.route("/settings", methods=['GET', 'POST'])
@@ -510,91 +693,7 @@ def revoke_all_devices():
     flash('✅ All other devices logged out', 'success')
     return redirect(url_for('devices'))
 
-# leagal pages
-@app.route("/terms")
-def terms():
-    return render_template("terms.html", nonce=g.nonce)
 
-@app.route("/privacy")
-def privacy():
-    return render_template("privacy.html", nonce=g.nonce)
-
-@app.route("/about")
-def about():
-    return render_template("about.html", nonce=g.nonce)
-
-# register -Auth
-@app.route("/register", methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
-def register():
-    if request.method == 'POST':
-        # Validate terms acceptance
-        if not request.form.get('agree_terms'):
-            flash('❌ You must agree to Terms of Service to register', 'error')
-            return render_template('register.html', nonce=g.nonce)
-
-        email = request.form.get('email')
-        password = request.form.get('password')
-        company_name = request.form.get('company_name', '')
-
-        # 🆕 ADD DEBUG LOGGING
-        print(f"📝 Attempting to register user: {email}")
-        print(f"🔑 Password length: {len(password) if password else 0}")
-
-        user_created = create_user(email, password, company_name)
-        print(f"✅ User creation result: {user_created}")
-
-        if user_created:
-            flash('✅ Account created! Please login.', 'success')
-            return redirect(url_for('auth.login'))
-        else:
-            flash('❌ User already exists or registration failed', 'error')
-            return render_template('register.html', nonce=g.nonce)
-
-    # GET request - show form
-    return render_template('register.html', nonce=g.nonce)
-
-# dashboard -Auth
-@app.route("/dashboard")
-def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import get_business_summary, get_client_analytics
-
-    with DB_ENGINE.connect() as conn:
-        total_products = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items
-            WHERE user_id = :user_id AND is_active = TRUE
-        """), {"user_id": session['user_id']}).scalar()
-
-        low_stock_items = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items
-            WHERE user_id = :user_id AND current_stock <= min_stock_level AND current_stock > 0
-        """), {"user_id": session['user_id']}).scalar()
-
-        out_of_stock_items = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items
-            WHERE user_id = :user_id AND current_stock = 0
-        """), {"user_id": session['user_id']}).scalar()
-
-    return render_template(
-        "dashboard.html",
-        user_email=session['user_email'],
-        get_business_summary=get_business_summary,
-        get_client_analytics=get_client_analytics,
-        total_products=total_products,
-        low_stock_items=low_stock_items,
-        out_of_stock_items=out_of_stock_items,
-        nonce=g.nonce
-    )
-
-
-
-# donate
-@app.route("/donate")
-def donate():
-    return render_template("donate.html", nonce=g.nonce)
 
 # 1 preview and download
 from flask.views import MethodView
@@ -1380,165 +1479,6 @@ def get_purchase_order_details(po_number):
         current_app.logger.error(f"PO details error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-# supplier management
-@app.route("/suppliers")
-def suppliers():
-    """Supplier management"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.purchases import get_suppliers
-    supplier_list = get_suppliers(session['user_id'])
-
-    return render_template("suppliers.html",
-                         suppliers=supplier_list,
-                         nonce=g.nonce)
-
-# CUSTOMER MANAGEMENT ROUTES
-@app.route("/customers")
-def customers():
-    """Customer management page"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import get_customers
-    customer_list = get_customers(session['user_id'])
-
-    return render_template("customers.html", customers=customer_list, nonce=g.nonce)
-
-# EXPENSE TRACKING ROUTES
-@app.route("/expenses")
-def expenses():
-    """Expense tracking page"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import get_expenses, get_expense_summary
-    from datetime import datetime
-
-    expense_list = get_expenses(session['user_id'])
-    expense_summary = get_expense_summary(session['user_id'])
-    today_date = datetime.now().strftime('%Y-%m-%d')
-
-    return render_template("expenses.html",
-                         expenses=expense_list,
-                         expense_summary=expense_summary,
-                         today_date=today_date,
-                         nonce=g.nonce)
-
-#add expense
-@app.route("/add_expense", methods=['POST'])
-def add_expense():
-    """Add new expense"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import save_expense
-
-    expense_data = {
-        'description': request.form.get('description'),
-        'amount': float(request.form.get('amount', 0)),
-        'category': request.form.get('category'),
-        'expense_date': request.form.get('expense_date'),
-        'notes': request.form.get('notes', '')
-    }
-
-    if save_expense(session['user_id'], expense_data):
-        flash('Expense added successfully!', 'success')
-    else:
-        flash('Error adding expense', 'error')
-
-    return redirect(url_for('expenses'))
-
-#Backup Route (Manual Trigger)
-@app.route('/admin/backup')
-def admin_backup():
-    """Manual database backup trigger (admin only)"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    # Simple admin check (first user is admin)
-    if session['user_id'] != 1:
-        return jsonify({'error': 'Admin only'}), 403
-
-    try:
-        import subprocess
-        result = subprocess.run(['python', 'backup_db.py'],
-                              capture_output=True,
-                              text=True,
-                              timeout=30)
-
-        if result.returncode == 0:
-            return jsonify({
-                'success': True,
-                'message': 'Backup created successfully',
-                'output': result.stdout
-            }), 200
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.stderr
-            }), 500
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Health status
-@app.route('/health')
-def health_check():
-    try:
-        with DB_ENGINE.connect() as conn:
-            user_count = conn.execute(text("SELECT COUNT(*) FROM users")).scalar()
-            invoice_count = conn.execute(text("SELECT COUNT(*) FROM user_invoices")).scalar()
-            product_count = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE is_active = TRUE")).scalar()
-
-        import shutil
-        total, used, free = shutil.disk_usage(".")
-        disk_free_gb = free // (2**30)
-
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': datetime.now().isoformat(),
-            'database': 'connected',
-            'users': user_count,
-            'invoices': invoice_count,
-            'products': product_count,
-            'disk_free_gb': disk_free_gb,
-            'version': '1.0.0'
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-#API status
-@app.route('/api/status')
-def system_status():
-    """Detailed system status"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    try:
-        with DB_ENGINE.connect() as conn:
-            total_users = conn.execute(text("SELECT COUNT(*) FROM users")).scalar()
-            total_invoices = conn.execute(text("SELECT COUNT(*) FROM user_invoices")).scalar()
-            total_products = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE is_active = TRUE")).scalar()
-
-        return jsonify({
-            'status': 'operational',
-            'stats': {
-                'total_users': total_users or 0,
-                'total_invoices': total_invoices or 0,
-                'total_products': total_products or 0
-            },
-            'timestamp': datetime.now().isoformat()
-        }), 200
-
-    except Exception as e:
-        print(f"System status error: {e}")
-        return jsonify({'error': 'Database error'}), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)))

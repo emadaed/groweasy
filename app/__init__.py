@@ -76,6 +76,11 @@ def create_app():
     app.register_blueprint(auth_bp)
     from app.routes.inventory import inventory_bp
     app.register_blueprint(inventory_bp)
+    from app.routes.main import main_bp
+    app.register_blueprint(main_bp)
+
+
+    
 
     # --- Logging Noise Reduction ---
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
