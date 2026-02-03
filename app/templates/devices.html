@@ -4,7 +4,7 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>📱 Active Devices</h2>
-        <a href="{{ url_for('revoke_all_devices') }}" class="btn btn-danger"
+        <a href="{{ url_for('settings.revoke_all_devices') }}" class="btn btn-danger"
            onclick="return confirm('Logout all other devices?')">
             🚫 Logout All Others
         </a>
@@ -32,7 +32,7 @@
                             <p class="mb-0 text-muted"><small>Logged in: {{ session.created_at }}</small></p>
                         </div>
                         {% if session.token != current_token %}
-                        <a href="{{ url_for('revoke_device', token=session.token) }}"
+                        <a href="{{ url_for('settings.revoke_device', token=session.token) }}"
                            class="btn btn-sm btn-danger"
                            onclick="return confirm('Logout this device?')">
                             Logout
