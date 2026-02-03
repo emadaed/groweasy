@@ -37,32 +37,6 @@ CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 
 app = create_app()
 
 
-# 1 password reset- Auth
-@app.route("/forgot_password", methods=['GET', 'POST'])
-@limiter.limit("3 per hour")
-def forgot_password():
-    """Simple password reset request with email simulation"""
-    if request.method == 'POST':
-        email = request.form.get('email')
-        # Check if email exists in database
-        with DB_ENGINE.connect() as conn:  # Read-only
-            result = conn.execute(text("SELECT id FROM users WHERE email = :email"), {"email": email}).fetchone()
-
-        if result:
-            flash('📧 Password reset instructions have been sent to your email.', 'success')
-            flash('🔐 Development Note: In production, you would receive an email with reset link.', 'info')
-            return render_template('reset_instructions.html', email=email, nonce=g.nonce)
-        else:
-            flash('❌ No account found with this email address.', 'error')
-    return render_template('forgot_password.html', nonce=g.nonce)
-
-# 2 PW token -Auth
-@app.route("/reset_password/<token>", methods=['GET', 'POST'])
-def reset_password(token):
-    """Password reset page (placeholder)"""
-    # In production, you'd verify the token
-    flash('Password reset functionality coming soon!', 'info')
-    return redirect(url_for('auth.login'))
 
 # 3 home -Auth
 @app.route('/')
@@ -72,38 +46,6 @@ def home():
         return redirect(url_for('dashboard'))
     else:
         return redirect(url_for('auth.login'))
-
-
-# register -Auth
-@app.route("/register", methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
-def register():
-    if request.method == 'POST':
-        # Validate terms acceptance
-        if not request.form.get('agree_terms'):
-            flash('❌ You must agree to Terms of Service to register', 'error')
-            return render_template('register.html', nonce=g.nonce)
-
-        email = request.form.get('email')
-        password = request.form.get('password')
-        company_name = request.form.get('company_name', '')
-
-        # 🆕 ADD DEBUG LOGGING
-        print(f"📝 Attempting to register user: {email}")
-        print(f"🔑 Password length: {len(password) if password else 0}")
-
-        user_created = create_user(email, password, company_name)
-        print(f"✅ User creation result: {user_created}")
-
-        if user_created:
-            flash('✅ Account created! Please login.', 'success')
-            return redirect(url_for('auth.login'))
-        else:
-            flash('❌ User already exists or registration failed', 'error')
-            return render_template('register.html', nonce=g.nonce)
-
-    # GET request - show form
-    return render_template('register.html', nonce=g.nonce)
 
 
 
@@ -141,16 +83,6 @@ def dashboard():
         out_of_stock_items=out_of_stock_items,
         nonce=g.nonce
     )
-
-
-#CRM
-
-# Finance.py
-
-#CRM
-
-
-
 
 
 # Debug
