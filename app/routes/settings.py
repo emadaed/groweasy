@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, make_response
-from app.services.auth update_user_profile, change_user_password, verify_user
+from app.services.auth import get_user_profile, update_user_profile, change_user_password, verify_user
 from app.services.cache import get_user_profile_cached 
 from app.services.session_manager import SessionManager
 
