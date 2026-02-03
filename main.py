@@ -37,8 +37,52 @@ CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 
 app = create_app()
 
 
+# Debug
+@app.route('/debug')
+def debug():
+    """Debug route to check what's working"""
+    debug_info = {
+        'session': dict(session),
+        'routes': [str(rule) for rule in app.url_map.iter_rules()],
+        'user_authenticated': bool(session.get('user_id'))
+    }
+    return jsonify(debug_info)
 
-# 3 home -Auth
+#Backup Route (Manual Trigger)
+@app.route('/admin/backup')
+def admin_backup():
+    """Manual database backup trigger (admin only)"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    # Simple admin check (first user is admin)
+    if session['user_id'] != 1:
+        return jsonify({'error': 'Admin only'}), 403
+
+    try:
+        import subprocess
+        result = subprocess.run(['python', 'backup_db.py'],
+                              capture_output=True,
+                              text=True,
+                              timeout=30)
+
+        if result.returncode == 0:
+            return jsonify({
+                'success': True,
+                'message': 'Backup created successfully',
+                'output': result.stdout
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.stderr
+            }), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+
+#  home -Auth
 @app.route('/')
 def home():
     """Home page - redirect to login or dashboard"""
@@ -85,75 +129,6 @@ def dashboard():
     )
 
 
-# Debug
-@app.route('/debug')
-def debug():
-    """Debug route to check what's working"""
-    debug_info = {
-        'session': dict(session),
-        'routes': [str(rule) for rule in app.url_map.iter_rules()],
-        'user_authenticated': bool(session.get('user_id'))
-    }
-    return jsonify(debug_info)
-
-#Backup Route (Manual Trigger)
-@app.route('/admin/backup')
-def admin_backup():
-    """Manual database backup trigger (admin only)"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    # Simple admin check (first user is admin)
-    if session['user_id'] != 1:
-        return jsonify({'error': 'Admin only'}), 403
-
-    try:
-        import subprocess
-        result = subprocess.run(['python', 'backup_db.py'],
-                              capture_output=True,
-                              text=True,
-                              timeout=30)
-
-        if result.returncode == 0:
-            return jsonify({
-                'success': True,
-                'message': 'Backup created successfully',
-                'output': result.stdout
-            }), 200
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.stderr
-            }), 500
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# create invoice
-@app.route('/create_invoice')
-def create_invoice():
-    """Dedicated route for creating sales invoices ONLY"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    prefill_data = {}
-    user_profile = get_user_profile_cached(session['user_id'])
-
-    if user_profile:
-        prefill_data = {
-            'company_name': user_profile.get('company_name', ''),
-            'company_address': user_profile.get('company_address', ''),
-            'company_phone': user_profile.get('company_phone', ''),
-            'company_email': user_profile.get('email', ''),
-            'company_tax_id': user_profile.get('company_tax_id', ''),
-            'seller_ntn': user_profile.get('seller_ntn', ''),
-            'seller_strn': user_profile.get('seller_strn', ''),
-        }
-
-    return render_template('form.html',
-                         prefill_data=prefill_data,
-                         nonce=g.nonce)
 
 #create po = 1
 @app.route("/create_purchase_order")
@@ -448,116 +423,6 @@ def cancel_purchase_order(po_number):
 
 
 
-#inventory 7
-#SETTINGS
-
-#SETTINGS -1
-@app.route("/settings", methods=['GET', 'POST'])
-def settings():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.auth import get_user_profile, update_user_profile, change_user_password, verify_user
-
-    user_profile = get_user_profile_cached(session['user_id'])
-
-    if request.method == 'POST':
-        # Handle profile update
-        if 'update_profile' in request.form:
-            company_name = request.form.get('company_name')
-            company_address = request.form.get('company_address')
-            company_phone = request.form.get('company_phone')
-            company_tax_id = request.form.get('company_tax_id')
-            seller_ntn = request.form.get('seller_ntn')  # 🆕 FBR field
-            seller_strn = request.form.get('seller_strn')  # 🆕 FBR field
-            preferred_currency = request.form.get('preferred_currency')
-
-            update_user_profile(
-                session['user_id'],
-                company_name=company_name,
-                company_address=company_address,
-                company_phone=company_phone,
-                company_tax_id=company_tax_id,
-                seller_ntn=seller_ntn,  # 🆕 Pass to function
-                seller_strn=seller_strn,  # 🆕 Pass to function
-                preferred_currency=preferred_currency
-            )
-
-            flash('Settings updated successfully!', 'success')
-            response = make_response(redirect(url_for('settings')))
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-            return response
-
-        # Handle password change
-        elif 'change_password' in request.form:
-            current_password = request.form.get('current_password')
-            new_password = request.form.get('new_password')
-            confirm_password = request.form.get('confirm_password')
-
-            # Verify current password
-            if not verify_user(user_profile['email'], current_password):
-                flash('Current password is incorrect', 'error')
-            elif new_password != confirm_password:
-                flash('New passwords do not match', 'error')
-            elif len(new_password) < 6:
-                flash('New password must be at least 6 characters', 'error')
-            else:
-                change_user_password(session['user_id'], new_password)
-                flash('Password changed successfully!', 'success')
-
-            return redirect(url_for('settings'))
-
-    return render_template("settings.html", user_profile=user_profile, nonce=g.nonce)
-
-#device management - 2
-@app.route("/devices")
-def devices():
-    """Manage active devices"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.session_manager import SessionManager
-    active_sessions = SessionManager.get_active_sessions(session['user_id'])
-
-    return render_template("devices.html",
-                         sessions=active_sessions,
-                         current_token=session.get('session_token'),
-                         nonce=g.nonce)
-
-# revoke tokens =3
-@app.route("/revoke_device/<token>")
-def revoke_device(token):
-    """Revoke specific device session"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.session_manager import SessionManager
-
-    # Don't allow revoking current session
-    if token == session.get('session_token'):
-        flash('❌ Cannot revoke current session', 'error')
-    else:
-        SessionManager.revoke_session(token)
-        flash('✅ Device session revoked', 'success')
-
-    return redirect(url_for('devices'))
-
-# revoke devices =4
-@app.route("/revoke_all_devices")
-def revoke_all_devices():
-    """Revoke all other sessions"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    from app.services.session_manager import SessionManager
-    SessionManager.revoke_all_sessions(session['user_id'], except_token=session.get('session_token'))
-
-    flash('✅ All other devices logged out', 'success')
-    return redirect(url_for('devices'))
-
-
 
 # 1 preview and download
 from flask.views import MethodView
@@ -794,6 +659,84 @@ def download_document(document_number):
         flash("❌ Download failed. Please try again.", 'error')
         return redirect(url_for('invoice_history' if document_type != 'purchase_order' else 'purchase_orders'))
 
+# purchase order - FIXED VERSION =1/9
+@app.route("/purchase_orders")
+def purchase_orders():
+    """Purchase order history with download options - FIXED"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    try:
+        from app.services.purchases import get_purchase_orders
+
+        page = request.args.get('page', 1, type=int)
+        limit = 10
+        offset = (page - 1) * limit
+
+        # Get orders with error handling
+        orders = []
+        try:
+            orders = get_purchase_orders(session['user_id'], limit=limit, offset=offset)
+
+            # Fix date formats for template
+            for order in orders:
+                if 'order_date' in order and order['order_date']:
+                    if isinstance(order['order_date'], str):
+                        try:
+                            from datetime import datetime
+                            order['order_date'] = datetime.strptime(order['order_date'], '%Y-%m-%d')
+                        except:
+                            pass
+        except Exception as e:
+            current_app.logger.error(f"Error loading purchase orders: {e}")
+            flash("Could not load purchase orders", "warning")
+
+        # Get user's currency for display
+        user_profile = get_user_profile_cached(session['user_id'])
+        currency_code = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
+        currency_symbol = CURRENCY_SYMBOLS.get(currency_code, 'Rs.')
+
+        return render_template("purchase_orders.html",
+                             orders=orders,
+                             current_page=page,
+                             currency_symbol=currency_symbol,
+                             nonce=g.nonce)
+    except Exception as e:
+        current_app.logger.error(f"Purchase orders route error: {e}")
+        flash("Error loading purchase orders", "error")
+        return redirect(url_for('dashboard'))
+
+#API endpoints for better UX
+@app.route("/api/purchase_order/<po_number>")
+@limiter.limit("30 per minute")
+def get_purchase_order_details(po_number):
+    """API endpoint to get PO details"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        with DB_ENGINE.connect() as conn:
+            result = conn.execute(text("""
+                SELECT order_data, status, created_at
+                FROM purchase_orders
+                WHERE user_id = :user_id AND po_number = :po_number
+                ORDER BY created_at DESC LIMIT 1
+            """), {"user_id": session['user_id'], "po_number": po_number}).fetchone()
+
+        if not result:
+            return jsonify({'error': 'Purchase order not found'}), 404
+
+        order_data = json.loads(result[0])
+        order_data['status'] = result[1]
+        order_data['created_at'] = result[2].isoformat() if result[2] else None
+
+        return jsonify(order_data), 200
+
+    except Exception as e:
+        current_app.logger.error(f"PO details error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 # NEW: Direct PDF Creation Functions =1/8
 def create_purchase_order_pdf_direct(data):
     """Create purchase order PDF directly from data"""
@@ -981,6 +924,34 @@ def create_purchase_order_pdf_direct(data):
     doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()
+
+
+
+# create invoice
+@app.route('/create_invoice')
+def create_invoice():
+    """Dedicated route for creating sales invoices ONLY"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    prefill_data = {}
+    user_profile = get_user_profile_cached(session['user_id'])
+
+    if user_profile:
+        prefill_data = {
+            'company_name': user_profile.get('company_name', ''),
+            'company_address': user_profile.get('company_address', ''),
+            'company_phone': user_profile.get('company_phone', ''),
+            'company_email': user_profile.get('email', ''),
+            'company_tax_id': user_profile.get('company_tax_id', ''),
+            'seller_ntn': user_profile.get('seller_ntn', ''),
+            'seller_strn': user_profile.get('seller_strn', ''),
+        }
+
+    return render_template('form.html',
+                         prefill_data=prefill_data,
+                         nonce=g.nonce)
+
 
 
 def create_invoice_pdf_direct(data):
@@ -1266,82 +1237,6 @@ def invoice_history():
         nonce=g.nonce
     )
 
-# purchase order - FIXED VERSION =1/9
-@app.route("/purchase_orders")
-def purchase_orders():
-    """Purchase order history with download options - FIXED"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    try:
-        from app.services.purchases import get_purchase_orders
-
-        page = request.args.get('page', 1, type=int)
-        limit = 10
-        offset = (page - 1) * limit
-
-        # Get orders with error handling
-        orders = []
-        try:
-            orders = get_purchase_orders(session['user_id'], limit=limit, offset=offset)
-
-            # Fix date formats for template
-            for order in orders:
-                if 'order_date' in order and order['order_date']:
-                    if isinstance(order['order_date'], str):
-                        try:
-                            from datetime import datetime
-                            order['order_date'] = datetime.strptime(order['order_date'], '%Y-%m-%d')
-                        except:
-                            pass
-        except Exception as e:
-            current_app.logger.error(f"Error loading purchase orders: {e}")
-            flash("Could not load purchase orders", "warning")
-
-        # Get user's currency for display
-        user_profile = get_user_profile_cached(session['user_id'])
-        currency_code = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
-        currency_symbol = CURRENCY_SYMBOLS.get(currency_code, 'Rs.')
-
-        return render_template("purchase_orders.html",
-                             orders=orders,
-                             current_page=page,
-                             currency_symbol=currency_symbol,
-                             nonce=g.nonce)
-    except Exception as e:
-        current_app.logger.error(f"Purchase orders route error: {e}")
-        flash("Error loading purchase orders", "error")
-        return redirect(url_for('dashboard'))
-
-#API endpoints for better UX
-@app.route("/api/purchase_order/<po_number>")
-@limiter.limit("30 per minute")
-def get_purchase_order_details(po_number):
-    """API endpoint to get PO details"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    try:
-        with DB_ENGINE.connect() as conn:
-            result = conn.execute(text("""
-                SELECT order_data, status, created_at
-                FROM purchase_orders
-                WHERE user_id = :user_id AND po_number = :po_number
-                ORDER BY created_at DESC LIMIT 1
-            """), {"user_id": session['user_id'], "po_number": po_number}).fetchone()
-
-        if not result:
-            return jsonify({'error': 'Purchase order not found'}), 404
-
-        order_data = json.loads(result[0])
-        order_data['status'] = result[1]
-        order_data['created_at'] = result[2].isoformat() if result[2] else None
-
-        return jsonify(order_data), 200
-
-    except Exception as e:
-        current_app.logger.error(f"PO details error: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
 
 
 if __name__ == "__main__":
