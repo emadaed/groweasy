@@ -21,14 +21,6 @@ def privacy():
 def about():
     return render_template("about.html", nonce=g.nonce)
 
-@main_bp.route('/debug')
-def debug():
-    debug_info = {
-        'session': dict(session),
-        'user_authenticated': bool(session.get('user_id'))
-    }
-    return jsonify(debug_info)
-
 @main_bp.route('/health')
 def health_check():
     try:
@@ -48,8 +40,6 @@ def system_status():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     return jsonify({'status': 'operational', 'timestamp': datetime.now().isoformat()}), 200
-
-
 
 
 @main_bp.route('/admin/backup')
