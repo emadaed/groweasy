@@ -268,7 +268,7 @@ def download_inventory_report():
     import csv
     import io
 
-    inventory_data = InventoryManager.get_inventory_items(session['user_id'])
+    inventory_data = InventoryManager.get_inventory_report(session['user_id'])
 
     # Create CSV in memory
     output = io.StringIO()
