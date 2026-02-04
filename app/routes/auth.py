@@ -33,7 +33,7 @@ def login():
             session['session_token'] = session_token
 
             flash(random_success_message('login'), 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('main.dashboard'))
         else:
             return render_template('login.html', error='Invalid credentials', nonce=g.nonce)
 
