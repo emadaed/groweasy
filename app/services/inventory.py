@@ -243,35 +243,3 @@ class InventoryManager:
 
 
 
-# Inside app/services/inventory.py, add this to the class:
-    @staticmethod
-    def get_inventory_report(user_id):
-        """Get all active inventory items for the user"""
-        try:
-            with DB_ENGINE.connect() as conn:
-                result = conn.execute(text('''
-                    SELECT id, name, sku, category, current_stock, min_stock_level,
-                           cost_price, selling_price, supplier, location
-                    FROM inventory_items
-                    WHERE user_id = :user_id AND is_active = TRUE
-                    ORDER BY name
-                '''), {"user_id": user_id})
-
-                items = []
-                for row in result:
-                    items.append({
-                        'id': row.id,
-                        'name': row.name,
-                        'sku': row.sku or 'N/A',
-                        'category': row.category or '',
-                        'current_stock': row.current_stock,
-                        'min_stock_level': row.min_stock_level or 10,
-                        'cost_price': float(row.cost_price) if row.cost_price else 0.0,
-                        'selling_price': float(row.selling_price) if row.selling_price else 0.0,
-                        'supplier': row.supplier or '',
-                        'location': row.location or ''
-                    })
-                return items
-        except Exception as e:
-            logger.error(f"Error fetching inventory: {e}")
-            return InventoryManager.get_inventory_items(user_id)
