@@ -274,4 +274,4 @@ class InventoryManager:
                 return items
         except Exception as e:
             logger.error(f"Error fetching inventory: {e}")
-            return []
+            return InventoryManager.get_inventory_items(user_id)
