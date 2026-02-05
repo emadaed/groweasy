@@ -463,3 +463,15 @@ def create_invoice_pdf_direct(data):
 # Register route
 app.add_url_rule('/invoice/process', view_func=InvoiceView.as_view('invoice_process'), methods=['GET', 'POST'])
 
+# poll route API-4
+@app.route('/invoice/status/<user_id>')
+def status(user_id):
+    try:
+        from app.services.services import InvoiceService
+        service = InvoiceService(int(user_id))
+        result = service.redis_client.get(f"preview:{user_id}")
+        if result:
+            return jsonify({'ready': True, 'data': json.loads(result)})
+        return jsonify({'ready': False})
+    except:
+        return jsonify({'ready': False})
