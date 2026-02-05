@@ -6,7 +6,6 @@ from flask import render_template, request
 from pathlib import Path
 import base64
 import json
-import io
 from app.services.pdf_engine import generate_pdf
 from app.services.qr_engine import generate_qr_base64
 

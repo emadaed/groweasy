@@ -36,6 +36,291 @@ CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 
 
 app = create_app()
 
+
+
+#create po = 1
+@app.route("/create_purchase_order")
+def create_purchase_order():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    user_id = session['user_id']
+
+    from app.services.inventory import InventoryManager
+
+    # Get inventory items for dropdown/modal
+    inventory_items = InventoryManager.get_inventory_items(user_id)
+
+    # Get suppliers (adjust if you have a supplier manager)
+    suppliers = get_suppliers(user_id)
+
+    # Today date
+    today_str = datetime.today().strftime('%Y-%m-%d')
+
+    return render_template("create_po.html",
+                         inventory_items=inventory_items,
+                         suppliers=suppliers,
+                         today=today_str,
+                         nonce=g.nonce)
+
+#create po process ==2 
+@app.route('/create_po_process', methods=['POST'])
+@limiter.limit("10 per minute")
+def create_po_process():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    user_id = session['user_id']
+
+    try:
+        from app.services.invoice_service import InvoiceService
+
+        print("DEBUG: Starting PO creation for user", user_id)
+        print("DEBUG: Form keys:", list(request.form.keys()))
+        print("DEBUG: File keys:", list(request.files.keys()))
+
+        service = InvoiceService(user_id)
+
+        print("DEBUG: Calling service.create_purchase_order...")
+        po_data, errors = service.create_purchase_order(request.form, request.files)
+
+        print("DEBUG: Service returned po_data keys:", list(po_data.keys()) if po_data else "None")
+        print("DEBUG: Service returned items count:", len(po_data.get('items', [])) if po_data else 0)
+        print("DEBUG: Service returned errors:", errors)
+
+        if errors:
+            for error in errors:
+                flash(f"❌ {error}", "error")
+                print("DEBUG: Flashed error:", error)
+            return redirect(url_for('create_purchase_order'))
+
+        if po_data:
+            print("DEBUG: PO data before save:", po_data)
+            print("DEBUG: Items in po_data:", po_data.get('items', []))
+
+            from app.services.session_storage import SessionStorage
+            session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
+            session['last_po_ref'] = session_ref
+
+            flash(f"✅ Purchase Order {po_data['po_number']} created successfully!", "success")
+            print("DEBUG: Redirecting to preview for", po_data['po_number'])
+            return redirect(url_for('po_preview', po_number=po_data['po_number']))
+
+        flash("❌ Failed to create purchase order", "error")
+        print("DEBUG: Failed - no po_data")
+        return redirect(url_for('create_purchase_order'))
+
+    except Exception as e:
+        current_app.logger.error(f"PO creation error: {str(e)}", exc_info=True)
+        print("DEBUG: Exception in PO creation:", str(e))
+        flash("❌ An unexpected error occurred", "error")
+        return redirect(url_for('create_purchase_order'))
+
+# po preview =3 
+@app.route('/po/preview/<po_number>')
+def po_preview(po_number):
+    """Final Preview & Print - with full product enrichment"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    user_id = session['user_id']
+
+    try:
+        with DB_ENGINE.connect() as conn:
+            result = conn.execute(text("""
+                SELECT order_data FROM purchase_orders
+                WHERE user_id = :user_id AND po_number = :po_number
+                ORDER BY created_at DESC LIMIT 1
+            """), {"user_id": user_id, "po_number": po_number}).fetchone()
+
+        if not result:
+            flash("Purchase order not found", "error")
+            return redirect(url_for('purchase_orders'))
+
+        po_data = json.loads(result[0])
+
+        po_data['po_number'] = po_number
+        po_data['invoice_number'] = po_number
+
+        # === FULL ENRICHMENT ===
+        from app.services.inventory import InventoryManager
+        inventory_items = InventoryManager.get_inventory_items(user_id)
+
+        product_lookup = {str(p['id']): p for p in inventory_items}
+        product_lookup.update({int(k): v for k, v in product_lookup.items() if k.isdigit()})
+
+        for item in po_data.get('items', []):
+            pid = item.get('product_id')
+            if pid and pid in product_lookup:
+                p = product_lookup[pid]
+                item['sku'] = p.get('sku', 'N/A')
+                item['name'] = p.get('name', item.get('name', 'Unknown'))
+                item['supplier'] = p.get('supplier', po_data.get('supplier_name', 'Unknown Supplier'))
+
+        # DEBUG LOGS
+        print("✅ PO PREVIEW ENRICHED DATA:")
+        for i, item in enumerate(po_data.get('items', []), 1):
+            print(f"  Item {i}: name='{item.get('name')}', sku='{item.get('sku')}', supplier='{item.get('supplier')}'")
+
+        qr_b64 = generate_simple_qr(po_data)
+
+        # Use same enriched data for both preview and PDF
+        html = render_template('purchase_order_pdf.html',
+                               data=po_data,
+                               preview=True,
+                               custom_qr_b64=qr_b64,
+                               currency_symbol=g.get('currency_symbol', 'Rs.'))
+
+        return render_template('po_preview.html',
+                               html=html,
+                               data=po_data,
+                               po_number=po_number,
+                               nonce=g.nonce)
+
+    except Exception as e:
+        current_app.logger.error(f"PO preview error: {str(e)}", exc_info=True)
+        flash("Error loading purchase order", "error")
+        return redirect(url_for('purchase_orders'))
+
+# GRN - Goods Received Note (Receive Purchase Order) 4
+@app.route("/po/mark_received/<po_number>", methods=['GET', 'POST'])
+def mark_po_received(po_number):
+    """Handle receiving goods for an existing Purchase Order"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    user_id = session['user_id']
+
+    try:
+        from app.services.purchases import get_purchase_order
+        from app.services.inventory import InventoryManager
+
+        # Load the existing PO data
+        po_data = get_purchase_order(user_id, po_number)
+        if not po_data:
+            flash("❌ Purchase Order not found", "error")
+            return redirect(url_for('purchase_orders'))
+
+        # Prevent double-receiving
+        if po_data.get('status', '').lower() == 'received':
+            flash("⚠️ This Purchase Order has already been received", "warning")
+            return redirect(url_for('purchase_orders'))
+
+        # GET request → Show confirmation page
+        if request.method == 'GET':
+            return render_template("po_receive_confirm.html",
+                                   po_data=po_data,
+                                   po_number=po_number,
+                                   nonce=g.nonce)
+
+        # POST request → User confirmed "Yes, Receive Goods"
+        if request.method == 'POST':
+            added_units = 0
+
+            # Step 1: Add items to inventory stock
+            for item in po_data.get('items', []):
+                if item.get('product_id'):
+                    qty = int(item.get('qty', 0))
+                    if qty > 0:
+                        if InventoryManager.update_stock_delta(
+                            user_id,
+                            item['product_id'],
+                            qty,  # positive = increase stock
+                            'purchase_receive',
+                            po_number,
+                            f"Goods received via PO {po_number}"
+                        ):
+                            added_units += qty
+
+            # Step 2: Update status only — updated_at will be set automatically to NOW()
+            try:
+                with DB_ENGINE.begin() as conn:
+                    conn.execute(text("""
+                        UPDATE purchase_orders
+                        SET status = 'Received'
+                        WHERE user_id = :user_id
+                          AND po_number = :po_number
+                    """), {"user_id": user_id, "po_number": po_number})
+
+                flash(f"✅ PO {po_number} successfully marked as Received! "
+                      f"{added_units} units added to stock.", "success")
+            except Exception as e:
+                current_app.logger.error(f"Error updating PO status: {e}")
+                flash("⚠️ Stock added, but status update failed. Please contact support.", "warning")
+
+            return redirect(url_for('purchase_orders'))
+
+    except Exception as e:
+        current_app.logger.error(f"Error receiving PO {po_number}: {e}", exc_info=True)
+        flash("❌ An error occurred while receiving goods. Please try again.", "error")
+        return redirect(url_for('purchase_orders'))
+
+# Email to supplier 5
+@app.route('/po/email/<po_number>', methods=['POST'])
+def email_po_to_supplier(po_number):
+    """Send PO to supplier via email"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    # TODO: Implement email sending
+    flash(f'PO {po_number} email functionality coming soon!', 'info')
+    return jsonify({'success': True, 'message': 'Email queued'})
+
+
+# Print preview -6
+@app.route('/po/print/<po_number>')
+def print_po_preview(po_number):
+    """Print preview for PO"""
+    return redirect(url_for('po_preview', po_number=po_number))
+
+# purchase order - History FIXED VERSION 7
+@app.route("/purchase_orders")
+def purchase_orders():
+    """Purchase order history with download options - FIXED"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    try:
+        from app.services.purchases import get_purchase_orders
+
+        page = request.args.get('page', 1, type=int)
+        limit = 10
+        offset = (page - 1) * limit
+
+        # Get orders with error handling
+        orders = []
+        try:
+            orders = get_purchase_orders(session['user_id'], limit=limit, offset=offset)
+
+            # Fix date formats for template
+            for order in orders:
+                if 'order_date' in order and order['order_date']:
+                    if isinstance(order['order_date'], str):
+                        try:
+                            from datetime import datetime
+                            order['order_date'] = datetime.strptime(order['order_date'], '%Y-%m-%d')
+                        except:
+                            pass
+        except Exception as e:
+            current_app.logger.error(f"Error loading purchase orders: {e}")
+            flash("Could not load purchase orders", "warning")
+
+        # Get user's currency for display
+        user_profile = get_user_profile_cached(session['user_id'])
+        currency_code = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
+        currency_symbol = CURRENCY_SYMBOLS.get(currency_code, 'Rs.')
+
+        return render_template("purchase_orders.html",
+                             orders=orders,
+                             current_page=page,
+                             currency_symbol=currency_symbol,
+                             nonce=g.nonce)
+    except Exception as e:
+        current_app.logger.error(f"Purchase orders route error: {e}")
+        flash("Error loading purchase orders", "error")
+        return redirect(url_for('dashboard'))
+
+
 # NEW: Direct PDF Creation Functions = app/services/pdf_generator.py
 def create_purchase_order_pdf_direct(data):
     """Create purchase order PDF directly from data"""
@@ -418,290 +703,6 @@ def create_invoice_pdf_direct(data):
 
 # Register route
 app.add_url_rule('/invoice/process', view_func=InvoiceView.as_view('invoice_process'), methods=['GET', 'POST'])
-
-
-
-#create po = 1
-@app.route("/create_purchase_order")
-def create_purchase_order():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    user_id = session['user_id']
-
-    from app.services.inventory import InventoryManager
-
-    # Get inventory items for dropdown/modal
-    inventory_items = InventoryManager.get_inventory_items(user_id)
-
-    # Get suppliers (adjust if you have a supplier manager)
-    suppliers = get_suppliers(user_id)
-
-    # Today date
-    today_str = datetime.today().strftime('%Y-%m-%d')
-
-    return render_template("create_po.html",
-                         inventory_items=inventory_items,
-                         suppliers=suppliers,
-                         today=today_str,
-                         nonce=g.nonce)
-
-#create po process ==2 
-@app.route('/create_po_process', methods=['POST'])
-@limiter.limit("10 per minute")
-def create_po_process():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    user_id = session['user_id']
-
-    try:
-        from app.services.invoice_service import InvoiceService
-
-        print("DEBUG: Starting PO creation for user", user_id)
-        print("DEBUG: Form keys:", list(request.form.keys()))
-        print("DEBUG: File keys:", list(request.files.keys()))
-
-        service = InvoiceService(user_id)
-
-        print("DEBUG: Calling service.create_purchase_order...")
-        po_data, errors = service.create_purchase_order(request.form, request.files)
-
-        print("DEBUG: Service returned po_data keys:", list(po_data.keys()) if po_data else "None")
-        print("DEBUG: Service returned items count:", len(po_data.get('items', [])) if po_data else 0)
-        print("DEBUG: Service returned errors:", errors)
-
-        if errors:
-            for error in errors:
-                flash(f"❌ {error}", "error")
-                print("DEBUG: Flashed error:", error)
-            return redirect(url_for('create_purchase_order'))
-
-        if po_data:
-            print("DEBUG: PO data before save:", po_data)
-            print("DEBUG: Items in po_data:", po_data.get('items', []))
-
-            from app.services.session_storage import SessionStorage
-            session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
-            session['last_po_ref'] = session_ref
-
-            flash(f"✅ Purchase Order {po_data['po_number']} created successfully!", "success")
-            print("DEBUG: Redirecting to preview for", po_data['po_number'])
-            return redirect(url_for('po_preview', po_number=po_data['po_number']))
-
-        flash("❌ Failed to create purchase order", "error")
-        print("DEBUG: Failed - no po_data")
-        return redirect(url_for('create_purchase_order'))
-
-    except Exception as e:
-        current_app.logger.error(f"PO creation error: {str(e)}", exc_info=True)
-        print("DEBUG: Exception in PO creation:", str(e))
-        flash("❌ An unexpected error occurred", "error")
-        return redirect(url_for('create_purchase_order'))
-
-# po preview =3 
-@app.route('/po/preview/<po_number>')
-def po_preview(po_number):
-    """Final Preview & Print - with full product enrichment"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    user_id = session['user_id']
-
-    try:
-        with DB_ENGINE.connect() as conn:
-            result = conn.execute(text("""
-                SELECT order_data FROM purchase_orders
-                WHERE user_id = :user_id AND po_number = :po_number
-                ORDER BY created_at DESC LIMIT 1
-            """), {"user_id": user_id, "po_number": po_number}).fetchone()
-
-        if not result:
-            flash("Purchase order not found", "error")
-            return redirect(url_for('purchase_orders'))
-
-        po_data = json.loads(result[0])
-
-        po_data['po_number'] = po_number
-        po_data['invoice_number'] = po_number
-
-        # === FULL ENRICHMENT ===
-        from app.services.inventory import InventoryManager
-        inventory_items = InventoryManager.get_inventory_items(user_id)
-
-        product_lookup = {str(p['id']): p for p in inventory_items}
-        product_lookup.update({int(k): v for k, v in product_lookup.items() if k.isdigit()})
-
-        for item in po_data.get('items', []):
-            pid = item.get('product_id')
-            if pid and pid in product_lookup:
-                p = product_lookup[pid]
-                item['sku'] = p.get('sku', 'N/A')
-                item['name'] = p.get('name', item.get('name', 'Unknown'))
-                item['supplier'] = p.get('supplier', po_data.get('supplier_name', 'Unknown Supplier'))
-
-        # DEBUG LOGS
-        print("✅ PO PREVIEW ENRICHED DATA:")
-        for i, item in enumerate(po_data.get('items', []), 1):
-            print(f"  Item {i}: name='{item.get('name')}', sku='{item.get('sku')}', supplier='{item.get('supplier')}'")
-
-        qr_b64 = generate_simple_qr(po_data)
-
-        # Use same enriched data for both preview and PDF
-        html = render_template('purchase_order_pdf.html',
-                               data=po_data,
-                               preview=True,
-                               custom_qr_b64=qr_b64,
-                               currency_symbol=g.get('currency_symbol', 'Rs.'))
-
-        return render_template('po_preview.html',
-                               html=html,
-                               data=po_data,
-                               po_number=po_number,
-                               nonce=g.nonce)
-
-    except Exception as e:
-        current_app.logger.error(f"PO preview error: {str(e)}", exc_info=True)
-        flash("Error loading purchase order", "error")
-        return redirect(url_for('purchase_orders'))
-
-# GRN - Goods Received Note (Receive Purchase Order) 4
-@app.route("/po/mark_received/<po_number>", methods=['GET', 'POST'])
-def mark_po_received(po_number):
-    """Handle receiving goods for an existing Purchase Order"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    user_id = session['user_id']
-
-    try:
-        from app.services.purchases import get_purchase_order
-        from app.services.inventory import InventoryManager
-
-        # Load the existing PO data
-        po_data = get_purchase_order(user_id, po_number)
-        if not po_data:
-            flash("❌ Purchase Order not found", "error")
-            return redirect(url_for('purchase_orders'))
-
-        # Prevent double-receiving
-        if po_data.get('status', '').lower() == 'received':
-            flash("⚠️ This Purchase Order has already been received", "warning")
-            return redirect(url_for('purchase_orders'))
-
-        # GET request → Show confirmation page
-        if request.method == 'GET':
-            return render_template("po_receive_confirm.html",
-                                   po_data=po_data,
-                                   po_number=po_number,
-                                   nonce=g.nonce)
-
-        # POST request → User confirmed "Yes, Receive Goods"
-        if request.method == 'POST':
-            added_units = 0
-
-            # Step 1: Add items to inventory stock
-            for item in po_data.get('items', []):
-                if item.get('product_id'):
-                    qty = int(item.get('qty', 0))
-                    if qty > 0:
-                        if InventoryManager.update_stock_delta(
-                            user_id,
-                            item['product_id'],
-                            qty,  # positive = increase stock
-                            'purchase_receive',
-                            po_number,
-                            f"Goods received via PO {po_number}"
-                        ):
-                            added_units += qty
-
-            # Step 2: Update status only — updated_at will be set automatically to NOW()
-            try:
-                with DB_ENGINE.begin() as conn:
-                    conn.execute(text("""
-                        UPDATE purchase_orders
-                        SET status = 'Received'
-                        WHERE user_id = :user_id
-                          AND po_number = :po_number
-                    """), {"user_id": user_id, "po_number": po_number})
-
-                flash(f"✅ PO {po_number} successfully marked as Received! "
-                      f"{added_units} units added to stock.", "success")
-            except Exception as e:
-                current_app.logger.error(f"Error updating PO status: {e}")
-                flash("⚠️ Stock added, but status update failed. Please contact support.", "warning")
-
-            return redirect(url_for('purchase_orders'))
-
-    except Exception as e:
-        current_app.logger.error(f"Error receiving PO {po_number}: {e}", exc_info=True)
-        flash("❌ An error occurred while receiving goods. Please try again.", "error")
-        return redirect(url_for('purchase_orders'))
-
-# Email to supplier 5
-@app.route('/po/email/<po_number>', methods=['POST'])
-def email_po_to_supplier(po_number):
-    """Send PO to supplier via email"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    # TODO: Implement email sending
-    flash(f'PO {po_number} email functionality coming soon!', 'info')
-    return jsonify({'success': True, 'message': 'Email queued'})
-
-
-# Print preview -6
-@app.route('/po/print/<po_number>')
-def print_po_preview(po_number):
-    """Print preview for PO"""
-    return redirect(url_for('po_preview', po_number=po_number))
-
-# purchase order - History FIXED VERSION 7
-@app.route("/purchase_orders")
-def purchase_orders():
-    """Purchase order history with download options - FIXED"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
-    try:
-        from app.services.purchases import get_purchase_orders
-
-        page = request.args.get('page', 1, type=int)
-        limit = 10
-        offset = (page - 1) * limit
-
-        # Get orders with error handling
-        orders = []
-        try:
-            orders = get_purchase_orders(session['user_id'], limit=limit, offset=offset)
-
-            # Fix date formats for template
-            for order in orders:
-                if 'order_date' in order and order['order_date']:
-                    if isinstance(order['order_date'], str):
-                        try:
-                            from datetime import datetime
-                            order['order_date'] = datetime.strptime(order['order_date'], '%Y-%m-%d')
-                        except:
-                            pass
-        except Exception as e:
-            current_app.logger.error(f"Error loading purchase orders: {e}")
-            flash("Could not load purchase orders", "warning")
-
-        # Get user's currency for display
-        user_profile = get_user_profile_cached(session['user_id'])
-        currency_code = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
-        currency_symbol = CURRENCY_SYMBOLS.get(currency_code, 'Rs.')
-
-        return render_template("purchase_orders.html",
-                             orders=orders,
-                             current_page=page,
-                             currency_symbol=currency_symbol,
-                             nonce=g.nonce)
-    except Exception as e:
-        current_app.logger.error(f"Purchase orders route error: {e}")
-        flash("Error loading purchase orders", "error")
-        return redirect(url_for('dashboard'))
 
 
 # PO API-1
