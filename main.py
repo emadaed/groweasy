@@ -28,13 +28,13 @@ from app import create_app, limiter, generate_simple_qr
 
 # Local application
 from fbr_integration import FBRInvoice
+from app.services.services import InvoiceService
+
 #config.py later
 
 CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
 
 app = create_app()
-
-
 
 
 # PO API-1
