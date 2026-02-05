@@ -22,10 +22,7 @@ from app import create_app, limiter, generate_simple_qr
 ##from app.services.invoice_logic_po import prepare_po_data
 ##from app.services.qr_engine import generate_qr_base64
 ##from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
-##from app.services.auth import (
-    create_user, verify_user, get_user_profile, 
-    update_user_profile, change_user_password, save_user_invoice
-)
+##from app.services.auth import create_user, verify_user, get_user_profile, update_user_profile, change_user_password, save_user_invoice
 
 ##from app.services.purchases import save_purchase_order, get_purchase_orders, get_suppliers
 
