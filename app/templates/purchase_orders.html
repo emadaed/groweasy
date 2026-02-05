@@ -116,7 +116,7 @@
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <!-- Download PDF -->
-                                    <a href="{{ url_for('download_document', document_number=order.po_number, type='purchase_order') }}"
+                                    <a href="{{ url_for('sales.download_document', document_number=order.po_number, type='purchase_order') }}"
                                        class="btn btn-outline-primary"
                                        title="Download PDF">
                                         <i class="bi bi-download"></i>
@@ -141,13 +141,13 @@
                                         <ul class="dropdown-menu">
                                             <li>
                                                 <a class="dropdown-item"
-                                                   href="{{ url_for('download_document', document_number=order.po_number, type='purchase_order') }}">
+                                                   href="{{ url_for('sales.download_document', document_number=order.po_number, type='purchase_order') }}">
                                                     <i class="bi bi-file-pdf"></i> Download PDF
                                                 </a>
                                             </li>
                                             <li>
                                                 <a class="dropdown-item"
-                                                   href="{{ url_for('invoice_process') }}?invoice_number={{ order.po_number }}&invoice_type=P&action=preview">
+                                                   href="{{ url_for('sales.invoice_process') }}?invoice_number={{ order.po_number }}&invoice_type=P&action=preview">
                                                     <i class="bi bi-printer"></i> Print Preview
                                                 </a>
                                             </li>

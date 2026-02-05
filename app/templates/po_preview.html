@@ -23,7 +23,7 @@
     <div class="card mt-4">
         <div class="card-body text-center">
             <div class="btn-group" role="group">
-                <a href="{{ url_for('download_document', document_number=po_number, type='purchase_order') }}"
+                <a href="{{ url_for('sales.download_document', document_number=po_number, type='purchase_order') }}"
                    class="btn btn-success btn-lg">
                     <i class="bi bi-download"></i> Download PO PDF
                 </a>
