@@ -273,7 +273,7 @@ def download_document(document_number):
     except Exception as e:
         current_app.logger.error(f"Download error: {str(e)}", exc_info=True)
         flash("❌ Download failed. Please try again.", 'error')
-        return redirect(url_for('purchases.invoice_history' if document_type != 'purchase_order' else 'purchase_orders'))
+        return redirect(url_for('sales.invoice_history' if document_type != 'purchase_order' else 'purchase_orders'))
 
 # 4 invoice history 4
 @sales_bp.route('/invoice_history')
