@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, g, current_app, jsonify
 from flask.views import MethodView
+from sqlalchemy import text
 import json
 from app.services.db import DB_ENGINE
 from app import limiter, generate_simple_qr
@@ -137,7 +138,7 @@ class InvoiceView(MethodView):
             return redirect(url_for('sales.create_invoice'))
 
 # Register route
-##app.add_url_rule('sales/invoice/process', view_func=InvoiceView.as_view('sales.invoice_process'), methods=['GET', 'POST'])
+sales_bp.add_url_rule('/invoice/process', view_func=InvoiceView.as_view('invoice_process'), methods=['GET', 'POST'])
 
 # 3 invoice/download/<document_number>') 3
 @sales_bp.route('/invoice/download/<document_number>')
@@ -341,3 +342,26 @@ def invoice_history():
         nonce=g.nonce
     )
 
+# poll route 5
+@sales_bp.route('/invoice/status/<user_id>')
+def status(user_id):
+    try:
+        from app.services.services import InvoiceService
+        service = InvoiceService(int(user_id))
+        result = service.redis_client.get(f"preview:{user_id}")
+        if result:
+            return jsonify({'ready': True, 'data': json.loads(result)})
+        return jsonify({'ready': False})
+    except:
+        return jsonify({'ready': False})
+
+
+#clean up API-6 
+@sales_bp.route('/cancel_invoice')
+def cancel_invoice():
+    """Cancel pending invoice"""
+    if 'user_id' in session:
+        clear_pending_invoice(session['user_id'])
+        session.pop('invoice_finalized', None)
+        flash('Invoice cancelled', 'info')
+    return redirect(url_for('sales.create_invoice'))

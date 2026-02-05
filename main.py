@@ -8,7 +8,7 @@ import json
 import datetime as dt_module
 from datetime import datetime, date, timedelta
 from flask import render_template, session, redirect, url_for, request, flash, jsonify, g, send_file, make_response, current_app
-from sqlalchemy import text
+##from sqlalchemy import text
 
 # Import the Factory and Global Extensions
 from app import create_app, limiter, generate_simple_qr
@@ -28,7 +28,7 @@ from app import create_app, limiter, generate_simple_qr
 
 # Local application
 from fbr_integration import FBRInvoice
-from app.services.services import InvoiceService
+##from app.services.services import InvoiceService
 
 #config.py later
 
@@ -124,29 +124,29 @@ def get_purchase_order_details(po_number):
         current_app.logger.error(f"PO details error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-# poll route API-4
-@app.route('/invoice/status/<user_id>')
-def status(user_id):
-    try:
-        from app.services.services import InvoiceService
-        service = InvoiceService(int(user_id))
-        result = service.redis_client.get(f"preview:{user_id}")
-        if result:
-            return jsonify({'ready': True, 'data': json.loads(result)})
-        return jsonify({'ready': False})
-    except:
-        return jsonify({'ready': False})
+### poll route 5 sales 
+##@app.route('/invoice/status/<user_id>')
+##def status(user_id):
+##    try:
+##        from app.services.services import InvoiceService
+##        service = InvoiceService(int(user_id))
+##        result = service.redis_client.get(f"preview:{user_id}")
+##        if result:
+##            return jsonify({'ready': True, 'data': json.loads(result)})
+##        return jsonify({'ready': False})
+##    except:
+##        return jsonify({'ready': False})
+##
 
-
-#clean up API-5
-@app.route('/cancel_invoice')
-def cancel_invoice():
-    """Cancel pending invoice"""
-    if 'user_id' in session:
-        clear_pending_invoice(session['user_id'])
-        session.pop('invoice_finalized', None)
-        flash('Invoice cancelled', 'info')
-    return redirect(url_for('create_invoice'))
+###clean up API-6 sales
+##@sales_bp.route('/cancel_invoice')
+##def cancel_invoice():
+##    """Cancel pending invoice"""
+##    if 'user_id' in session:
+##        clear_pending_invoice(session['user_id'])
+##        session.pop('invoice_finalized', None)
+##        flash('Invoice cancelled', 'info')
+##    return redirect(url_for('sales.create_invoice'))
 
 
 
