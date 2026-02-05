@@ -407,18 +407,7 @@ def get_purchase_order_details(po_number):
         current_app.logger.error(f"PO details error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-# poll route API-4
-@app.route('/invoice/status/<user_id>')
-def status(user_id):
-    try:
-        from app.services.services import InvoiceService
-        service = InvoiceService(int(user_id))
-        result = service.redis_client.get(f"preview:{user_id}")
-        if result:
-            return jsonify({'ready': True, 'data': json.loads(result)})
-        return jsonify({'ready': False})
-    except:
-        return jsonify({'ready': False})
+
 
 #clean up API-5
 @app.route('/cancel_invoice')
