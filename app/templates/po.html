@@ -13,7 +13,7 @@
         <p class="text-muted fs-5">Order from suppliers, track deliveries, manage inventory</p>
     </div>
 
-    <form method="POST" action="{{ url_for('create_po_process') }}" enctype="multipart/form-data" id="poForm">
+    <form method="POST" action="{{ url_for('purchases.create_po_process') }}" enctype="multipart/form-data" id="poForm">
         <input type="hidden" name="document_type" value="purchase_order">
 
         <!-- Supplier & PO Details -->
@@ -178,7 +178,7 @@
         <!-- Submit -->
         <div class="text-center">
             <button type="submit" class="btn btn-success btn-lg px-5">Create Purchase Order</button>
-            <a href="{{ url_for('purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
+            <a href="{{ url_for('purchases.purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
         </div>
     </form>
 </div>

@@ -28,12 +28,12 @@
                     <i class="bi bi-download"></i> Download PO PDF
                 </a>
 
-                <a href="{{ url_for('purchase_orders') }}"
+                <a href="{{ url_for('purchases.purchase_orders') }}"
                    class="btn btn-outline-primary btn-lg ms-3">
                     <i class="bi bi-list-check"></i> View All POs
                 </a>
 
-                <a href="{{ url_for('create_purchase_order') }}"
+                <a href="{{ url_for('purchases.create_purchase_order') }}"
                    class="btn btn-primary btn-lg ms-3">
                     <i class="bi bi-plus-circle"></i> Create Another PO
                 </a>
@@ -52,7 +52,7 @@
 
             <!-- Make sure this is OUTSIDE any <form> -->
             <div class="mt-3">
-                <a href="{{ url_for('mark_po_received', po_number=po_number) }}" class="btn btn-success">
+                <a href="{{ url_for('purchases.mark_po_received', po_number=po_number) }}" class="btn btn-success">
                     Receive Goods
                 </a>
             </div>

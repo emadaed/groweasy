@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const pageSubtitle = document.querySelector('p.text-muted.fs-5');
     if (pageSubtitle) {
         pageSubtitle.textContent = 'For billing customers and clients';
-        pageSubtitle.innerHTML += '<br><small class="text-info"><i class="bi bi-info-circle"></i> For supplier orders, use <a href="{{ url_for("create_purchase_order") }}" class="text-decoration-underline">Purchase Orders</a></small>';
+        pageSubtitle.innerHTML += '<br><small class="text-info"><i class="bi bi-info-circle"></i> For supplier orders, use <a href="{{ url_for("purchases.create_po_process") }}" class="text-decoration-underline">Purchase Orders</a></small>';
     }
 
     // Auto-fill dates

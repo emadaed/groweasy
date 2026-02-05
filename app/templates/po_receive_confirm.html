@@ -19,10 +19,10 @@
             <p><strong>{{ po_data.get('items', [])|length }} items</strong> will be added to stock.</p>
 
             <!-- FINAL FIX: action forces POST to correct route -->
-            <form method="POST" action="{{ url_for('mark_po_received', po_number=po_number) }}">
+            <form method="POST" action="{{ url_for('purchases.mark_po_received', po_number=po_number) }}">
                 <input type="hidden" name="confirm" value="yes">
                 <button type="submit" class="btn btn-success btn-lg">Yes, Receive Goods</button>
-                <a href="{{ url_for('purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
+                <a href="{{ url_for('purchases.purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
             </form>
         </div>
     </div>
