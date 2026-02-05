@@ -13,7 +13,7 @@
         <p class="text-muted fs-5">Professional, & Fast</p>
     </div>
 
-    <form method="POST" action="{{ url_for('invoice_process') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ url_for('sales.invoice_process') }}" enctype="multipart/form-data">
         <input type="hidden" name="action" value="preview">
 
         <!-- Business & Client Info (Side-by-side on desktop) -->

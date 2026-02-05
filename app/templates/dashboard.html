@@ -75,7 +75,7 @@
                         <div class="card-body">
                             <h5>📝 Create Invoice</h5>
                             <p>Create a new professional invoice</p>
-                            <a href="{{ url_for('create_invoice') }}" class="btn btn-success">Get Started</a>
+                            <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success">Get Started</a>
                         </div>
                     </div>
                 </div>
@@ -102,7 +102,7 @@
                         <div class="card-body">
                             <h5>📋 Invoice History</h5>
                             <p>View and manage all invoices</p>
-                            <a href="{{ url_for('invoice_history') }}" class="btn btn-info">View History</a>
+                            <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-info">View History</a>
                         </div>
                     </div>
                 </div>
@@ -137,7 +137,7 @@
                         <div class="card-body">
                             <p class="text-muted">Business analytics dashboard coming soon!</p>
                             <div class="text-center">
-                                <a href="{{ url_for('invoice_history') }}" class="btn btn-outline-primary">
+                                <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-outline-primary">
                                     View Detailed Analytics
                                 </a>
                             </div>
@@ -171,7 +171,7 @@
                             {% else %}
                                 <p class="text-muted text-center">No client data yet</p>
                                 <div class="text-center">
-                                    <a href="{{ url_for('create_invoice') }}" class="btn btn-sm btn-outline-success">
+                                    <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-sm btn-outline-success">
                                         Create First Invoice
                                     </a>
                                 </div>

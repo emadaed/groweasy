@@ -86,8 +86,8 @@ def create_app():
     app.register_blueprint(settings_bp)
     from app.routes.purchases import purchases_bp
     app.register_blueprint(purchases_bp)
-##    from app.routes.sales import sales_bp
-##    app.register_blueprint(sales_bp)
+    from app.routes.sales import sales_bp
+    app.register_blueprint(sales_bp)
 ##    from app.routes.api import api_bp
 ##    app.register_blueprint(api_bp)    
 ##    from app.routes.common import common_bp

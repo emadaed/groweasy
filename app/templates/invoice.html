@@ -276,7 +276,7 @@
     </button>
 
     <p class="mt-3">
-        <a href="{{ url_for('cancel_invoice') }}" class="btn btn-outline-secondary btn-sm">Cancel & Start Over</a>
+        <a href="{{ url_for('sales.cancel_invoice') }}" class="btn btn-outline-secondary btn-sm">Cancel & Start Over</a>
     </p>
 </div>
 
@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const invoiceData = {{ data | tojson }};
 
-            const response = await fetch('{{ url_for("download_invoice") }}', {
+            const response = await fetch('{{ url_for("sales.download_invoice") }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(invoiceData)
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             downloadBtn.innerHTML = '✅ Download Complete!';
             setTimeout(() => {
-                window.location.href = '{{ url_for("create_invoice") }}';
+                window.location.href = '{{ url_for("sales.create_invoice") }}';
             }, 1000);
 
         } catch (err) {
