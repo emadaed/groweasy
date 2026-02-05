@@ -136,7 +136,8 @@ class InvoiceView(MethodView):
             flash("⚠️ An unexpected error occurred. Please try again.", 'error')
             return redirect(url_for('sales.create_invoice'))
 
-
+# Register route
+##app.add_url_rule('sales/invoice/process', view_func=InvoiceView.as_view('sales.invoice_process'), methods=['GET', 'POST'])
 
 # 3 invoice/download/<document_number>') 3
 @sales_bp.route('/invoice/download/<document_number>')

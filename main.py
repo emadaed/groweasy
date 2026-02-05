@@ -859,8 +859,6 @@ def create_invoice_pdf_direct(data):
     buffer.seek(0)
     return buffer.getvalue()
 
-# Register route
-app.add_url_rule('sales/invoice/process', view_func=InvoiceView.as_view('sales.invoice_process'), methods=['GET', 'POST'])
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)))
