@@ -17,6 +17,7 @@ from app import limiter, generate_simple_qr
 
 purchases_bp = Blueprint('purchases', __name__)
 
+CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
 #create po 1
 @purchases_bp.route("/create_purchase_order")
 def create_purchase_order():
