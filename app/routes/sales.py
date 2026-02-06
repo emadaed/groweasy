@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, session, redirect, url_for, reques
 from flask.views import MethodView
 from sqlalchemy import text
 import json
+import io
 from app.services.db import DB_ENGINE
 from app import limiter, generate_simple_qr
 from app.services.utils import random_success_message

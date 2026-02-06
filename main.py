@@ -3,7 +3,6 @@
 # ============================================================================
 import os
 import time
-import io
 import json
 import datetime as dt_module
 from datetime import datetime, date, timedelta
