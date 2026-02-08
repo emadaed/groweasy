@@ -20,13 +20,11 @@ from dotenv import load_dotenv
 import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-
 # Local application imports
 from app.services.db import DB_ENGINE
 from app.services.middleware import security_headers
 from app.services.cache import init_cache, get_user_profile_cached
 from app.services.purchases import save_purchase_order, get_purchase_orders, get_suppliers
-
 
 # Global Limiter instance
 limiter = Limiter(key_func=get_remote_address)
@@ -93,9 +91,6 @@ def create_app():
 ##    from app.routes.common import common_bp
 ##    app.register_blueprint(common_bp)
 
-
-    
-
     # --- Logging Noise Reduction ---
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -116,7 +111,6 @@ def create_app():
                 symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
 
         return dict(currency=currency, currency_symbol=symbol)
-
 
     # --- Custom Jinja Filters ---
     @app.template_filter('escapejs')

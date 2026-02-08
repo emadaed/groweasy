@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from sqlalchemy import text
 from app.services.inventory import InventoryManager
 from app.services.utils import random_success_message
+from flask import Response
 from app.services.db import DB_ENGINE # Ensure this import exists
 from app import limiter
 
