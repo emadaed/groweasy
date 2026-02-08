@@ -242,34 +242,32 @@ class InventoryManager:
             return []
 
     @staticmethod
-        def get_inventory_report(user_id):
-            """Fetch all inventory data specifically for CSV reporting"""
-            try:
-                with DB_ENGINE.connect() as conn:
-                    result = conn.execute(text('''
-                        SELECT name, sku, category, current_stock, min_stock_level,
-                               cost_price, selling_price, supplier, location
-                        FROM inventory_items
-                        WHERE user_id = :user_id AND is_active = TRUE
-                        ORDER BY name
-                    '''), {"user_id": user_id})
+    def get_inventory_report(user_id):
+        """Fetch all inventory data specifically for CSV reporting"""
+        try:
+            with DB_ENGINE.connect() as conn:
+                result = conn.execute(text('''
+                    SELECT name, sku, category, current_stock, min_stock_level,
+                           cost_price, selling_price, supplier, location
+                    FROM inventory_items
+                    WHERE user_id = :user_id AND is_active = TRUE
+                    ORDER BY name
+                '''), {"user_id": user_id})
 
-                    report_data = []
-                    for row in result:
-                        report_data.append({
-                            'name': row.name,
-                            'sku': row.sku or 'N/A',
-                            'category': row.category or '',
-                            'current_stock': row.current_stock,
-                            'min_stock': row.min_stock_level or 0, # Note: route expects 'min_stock'
-                            'cost_price': float(row.cost_price) if row.cost_price else 0.0,
-                            'selling_price': float(row.selling_price) if row.selling_price else 0.0,
-                            'supplier': row.supplier or '',
-                            'location': row.location or ''
-                        })
-                    return report_data
-            except Exception as e:
-                logger.error(f"Error generating inventory report data: {e}")
-                return []
-
-
+                report_data = []
+                for row in result:
+                    report_data.append({
+                        'name': row.name,
+                        'sku': row.sku or 'N/A',
+                        'category': row.category or '',
+                        'current_stock': row.current_stock,
+                        'min_stock': row.min_stock_level or 0, # Note: route expects 'min_stock'
+                        'cost_price': float(row.cost_price) if row.cost_price else 0.0,
+                        'selling_price': float(row.selling_price) if row.selling_price else 0.0,
+                        'supplier': row.supplier or '',
+                        'location': row.location or ''
+                    })
+                return report_data
+        except Exception as e:
+            logger.error(f"Error generating inventory report data: {e}")
+            return []
