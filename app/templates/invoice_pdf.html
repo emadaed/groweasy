@@ -7,74 +7,92 @@
         @page { size: A4; margin: 0.3cm; }
         body { font-family: Arial, sans-serif; font-size: 8pt; line-height: 1.4; color: #333; }
         .container { max-width: 100%; }
-        .header { margin-bottom: 1px; border-bottom: 1px solid #2c5aa0; padding-bottom: 1px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .company-info { flex: 1; }
-        .company-info img { max-height: 80px; margin-bottom: 1px; display: block; }
-        .invoice-info { flex: 1; text-align: right; }
         
-        /* New Metadata Row Logic */
+        /* Balanced Header Layout */
+        .header { 
+            margin-bottom: 5px; 
+            border-bottom: 1px solid #2c5aa0; 
+            padding-bottom: 5px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; /* Align items to center vertically */
+        }
+        .logo-section { flex: 1; text-align: left; }
+        .logo-section img { max-height: 70px; display: block; }
+        
+        .company-info-center { flex: 2; text-align: center; } /* More space for center */
+        .company-info-center h2 { font-size: 12pt; color: #2c5aa0; margin: 0; }
+        .company-info-center p { margin: 0; font-size: 7pt; }
+
+        .invoice-info-right { flex: 1; text-align: right; }
+        .invoice-info-right h1 { font-size: 18pt; margin: 0; }
+
+        /* Unified 3-Column Metadata Row */
         .metadata-row { display: flex; justify-content: space-between; gap: 5px; margin: 5px 0; align-items: stretch; }
-        .metadata-column { flex: 1; padding: 2px; border-left: 1px solid #2c5aa0; min-height: 60px; }
-        
-        .bill-to { background: #f8f9fa; border-left: 1px dashed #ccc; }
-        .payment-info { background: #e8f5e8; border-left: 1px dashed #ccc; }
-        .notes { background: #f0f0f0; border-left: 1px dashed #ccc; }
+        .metadata-column { 
+            flex: 1; 
+            padding: 5px; 
+            background: #f8f9fa; /* Unified Light Gray */
+            border-left: 2px solid #2c5aa0; /* Unified Blue Border */
+            min-height: 60px; 
+        }
 
         table.items { width: 100%; border-collapse: collapse; margin: 1px 0; page-break-inside: avoid; }
-        table.items th, table.items td { border: 1px solid #ddd; padding: 1px; text-align: left; font-size: 8pt; }
+        table.items th, table.items td { border: 1px solid #ddd; padding: 2px; text-align: left; font-size: 7pt; }
         table.items thead { background: #2c5aa0; color: white; }
-        .totals { width: 30%; float: right; background: #f8f9fa; border: 1px solid #ddd; margin-top: 0px; }
-        .totals td { padding: 1px; font-size: 8pt; }
-        .grand-total { background: #2c5aa0; color: white; font-weight: bold; font-size: 8pt; }
+        
+        .totals { width: 30%; float: right; background: #f8f9fa; border: 1px solid #ddd; margin-top: 5px; }
+        .totals td { padding: 2px; font-size: 7pt; }
+        .grand-total { background: #2c5aa0; color: white; font-weight: bold; }
         
         .qr-section { text-align: center; margin: 5px 0; }
         .qr-section img { width: 70px; height: 70px; border: 1px solid #2c5aa0; padding: 1px; background: white; }
-        .footer { text-align: center; margin-top: 1px; font-size: 5pt; color: #666; }
+        .footer { text-align: center; margin-top: 5px; font-size: 6pt; color: #666; }
         .clear { clear: both; }
         .text-right { text-align: right; }
-        h1, h2, h3 { color: #2c5aa0; margin: 0 0 1px 0; font-size: 8pt; }
+        h3 { color: #2c5aa0; margin: 0 0 2px 0; font-size: 8pt; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="company-info">
+            <div class="logo-section">
                 {% if data.get('logo_b64') %}
                 <img src="data:image/png;base64,{{ data.get('logo_b64') }}" alt="Company Logo">
                 {% endif %}
-                <h2>{{ data.get('company_name', 'Your Company') }}</h2>
-                <p>{{ data.get('company_address', '') }}<br>
-                Phone: {{ data.get('company_phone', '') }}<br>
-                Email: {{ data.get('company_email', '') }}</p>
             </div>
-            <div class="invoice-info">
+
+            <div class="company-info-center">
+                <h2>{{ data.get('company_name', 'Your Company') }}</h2>
+                <p>{{ data.get('company_address', '') }}</p>
+                <p>Phone: {{ data.get('company_phone', '') }} | Email: {{ data.get('company_email', '') }}</p>
+            </div>
+
+            <div class="invoice-info-right">
                 <h1>INVOICE</h1>
                 <p><strong>#:</strong> {{ data.get('invoice_number', '') }}<br>
-                <strong>Date:</strong> {{ data.get('invoice_date', '') }}<br>
-                {% if data.get('due_date', '') %}
-                <strong>Due:</strong> {{ data.get('due_date', '') }}<br>
-                {% endif %}
-                <strong>Status:</strong> {{ data.get('status', 'Pending')|upper }}</p>
+                <strong>Date:</strong> {{ data.get('invoice_date', '') }}</p>
             </div>
         </div>
 
         <div class="metadata-row">
-            <div class="metadata-column bill-to">
+            <div class="metadata-column">
                 <h3>BILL TO</h3>
-                <p><strong>{{ data.get('client_name', '') }}</strong><br>
-                {{ data.get('client_address', '') }}<br>
-                Ph: {{ data.get('client_phone', '') }}</p>
+                <p><strong>{{ data.get('client_name', '') }}</strong></p>
+                <p>{{ data.get('client_address', '') }}</p>
+                <p>Ph: {{ data.get('client_phone', '') }}</p>
             </div>
 
-            <div class="metadata-column payment-info">
+            <div class="metadata-column">
                 <h3>PAYMENT INFO</h3>
-                <p><strong>Terms:</strong> {{ data.get('payment_terms', 'Due on Receipt') }}<br>
-                <strong>Methods:</strong> {{ data.get('payment_methods', 'Bank/Cash') }}</p>
+                <p><strong>Terms:</strong> {{ data.get('payment_terms', 'Due on Receipt') }}</p>
+                <p><strong>Methods:</strong> {{ data.get('payment_methods', 'Bank/Cash') }}</p>
+                <p><strong>Status:</strong> {{ data.get('status', 'Pending')|upper }}</p>
             </div>
 
-            <div class="metadata-column notes">
-                <h3>NOTES</h3>
-                <p>{{ data.get('notes', 'N/A') }}</p>
+            <div class="metadata-column">
+                <h3>NOTES / INSTRUCTIONS</h3>
+                <p>{{ data.get('notes') if data.get('notes') else 'Thank you for choosing our services.' }}</p>
             </div>
         </div>
 
@@ -82,11 +100,11 @@
             <table class="items">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Description</th>
-                        <th>Qty</th>
-                        <th>Price</th>
-                        <th>Amount</th>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 50%;">Description</th>
+                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 15%;">Price</th>
+                        <th style="width: 20%;">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -125,15 +143,14 @@
 
         {% if custom_qr_b64 %}
         <div class="qr-section">
-            <h3>PAYMENT QR</h3>
             <img src="data:image/png;base64,{{ custom_qr_b64 }}" alt="Payment QR">
-            <p>Scan to pay</p>
+            <p style="font-size: 7pt; margin: 0;">Scan to Verify/Pay</p>
         </div>
         {% endif %}
 
         <div class="footer">
             <p><strong>Thank you for your business!</strong></p>
-            <p>{{ data.get('company_name', 'Your Company') }} | {{ data.get('company_website', '') }}</p>
+            <p>{{ data.get('company_name', 'Your Company') }} | Generated by GrowEasy Invoice System</p>
         </div>
     </div>
 </body>
