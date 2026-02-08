@@ -167,7 +167,7 @@ def create_purchase_order_pdf_direct(data):
         ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#e8f4fd')),
         ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#f8f9fa')),
         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('PADDING', (0, 0), (-1, -1), 6),
+        ('PADDING', (0, 0), (-1, -1), 1),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
 
@@ -214,8 +214,8 @@ def create_purchase_order_pdf_direct(data):
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 1),
             ('GRID', (0, 0), (-1, len(data['items']) + 1), 1, colors.grey),
             ('ALIGN', (4, 1), (6, len(data['items']) + 1), 'RIGHT'),
             ('BACKGROUND', (0, -4), (-1, -1), colors.HexColor('#f8f9fa')),
@@ -241,7 +241,7 @@ def create_purchase_order_pdf_direct(data):
     terms_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#6c757d')),
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
-        ('PADDING', (0, 0), (-1, -1), 8),
+        ('PADDING', (0, 0), (-1, -1), 1),
     ]))
 
     story.append(terms_table)
@@ -282,10 +282,10 @@ def create_invoice_pdf_direct(data):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=1*cm,
-        leftMargin=1*cm,
-        topMargin=1*cm,
-        bottomMargin=1*cm
+        rightMargin=0.5*cm,
+        leftMargin=0.5*cm,
+        topMargin=0.5*cm,
+        bottomMargin=0.5*cm
     )
 
     story = []
@@ -295,10 +295,11 @@ def create_invoice_pdf_direct(data):
     title_style = ParagraphStyle(
         'InvoiceTitle',
         parent=styles['Heading1'],
-        fontSize=18,
+        fontSize=14,
+        leading=16,
         textColor=colors.HexColor('#28a745'),  # Green for invoices
         alignment=1,
-        spaceAfter=4
+        spaceAfter=0
     )
 
     header_style = ParagraphStyle(
@@ -306,14 +307,15 @@ def create_invoice_pdf_direct(data):
         parent=styles['Heading2'],
         fontSize=14,
         textColor=colors.HexColor('#28a745'),
-        spaceAfter=4
+        spaceAfter=0
     )
 
     normal_style = ParagraphStyle(
         'InvoiceNormal',
         parent=styles['Normal'],
-        fontSize=10,
-        spaceAfter=4
+        fontSize=8,
+        leading=9,
+        spaceAfter=0
     )
 
     bold_style = ParagraphStyle(
@@ -326,7 +328,7 @@ def create_invoice_pdf_direct(data):
     # Title with Tax Invoice
     story.append(Paragraph("TAX INVOICE", title_style))
     story.append(Paragraph(f"Invoice #: {data['document_number']}", header_style))
-    story.append(Spacer(1, 0.2*inch))
+    story.append(Spacer(0.2, 0.3*inch))
 
     # Seller/Buyer info in two columns
     seller_info = [
@@ -353,11 +355,11 @@ def create_invoice_pdf_direct(data):
         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
         ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#e8f4fd')),
         ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#f8f9fa')),
-        ('PADDING', (0, 0), (-1, -1), 4),
+        ('PADDING', (0, 0), (-1, -1), 1),
     ]))
 
     story.append(seller_table)
-    story.append(Spacer(1, 0.2*inch))
+    story.append(Spacer(0.2, 0.3*inch))
 
     # Invoice details
     details_data = [
@@ -369,7 +371,7 @@ def create_invoice_pdf_direct(data):
     details_table = Table(details_data, colWidths=[2.3*inch, 2.3*inch, 2.3*inch])
     details_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('PADDING', (0, 0), (-1, -1), 4),
+        ('PADDING', (0, 0), (-1, -1), 1),
     ]))
 
     story.append(details_table)
@@ -419,7 +421,7 @@ def create_invoice_pdf_direct(data):
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 1),
             ('GRID', (0, 0), (-1, len(data['items']) + 1), 1, colors.grey),
             ('ALIGN', (2, 1), (4, len(data['items']) + 1), 'RIGHT'),
             ('BACKGROUND', (0, -4), (-1, -1), colors.HexColor('#f8f9fa')),
@@ -441,11 +443,11 @@ def create_invoice_pdf_direct(data):
         notes_table.setStyle(TableStyle([
             ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#6c757d')),
             ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
-            ('PADDING', (0, 0), (-1, -1), 4),
+            ('PADDING', (0, 0), (-1, -1), 1),
         ]))
 
         story.append(notes_table)
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(.02, 0.3*inch))
 
     # Thank you message and footer
     story.append(Paragraph("Thank you for your business!",
