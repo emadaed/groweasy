@@ -11,21 +11,28 @@
         .company-info { flex: 1; }
         .company-info img { max-height: 80px; margin-bottom: 1px; display: block; }
         .invoice-info { flex: 1; text-align: right; }
-        .bill-to { margin: 1px 0; padding: 1px; background: #f8f9fa; border-left: 1px solid #2c5aa0; }
+        
+        /* New Metadata Row Logic */
+        .metadata-row { display: flex; justify-content: space-between; gap: 5px; margin: 5px 0; align-items: stretch; }
+        .metadata-column { flex: 1; padding: 2px; border-left: 1px solid #2c5aa0; min-height: 60px; }
+        
+        .bill-to { background: #f8f9fa; border-left: 1px solid #2c5aa0; }
+        .payment-info { background: #e8f5e8; border-left: 1px solid #28a745; }
+        .notes { background: #f0f0f0; border-left: 1px dashed #ccc; }
+
         table.items { width: 100%; border-collapse: collapse; margin: 1px 0; page-break-inside: avoid; }
-        table.items th, table.items td { border: 1px solid #ddd; padding: 1px; text-align: left; font-size: 7pt; }
+        table.items th, table.items td { border: 1px solid #ddd; padding: 1px; text-align: left; font-size: 8pt; }
         table.items thead { background: #2c5aa0; color: white; }
-        .totals { width: 40%; float: right; background: #f8f9fa; border: 1px solid #ddd; margin-top: 0px; }
-        .totals td { padding: 1px; font-size: 6pt; }
-        .grand-total { background: #2c5aa0; color: white; font-weight: bold; font-size: 7pt; }
-        .payment-info { margin: 1px 0; padding: 1px; background: #e8f5e8; border-left: 1px solid #28a745; }
-        .notes { margin: 1px 0; padding: 1px; background: #f0f0f0; border: 1px dashed #ccc; }
-        .qr-section { text-align: center; margin: 1px 0; }
+        .totals { width: 30%; float: right; background: #f8f9fa; border: 1px solid #ddd; margin-top: 0px; }
+        .totals td { padding: 1px; font-size: 8pt; }
+        .grand-total { background: #2c5aa0; color: white; font-weight: bold; font-size: 8pt; }
+        
+        .qr-section { text-align: center; margin: 5px 0; }
         .qr-section img { width: 70px; height: 70px; border: 1px solid #2c5aa0; padding: 1px; background: white; }
         .footer { text-align: center; margin-top: 1px; font-size: 5pt; color: #666; }
         .clear { clear: both; }
         .text-right { text-align: right; }
-        h1, h2, h3 { color: #2c5aa0; margin: 0 0 1px 0; }
+        h1, h2, h3 { color: #2c5aa0; margin: 0 0 1px 0; font-size: 8pt; }
     </style>
 </head>
 <body>
@@ -51,12 +58,24 @@
             </div>
         </div>
 
-        <div class="bill-to">
-            <h3>BILL TO</h3>
-            <p><strong>{{ data.get('client_name', '') }}</strong><br>
-            {{ data.get('client_address', '') }}<br>
-            Phone: {{ data.get('client_phone', '') }}<br>
-            Email: {{ data.get('client_email', '') }}</p>
+        <div class="metadata-row">
+            <div class="metadata-column bill-to">
+                <h3>BILL TO</h3>
+                <p><strong>{{ data.get('client_name', '') }}</strong><br>
+                {{ data.get('client_address', '') }}<br>
+                Ph: {{ data.get('client_phone', '') }}</p>
+            </div>
+
+            <div class="metadata-column payment-info">
+                <h3>PAYMENT INFO</h3>
+                <p><strong>Terms:</strong> {{ data.get('payment_terms', 'Due on Receipt') }}<br>
+                <strong>Methods:</strong> {{ data.get('payment_methods', 'Bank/Cash') }}</p>
+            </div>
+
+            <div class="metadata-column notes">
+                <h3>NOTES</h3>
+                <p>{{ data.get('notes', 'N/A') }}</p>
+            </div>
         </div>
 
         <div style="page-break-inside: avoid;">
@@ -104,28 +123,6 @@
 
         <div class="clear"></div>
 
-        <!-- Payment Information -->
-        {% if data.get('payment_terms') or data.get('payment_methods') %}
-        <div class="payment-info">
-            <h3>PAYMENT INFORMATION</h3>
-            {% if data.get('payment_terms') %}
-            <p><strong>Terms:</strong> {{ data.get('payment_terms') }}</p>
-            {% endif %}
-            {% if data.get('payment_methods') %}
-            <p><strong>Methods:</strong> {{ data.get('payment_methods') }}</p>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Notes -->
-        {% if data.get('notes') %}
-        <div class="notes">
-            <h3>NOTES</h3>
-            <p>{{ data.get('notes') }}</p>
-        </div>
-        {% endif %}
-
-        <!-- QR -->
         {% if custom_qr_b64 %}
         <div class="qr-section">
             <h3>PAYMENT QR</h3>
