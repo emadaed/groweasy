@@ -1,9 +1,9 @@
 # app/services/supplier.py
-from app.services.db import DB_ENGINE
-from sqlalchemy import text
+import secrets  # <--- Added this critical import
 import logging
-import secrets 
 from datetime import datetime
+from sqlalchemy import text
+from app.services.db import DB_ENGINE
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ class SupplierManager:
                 email VARCHAR(255),
                 phone VARCHAR(50),
                 address TEXT,
-                tax_id VARCHAR(100), -- NTN/STRN
-                payment_terms VARCHAR(100), -- e.g., Net 30, Due on Receipt
+                tax_id VARCHAR(100),
+                payment_terms VARCHAR(100),
                 bank_details TEXT,
                 total_purchased DECIMAL(15, 2) DEFAULT 0,
                 order_count INTEGER DEFAULT 0,
@@ -38,7 +38,7 @@ class SupplierManager:
 
     @staticmethod
     def get_suppliers(user_id):
-        SupplierManager.ensure_table_exists() # Safety check
+        SupplierManager.ensure_table_exists()
         try:
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(text('''
@@ -49,6 +49,7 @@ class SupplierManager:
                     ORDER BY name
                 '''), {"user_id": user_id})
                 
+                # Convert rows to dictionaries properly
                 return [dict(row._mapping) for row in result]
         except Exception as e:
             logger.error(f"Error fetching suppliers: {e}")
@@ -57,7 +58,8 @@ class SupplierManager:
     @staticmethod
     def add_supplier(user_id, data):
         SupplierManager.ensure_table_exists()
-        # Generate a Vendor ID if not provided (SAP style)
+        
+        # Professional Vendor ID generation: VEN-2602-A1B2
         vendor_id = data.get('vendor_id') or f"VEN-{datetime.now().strftime('%y%m')}-{secrets.token_hex(2).upper()}"
         
         query = text('''
@@ -75,15 +77,16 @@ class SupplierManager:
                     "user_id": user_id,
                     "vendor_id": vendor_id,
                     "name": data['name'],
-                    "contact_person": data.get('contact_person'),
-                    "email": data.get('email'),
-                    "phone": data.get('phone'),
-                    "address": data.get('address'),
-                    "tax_id": data.get('tax_id'),
-                    "payment_terms": data.get('payment_terms'),
-                    "bank_details": data.get('bank_details')
+                    "contact_person": data.get('contact_person') or '',
+                    "email": data.get('email') or '',
+                    "phone": data.get('phone') or '',
+                    "address": data.get('address') or '',
+                    "tax_id": data.get('tax_id') or '',
+                    "payment_terms": data.get('payment_terms') or 'Due on Receipt',
+                    "bank_details": data.get('bank_details') or ''
                 })
-                return result.fetchone()[0]
+                row = result.fetchone()
+                return row[0] if row else None
         except Exception as e:
             logger.error(f"Error adding supplier: {e}")
             return None
