@@ -37,27 +37,54 @@ def create_po_process():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user_id = session['user_id']
+    
     try:
+        # --- NEW FIX START ---
+        # Get the ID from the form
+        supplier_id = request.form.get('supplier_id')
+        form_data = request.form.to_dict()
+
+        if supplier_id:
+            # Fetch the actual supplier from the database using our new Manager
+            from app.services.supplier import SupplierManager
+            suppliers = SupplierManager.get_suppliers(user_id)
+            # Find the specific supplier matching the ID
+            selected_supplier = next((s for s in suppliers if str(s['id']) == str(supplier_id)), None)
+            
+            if selected_supplier:
+                # Force the correct vendor data into the form data for the PDF generator
+                form_data['supplier_name'] = selected_supplier['name']
+                form_data['supplier_email'] = selected_supplier.get('email', '')
+                form_data['supplier_phone'] = selected_supplier.get('phone', '')
+                form_data['supplier_address'] = selected_supplier.get('address', '')
+                form_data['supplier_tax_id'] = selected_supplier.get('tax_id', '')
+        # --- NEW FIX END ---
+
         from app.services.invoice_service import InvoiceService
         service = InvoiceService(user_id)
-        po_data, errors = service.create_purchase_order(request.form, request.files)
+        
+        # Pass our modified form_data instead of the raw request.form
+        po_data, errors = service.create_purchase_order(form_data, request.files)
+        
         if errors:
             for error in errors:
                 flash(f"❌ {error}", "error")
             return redirect(url_for('purchases.create_purchase_order'))
+            
         if po_data:
             from app.services.session_storage import SessionStorage
             session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
             session['last_po_ref'] = session_ref
-            flash(f"✅ Purchase Order {po_data['po_number']} created successfully!", "success")
+            flash(f"✅ PO {po_data['po_number']} created for {form_data.get('supplier_name')}!", "success")
             return redirect(url_for('purchases.po_preview', po_number=po_data['po_number']))
+            
         flash("❌ Failed to create purchase order", "error")
         return redirect(url_for('purchases.create_purchase_order'))
+        
     except Exception as e:
         current_app.logger.error(f"PO creation error: {str(e)}", exc_info=True)
         flash("❌ An unexpected error occurred", "error")
         return redirect(url_for('purchases.create_purchase_order'))
-
 # po preview =3 
 @purchases_bp.route('/po/preview/<po_number>')
 def po_preview(po_number):
