@@ -25,5 +25,5 @@ def suppliers():
     suppliers = SupplierManager.get_suppliers(session['user_id'])
 
     return render_template("suppliers.html",
-                         suppliers=supplier_list,
+                         suppliers=suppliers,
                          nonce=g.nonce)
