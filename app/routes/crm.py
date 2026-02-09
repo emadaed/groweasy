@@ -22,7 +22,7 @@ def suppliers():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
    
-    supplier_list = get_suppliers(session['user_id'])
+    suppliers = SupplierManager.get_suppliers(session['user_id'])
 
     return render_template("suppliers.html",
                          suppliers=supplier_list,
