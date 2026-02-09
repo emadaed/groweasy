@@ -4,72 +4,56 @@ from sqlalchemy import text
 import json
 from datetime import datetime
 
-def init_purchase_tables():
-    """Initialize purchase order and supplier tables"""
-    with DB_ENGINE.begin() as conn:
-        conn.execute(text('''
-            CREATE TABLE IF NOT EXISTS suppliers (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                email TEXT,
-                phone TEXT,
-                address TEXT,
-                tax_id TEXT,
-                total_purchased DECIMAL(10,2) DEFAULT 0,
-                order_count INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        '''))
+# app/services/purchases.py
 
-        conn.execute(text('''
-            CREATE TABLE IF NOT EXISTS purchase_orders (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                po_number TEXT NOT NULL,
-                supplier_name TEXT NOT NULL,
-                order_date DATE NOT NULL,
-                delivery_date DATE,
-                grand_total DECIMAL(10,2) NOT NULL,
-                status TEXT DEFAULT 'pending',
-                order_data TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        '''))
-
-        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_purchase_orders ON purchase_orders(user_id, order_date)"))
+def ensure_purchase_table_migrated():
+    """Safety check to add supplier_id column to purchase_orders table if missing"""
+    from app.services.db import DB_ENGINE
+    from sqlalchemy import text
+    try:
+        with DB_ENGINE.begin() as conn:
+            # Add supplier_id column if it doesn't exist
+            conn.execute(text('''
+                ALTER TABLE purchase_orders 
+                ADD COLUMN IF NOT EXISTS supplier_id INTEGER;
+            '''))
+            # Also ensure grand_total exists (sometimes named total_amount in old versions)
+            conn.execute(text('''
+                ALTER TABLE purchase_orders 
+                ADD COLUMN IF NOT EXISTS grand_total DECIMAL(15, 2);
+            '''))
+    except Exception as e:
+        print(f"Migration Notice (Purchase Orders): {e}")
 
 def save_purchase_order(user_id, order_data):
     """Save purchase order and link to professional Supplier record using ID"""
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
     import json
+    from datetime import datetime
+    
+    # RUN MIGRATION FIRST
+    ensure_purchase_table_migrated()
     
     try:
         with DB_ENGINE.begin() as conn:
             # 1. Generate fresh PO number
             from app.services.number_generator import NumberGenerator
             po_number = NumberGenerator.generate_po_number(user_id)
-            print(f"🔍 Generated fresh PO number: {po_number}")
 
-            # 2. Get identifying data
-            # Use supplier_id (the numeric key) instead of just the name
-            supplier_id = order_data.get('supplier_id') 
+            # 2. Extract Data
+            # Use .get() to avoid KeyErrors
+            supplier_id = order_data.get('supplier_id')
             supplier_name = order_data.get('supplier_name', 'Unknown Supplier')
-            order_date = order_data.get('po_date', datetime.now().strftime('%Y-%m-%d'))
+            order_date = order_data.get('po_date') or datetime.now().strftime('%Y-%m-%d')
             delivery_date = order_data.get('delivery_date')
             grand_total = float(order_data.get('grand_total', 0))
 
-            # 3. Cleanup order data
+            # 3. Prepare JSON blob
             order_data['po_number'] = po_number
-            if 'invoice_number' in order_data:
-                del order_data['invoice_number']
-            
             order_json = json.dumps(order_data)
 
-            # 4. Insert PO with link to supplier_id
+            # 4. Insert PO (Now safe because of migration)
             conn.execute(text('''
                 INSERT INTO purchase_orders 
                 (user_id, po_number, supplier_id, supplier_name, order_date, delivery_date, grand_total, order_data)
@@ -85,7 +69,7 @@ def save_purchase_order(user_id, order_data):
                 "order_json": order_json
             })
 
-            # 5. Professional Update: Update the existing supplier record directly by ID
+            # 5. Update Supplier Stats
             if supplier_id:
                 conn.execute(text('''
                     UPDATE suppliers SET 
@@ -95,16 +79,14 @@ def save_purchase_order(user_id, order_data):
                     WHERE id = :id AND user_id = :user_id
                 '''), {
                     "grand_total": grand_total,
-                    "id": supplier_id,
+                    "id": int(supplier_id),
                     "user_id": user_id
                 })
-                print(f"✅ Supplier {supplier_name} stats updated via ID")
-            else:
-                print(f"⚠️ No supplier_id found, PO saved but stats not updated.")
+                print(f"✅ Purchase Order Linked & Supplier {supplier_name} stats updated.")
 
         return True
     except Exception as e:
-        print(f"❌ Error in save_purchase_order: {e}")
+        print(f"❌ Final Save Error: {e}")
         return False
 
 def get_purchase_orders(user_id, limit=50, offset=0):
