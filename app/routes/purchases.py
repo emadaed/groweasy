@@ -39,32 +39,12 @@ def create_po_process():
     user_id = session['user_id']
     
     try:
-        # --- NEW FIX START ---
-        # Get the ID from the form
-        supplier_id = request.form.get('supplier_id')
-        form_data = request.form.to_dict()
-
-        if supplier_id:
-            # Fetch the actual supplier from the database using our new Manager
-            from app.services.suppliers import SupplierManager
-            suppliers = SupplierManager.get_suppliers(user_id)
-            # Find the specific supplier matching the ID
-            selected_supplier = next((s for s in suppliers if str(s['id']) == str(supplier_id)), None)
-            
-            if selected_supplier:
-                # Force the correct vendor data into the form data for the PDF generator
-                form_data['supplier_name'] = selected_supplier['name']
-                form_data['supplier_email'] = selected_supplier.get('email', '')
-                form_data['supplier_phone'] = selected_supplier.get('phone', '')
-                form_data['supplier_address'] = selected_supplier.get('address', '')
-                form_data['supplier_tax_id'] = selected_supplier.get('tax_id', '')
-        # --- NEW FIX END ---
-
+        
         from app.services.invoice_service import InvoiceService
         service = InvoiceService(user_id)
         
-        # Pass our modified form_data instead of the raw request.form
-        po_data, errors = service.create_purchase_order(form_data, request.files)
+        # Pass our
+        po_data, errors = service.create_purchase_order(request.form, request.files)
         
         if errors:
             for error in errors:

@@ -10,21 +10,11 @@
         <div class="row">
             <div class="col-md-6">
                 <h5>Supplier</h5>
-                <select name="supplier_id" id="supplier_select" class="form-select mb-2" required onchange="syncVendorData()">
-                    <option value="">-- Select Registered Vendor --</option>
+                <select name="supplier_id" id="supplier_select">
                     {% for s in suppliers %}
-                    <option value="{{ s.id }}" 
-                            data-name="{{ s.name }}"
-                            data-email="{{ s.email }}"
-                            data-phone="{{ s.phone }}"
-                            data-address="{{ s.address }}">
-                        {{ s.name }} ({{ s.vendor_id if s.vendor_id else 'No ID' }})
-                    </option>
+                    <option value="{{ s.id }}">{{ s.name }}</option>
                     {% endfor %}
                 </select>
-                
-                <input type="hidden" name="supplier_name" id="hidden_supplier_name">
-
                 <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#supplierModal">
                     + Add New Supplier
                 </button>
@@ -59,7 +49,8 @@
                 </tr>
             </thead>
             <tbody>
-                </tbody>
+                <!-- Items added here -->
+            </tbody>
         </table>
 
         <div class="text-center">
@@ -68,6 +59,7 @@
     </form>
 </div>
 
+<!-- Inventory Modal -->
 <div class="modal fade" id="inventoryModal">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -105,16 +97,6 @@
 </div>
 
 <script nonce="{{ nonce }}">
-function syncVendorData() {
-    const select = document.getElementById('supplier_select');
-    const selected = select.options[select.selectedIndex];
-    
-    if (selected.value) {
-        // Populates the hidden name field for the PO record and PDF [cite: 3]
-        document.getElementById('hidden_supplier_name').value = selected.getAttribute('data-name');
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     const tbody = document.querySelector('#itemsTable tbody');
 
