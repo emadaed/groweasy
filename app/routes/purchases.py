@@ -56,7 +56,7 @@ def create_po_process():
             from app.services.session_storage import SessionStorage
             session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
             session['last_po_ref'] = session_ref
-            flash(f"✅ PO {po_data['po_number']} created for {form_data.get('supplier_name')}!", "success")
+            #flash(f"✅ PO {po_data['po_number']} created for {form_data.get('supplier_name')}!", "success")
             return redirect(url_for('purchases.po_preview', po_number=po_data['po_number']))
             
         flash("❌ Failed to create purchase order", "error")
