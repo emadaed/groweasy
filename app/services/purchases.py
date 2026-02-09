@@ -42,98 +42,70 @@ def init_purchase_tables():
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_purchase_orders ON purchase_orders(user_id, order_date)"))
 
 def save_purchase_order(user_id, order_data):
-    """Save purchase order and auto-update supplier - FIXED"""
-    with DB_ENGINE.begin() as conn:
-        # Generate fresh PO number
-        from app.services.number_generator import NumberGenerator
-        po_number = NumberGenerator.generate_po_number(user_id)
+    """Save purchase order and link to professional Supplier record using ID"""
+    from app.services.db import DB_ENGINE
+    from sqlalchemy import text
+    import json
+    
+    try:
+        with DB_ENGINE.begin() as conn:
+            # 1. Generate fresh PO number
+            from app.services.number_generator import NumberGenerator
+            po_number = NumberGenerator.generate_po_number(user_id)
+            print(f"🔍 Generated fresh PO number: {po_number}")
 
-        print(f"🔍 Generated fresh PO number: {po_number}")
+            # 2. Get identifying data
+            # Use supplier_id (the numeric key) instead of just the name
+            supplier_id = order_data.get('supplier_id') 
+            supplier_name = order_data.get('supplier_name', 'Unknown Supplier')
+            order_date = order_data.get('po_date', datetime.now().strftime('%Y-%m-%d'))
+            delivery_date = order_data.get('delivery_date')
+            grand_total = float(order_data.get('grand_total', 0))
 
-        # FIX: Use correct PO field names
-        supplier_name = order_data.get('supplier_name', 'Unknown Supplier')  # FIXED
-        order_date = order_data.get('po_date', datetime.now().strftime('%Y-%m-%d'))  # FIXED
-        delivery_date = order_data.get('delivery_date', '')  # FIXED
-        grand_total = float(order_data.get('grand_total', 0))
+            # 3. Cleanup order data
+            order_data['po_number'] = po_number
+            if 'invoice_number' in order_data:
+                del order_data['invoice_number']
+            
+            order_json = json.dumps(order_data)
 
-        # Update order_data with correct PO number (remove invoice_number)
-        order_data['po_number'] = po_number
-        if 'invoice_number' in order_data:
-            del order_data['invoice_number']  # Remove invoice field
-
-        order_json = json.dumps(order_data)
-
-        # Convert empty dates to None for PostgreSQL
-        if not order_date:
-            order_date = datetime.now().strftime('%Y-%m-%d')  # Default to today
-        if not delivery_date:
-            delivery_date = None
-
-        print(f"📅 PO Date: {order_date}, Delivery: {delivery_date}")
-
-        conn.execute(text('''
-            INSERT INTO purchase_orders
-            (user_id, po_number, supplier_name, order_date, delivery_date, grand_total, order_data)
-            VALUES (:user_id, :po_number, :supplier_name, :order_date, :delivery_date, :grand_total, :order_json)
-        '''), {
-            "user_id": user_id,
-            "po_number": po_number,
-            "supplier_name": supplier_name,
-            "order_date": order_date,
-            "delivery_date": delivery_date,
-            "grand_total": grand_total,
-            "order_json": order_json
-        })
-
-        print(f"✅ Purchase Order {po_number} saved for {supplier_name}")
-
-        # Auto-save supplier - FIXED: Use correct supplier fields
-        supplier_data = {
-            'name': supplier_name,
-            'email': order_data.get('supplier_email', ''),
-            'phone': order_data.get('supplier_phone', ''),
-            'address': order_data.get('supplier_address', ''),
-            'tax_id': order_data.get('supplier_tax_id', '')
-        }
-
-        result = conn.execute(text("SELECT id FROM suppliers WHERE user_id = :user_id AND name = :name"),
-                             {"user_id": user_id, "name": supplier_data['name']}).fetchone()
-
-        if result:
+            # 4. Insert PO with link to supplier_id
             conn.execute(text('''
-                UPDATE suppliers SET
-                email=:email, phone=:phone, address=:address, tax_id=:tax_id,
-                order_count = order_count + 1,
-                total_purchased = total_purchased + :grand_total,
-                updated_at=CURRENT_TIMESTAMP
-                WHERE id=:id
-            '''), {
-                "email": supplier_data['email'],
-                "phone": supplier_data['phone'],
-                "address": supplier_data['address'],
-                "tax_id": supplier_data['tax_id'],
-                "grand_total": grand_total,
-                "id": result[0]
-            })
-        else:
-            conn.execute(text('''
-                INSERT INTO suppliers
-                (user_id, name, email, phone, address, tax_id, total_purchased, order_count)
-                VALUES (:user_id, :name, :email, :phone, :address, :tax_id, :grand_total, 1)
+                INSERT INTO purchase_orders 
+                (user_id, po_number, supplier_id, supplier_name, order_date, delivery_date, grand_total, order_data)
+                VALUES (:user_id, :po_number, :supplier_id, :supplier_name, :order_date, :delivery_date, :grand_total, :order_json)
             '''), {
                 "user_id": user_id,
-                "name": supplier_data['name'],
-                "email": supplier_data['email'],
-                "phone": supplier_data['phone'],
-                "address": supplier_data['address'],
-                "tax_id": supplier_data['tax_id'],
-                "grand_total": grand_total
+                "po_number": po_number,
+                "supplier_id": supplier_id,
+                "supplier_name": supplier_name,
+                "order_date": order_date,
+                "delivery_date": delivery_date if delivery_date else None,
+                "grand_total": grand_total,
+                "order_json": order_json
             })
 
-        print(f"✅ Supplier {supplier_name} updated/created")
+            # 5. Professional Update: Update the existing supplier record directly by ID
+            if supplier_id:
+                conn.execute(text('''
+                    UPDATE suppliers SET 
+                        order_count = order_count + 1,
+                        total_purchased = total_purchased + :grand_total,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id AND user_id = :user_id
+                '''), {
+                    "grand_total": grand_total,
+                    "id": supplier_id,
+                    "user_id": user_id
+                })
+                print(f"✅ Supplier {supplier_name} stats updated via ID")
+            else:
+                print(f"⚠️ No supplier_id found, PO saved but stats not updated.")
 
-    return True
-
+        return True
+    except Exception as e:
+        print(f"❌ Error in save_purchase_order: {e}")
+        return False
 
 def get_purchase_orders(user_id, limit=50, offset=0):
     """Get purchase orders for user"""

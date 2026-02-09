@@ -55,14 +55,14 @@ class SupplierManager:
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(text('''
                     SELECT id, 
-                           COALESCE(vendor_id, 'VEN-OLD') as vendor_id, 
+                           COALESCE(vendor_id, 'VEN-OLD-' || id) as vendor_id, 
                            name, email, phone, address, 
                            tax_id, total_purchased, order_count, payment_terms
                     FROM suppliers 
                     WHERE user_id = :user_id AND is_active = TRUE 
                     ORDER BY name
                 '''), {"user_id": user_id})
-                
+                                
                 return [dict(row._mapping) for row in result]
         except Exception as e:
             logger.error(f"Error fetching suppliers: {e}")
