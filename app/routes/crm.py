@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, session, g
 from app.services.auth import get_customers
-from app.services.purchases import get_suppliers
+from app.services.suppliers import SupplierManager
 
 crm_bp = Blueprint('crm', __name__)
 
