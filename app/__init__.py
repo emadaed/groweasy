@@ -25,7 +25,7 @@ from app.services.db import DB_ENGINE
 from app.services.middleware import security_headers
 from app.services.cache import init_cache, get_user_profile_cached
 from app.services.purchases import save_purchase_order, get_purchase_orders
-from app.services.suppliers import get_suppliers
+from app.services.suppliers import SupplierManager
 # Global Limiter instance
 limiter = Limiter(key_func=get_remote_address)
 

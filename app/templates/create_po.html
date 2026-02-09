@@ -110,11 +110,8 @@ function syncVendorData() {
     const selected = select.options[select.selectedIndex];
     
     if (selected.value) {
-        // Set the hidden supplier name for the PO record and PDF [cite: 27]
+        // Populates the hidden name field for the PO record and PDF [cite: 3]
         document.getElementById('hidden_supplier_name').value = selected.getAttribute('data-name');
-        
-        // This is where you would auto-fill other hidden fields like email/phone 
-        // if your PO PDF logic needs them passed in the form.
     }
 }
 
@@ -146,8 +143,8 @@ document.addEventListener('DOMContentLoaded', function() {
     tbody.addEventListener('input', function(e) {
         if (e.target.name === 'item_qty[]' || e.target.name === 'item_price[]') {
             const row = e.target.closest('tr');
-            const qty = parseFloat(row.querySelector('[name=\"item_qty[]\"]').value) || 0;
-            const price = parseFloat(row.querySelector('[name=\"item_price[]\"]').value) || 0;
+            const qty = parseFloat(row.querySelector('[name="item_qty[]"]').value) || 0;
+            const price = parseFloat(row.querySelector('[name="item_price[]"]').value) || 0;
             row.querySelector('.total').textContent = (qty * price).toFixed(2);
         }
     });
