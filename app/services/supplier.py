@@ -1,5 +1,5 @@
 # app/services/supplier.py
-import secrets  # <--- Added this critical import
+import secrets
 import logging
 from datetime import datetime
 from sqlalchemy import text
@@ -10,31 +10,43 @@ logger = logging.getLogger(__name__)
 class SupplierManager:
     @staticmethod
     def ensure_table_exists():
-        """Ensures the suppliers table exists with professional ERP fields"""
-        query = text('''
-            CREATE TABLE IF NOT EXISTS suppliers (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                vendor_id VARCHAR(50) UNIQUE,
-                name VARCHAR(255) NOT NULL,
-                contact_person VARCHAR(255),
-                email VARCHAR(255),
-                phone VARCHAR(50),
-                address TEXT,
-                tax_id VARCHAR(100),
-                payment_terms VARCHAR(100),
-                bank_details TEXT,
-                total_purchased DECIMAL(15, 2) DEFAULT 0,
-                order_count INTEGER DEFAULT 0,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        ''')
+        """Ensures the table exists and has all professional ERP columns (Auto-Migration)"""
         try:
             with DB_ENGINE.begin() as conn:
-                conn.execute(query)
+                # 1. Create table if it doesn't exist at all
+                conn.execute(text('''
+                    CREATE TABLE IF NOT EXISTS suppliers (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                '''))
+
+                # 2. Add missing columns one by one (PostgreSQL safe migration)
+                columns_to_add = [
+                    ("vendor_id", "VARCHAR(50) UNIQUE"),
+                    ("contact_person", "VARCHAR(255)"),
+                    ("email", "VARCHAR(255)"),
+                    ("phone", "VARCHAR(50)"),
+                    ("address", "TEXT"),
+                    ("tax_id", "VARCHAR(100)"),
+                    ("payment_terms", "VARCHAR(100)"),
+                    ("bank_details", "TEXT"),
+                    ("total_purchased", "DECIMAL(15, 2) DEFAULT 0"),
+                    ("order_count", "INTEGER DEFAULT 0"),
+                    ("is_active", "BOOLEAN DEFAULT TRUE")
+                ]
+
+                for col_name, col_type in columns_to_add:
+                    try:
+                        # This checks if the column exists; if not, adds it
+                        conn.execute(text(f"ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS {col_name} {col_type};"))
+                    except Exception as col_err:
+                        logger.warning(f"Column migration notice for {col_name}: {col_err}")
+
         except Exception as e:
-            logger.error(f"Table Creation Error: {e}")
+            logger.error(f"Migration/Table Creation Error: {e}")
 
     @staticmethod
     def get_suppliers(user_id):
@@ -42,14 +54,15 @@ class SupplierManager:
         try:
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(text('''
-                    SELECT id, vendor_id, name, email, phone, address, 
+                    SELECT id, 
+                           COALESCE(vendor_id, 'VEN-OLD') as vendor_id, 
+                           name, email, phone, address, 
                            tax_id, total_purchased, order_count, payment_terms
                     FROM suppliers 
                     WHERE user_id = :user_id AND is_active = TRUE 
                     ORDER BY name
                 '''), {"user_id": user_id})
                 
-                # Convert rows to dictionaries properly
                 return [dict(row._mapping) for row in result]
         except Exception as e:
             logger.error(f"Error fetching suppliers: {e}")
@@ -57,9 +70,8 @@ class SupplierManager:
 
     @staticmethod
     def add_supplier(user_id, data):
-        SupplierManager.ensure_table_exists()
+        SupplierManager.ensure_table_exists() # This will run the migration
         
-        # Professional Vendor ID generation: VEN-2602-A1B2
         vendor_id = data.get('vendor_id') or f"VEN-{datetime.now().strftime('%y%m')}-{secrets.token_hex(2).upper()}"
         
         query = text('''
@@ -88,5 +100,5 @@ class SupplierManager:
                 row = result.fetchone()
                 return row[0] if row else None
         except Exception as e:
-            logger.error(f"Error adding supplier: {e}")
+            logger.error(f"Final insert error: {e}")
             return None
