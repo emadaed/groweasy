@@ -46,7 +46,7 @@ def create_po_process():
 
         if supplier_id:
             # Fetch the actual supplier from the database using our new Manager
-            from app.services.supplier import SupplierManager
+            from app.services.suppliers import SupplierManager
             suppliers = SupplierManager.get_suppliers(user_id)
             # Find the specific supplier matching the ID
             selected_supplier = next((s for s in suppliers if str(s['id']) == str(supplier_id)), None)
