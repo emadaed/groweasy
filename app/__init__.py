@@ -89,7 +89,7 @@ def create_app():
     from app.routes.api import api_bp
     app.register_blueprint(api_bp)
     from app.routes.suppliers import suppliers_bp
-    app.register_bluprint(suppliers_bp)
+    app.register_blueprint(suppliers_bp)
 ##    from app.routes.common import common_bp
 ##    app.register_blueprint(common_bp)
 
