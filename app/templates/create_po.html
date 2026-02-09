@@ -10,11 +10,21 @@
         <div class="row">
             <div class="col-md-6">
                 <h5>Supplier</h5>
-                <select name="supplier_id" id="supplier_select">
+                <select name="supplier_id" id="supplier_select" class="form-select mb-2" required onchange="syncVendorData()">
+                    <option value="">-- Select Registered Vendor --</option>
                     {% for s in suppliers %}
-                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    <option value="{{ s.id }}" 
+                            data-name="{{ s.name }}"
+                            data-email="{{ s.email }}"
+                            data-phone="{{ s.phone }}"
+                            data-address="{{ s.address }}">
+                        {{ s.name }} ({{ s.vendor_id if s.vendor_id else 'No ID' }})
+                    </option>
                     {% endfor %}
                 </select>
+                
+                <input type="hidden" name="supplier_name" id="hidden_supplier_name">
+
                 <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#supplierModal">
                     + Add New Supplier
                 </button>
@@ -49,8 +59,7 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Items added here -->
-            </tbody>
+                </tbody>
         </table>
 
         <div class="text-center">
@@ -59,7 +68,6 @@
     </form>
 </div>
 
-<!-- Inventory Modal -->
 <div class="modal fade" id="inventoryModal">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -97,6 +105,19 @@
 </div>
 
 <script nonce="{{ nonce }}">
+function syncVendorData() {
+    const select = document.getElementById('supplier_select');
+    const selected = select.options[select.selectedIndex];
+    
+    if (selected.value) {
+        // Set the hidden supplier name for the PO record and PDF [cite: 27]
+        document.getElementById('hidden_supplier_name').value = selected.getAttribute('data-name');
+        
+        // This is where you would auto-fill other hidden fields like email/phone 
+        // if your PO PDF logic needs them passed in the form.
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const tbody = document.querySelector('#itemsTable tbody');
 
@@ -125,8 +146,8 @@ document.addEventListener('DOMContentLoaded', function() {
     tbody.addEventListener('input', function(e) {
         if (e.target.name === 'item_qty[]' || e.target.name === 'item_price[]') {
             const row = e.target.closest('tr');
-            const qty = parseFloat(row.querySelector('[name="item_qty[]"]').value) || 0;
-            const price = parseFloat(row.querySelector('[name="item_price[]"]').value) || 0;
+            const qty = parseFloat(row.querySelector('[name=\"item_qty[]\"]').value) || 0;
+            const price = parseFloat(row.querySelector('[name=\"item_price[]\"]').value) || 0;
             row.querySelector('.total').textContent = (qty * price).toFixed(2);
         }
     });
