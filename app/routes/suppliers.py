@@ -1,6 +1,6 @@
 # app/routes/suppliers.py
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
-from app.services.supplier import SupplierManager
+from app.services.suppliers import SupplierManager
 
 suppliers_bp = Blueprint('suppliers', __name__)
 
