@@ -105,33 +105,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const supplierSelect = document.getElementById('supplier_select');
     const hiddenNameInput = document.getElementById('hidden_supplier_name');
 
-    // Handle Supplier Selection for PDF
+    // 1. SAFE MODAL HANDLING (Fixes the "Stuck" Issue)
+    function hideModal(modalId) {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            // Try to get existing instance, otherwise create one to close it
+            let modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(modalElement);
+            }
+            modalInstance.hide();
+            
+            // Cleanup: Manually remove backdrops if Bootstrap fails to
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    }
+
+    // 2. CSP-COMPLIANT SUPPLIER SYNC
     if (supplierSelect) {
         supplierSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
-            if (selectedOption.value) {
-                hiddenNameInput.value = selectedOption.getAttribute('data-name');
-            } else {
-                hiddenNameInput.value = "";
+            if (selectedOption && selectedOption.value) {
+                hiddenNameInput.value = selectedOption.getAttribute('data-name') || "";
             }
         });
     }
 
-    // Fix for Bootstrap Modals under CSP
-    const modalButtons = document.querySelectorAll('[data-bs-toggle="modal"]');
-    modalButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-bs-target');
-            const modalElement = document.querySelector(targetId);
-            if (modalElement) {
-                const modal = new bootstrap.Modal(modalElement);
-                modal.show();
-            }
-        });
-    });
-
+    // 3. INVENTORY ITEM ADDITION
     document.getElementById('addInventoryItems').addEventListener('click', function() {
-        document.querySelectorAll('.item-check:checked').forEach(cb => {
+        const checkedItems = document.querySelectorAll('.item-check:checked');
+        
+        checkedItems.forEach(cb => {
             const id = cb.dataset.id;
             const name = cb.dataset.name;
             const price = cb.dataset.price;
@@ -144,16 +152,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <td><input type="number" name="item_qty[]" value="1" min="1" class="form-control"></td>
                 <td><input type="number" name="item_price[]" value="${price}" step="0.01" class="form-control"></td>
-                <td class="total">0.00</td>
+                <td class="total">${parseFloat(price).toFixed(2)}</td>
                 <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
             `;
             tbody.appendChild(row);
+            cb.checked = false; // Uncheck for next time
         });
-        const invModal = document.getElementById('inventoryModal');
-        const modalInstance = bootstrap.Modal.getInstance(invModal) || new bootstrap.Modal(invModal);
-        modalInstance.hide();
+
+        // Use the safe hide function
+        hideModal('inventoryModal');
     });
 
+    // 4. DYNAMIC CALCULATION
     tbody.addEventListener('input', function(e) {
         if (e.target.name === 'item_qty[]' || e.target.name === 'item_price[]') {
             const row = e.target.closest('tr');
@@ -171,3 +181,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
