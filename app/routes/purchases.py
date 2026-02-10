@@ -11,7 +11,7 @@ from app.services.invoice_logic_po import prepare_po_data
 from app.services.qr_engine import generate_qr_base64
 from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
 from app.services.purchases import get_purchase_orders, get_purchase_order,save_purchase_order #
-from app.services.suppliers import SupplierManager, get_suppliers #
+from app.services.suppliers import SupplierManager #, get_suppliers #
 
 from app.services.cache import get_user_profile_cached
 from app import limiter, generate_simple_qr
