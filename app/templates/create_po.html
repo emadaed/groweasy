@@ -54,8 +54,7 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Items added here -->
-            </tbody>
+                </tbody>
         </table>
 
         <div class="text-center">
@@ -64,7 +63,6 @@
     </form>
 </div>
 
-<!-- Inventory Modal -->
 <div class="modal fade" id="inventoryModal">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -104,6 +102,33 @@
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const tbody = document.querySelector('#itemsTable tbody');
+    const supplierSelect = document.getElementById('supplier_select');
+    const hiddenNameInput = document.getElementById('hidden_supplier_name');
+
+    // Handle Supplier Selection for PDF
+    if (supplierSelect) {
+        supplierSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                hiddenNameInput.value = selectedOption.getAttribute('data-name');
+            } else {
+                hiddenNameInput.value = "";
+            }
+        });
+    }
+
+    // Fix for Bootstrap Modals under CSP
+    const modalButtons = document.querySelectorAll('[data-bs-toggle="modal"]');
+    modalButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-bs-target');
+            const modalElement = document.querySelector(targetId);
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        });
+    });
 
     document.getElementById('addInventoryItems').addEventListener('click', function() {
         document.querySelectorAll('.item-check:checked').forEach(cb => {
@@ -124,7 +149,9 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             tbody.appendChild(row);
         });
-        bootstrap.Modal.getInstance(document.getElementById('inventoryModal')).hide();
+        const invModal = document.getElementById('inventoryModal');
+        const modalInstance = bootstrap.Modal.getInstance(invModal) || new bootstrap.Modal(invModal);
+        modalInstance.hide();
     });
 
     tbody.addEventListener('input', function(e) {

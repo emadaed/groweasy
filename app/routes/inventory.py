@@ -83,6 +83,7 @@ def inventory_reports():
         return redirect(url_for('inventory.inventory'))
 
 #add products = 3
+# add products = 3
 @inventory_bp.route("/add_product", methods=['POST'])
 def add_product():
     """Add new product to inventory"""
@@ -91,15 +92,24 @@ def add_product():
 
     from app.services.inventory import InventoryManager
 
+    # Helper function to safely handle empty string conversions
+    def safe_num(val, func, default=0):
+        if val is None or str(val).strip() == '':
+            return default
+        try:
+            return func(val)
+        except (ValueError, TypeError):
+            return default
+
     product_data = {
         'name': request.form.get('name'),
         'sku': request.form.get('sku'),
         'category': request.form.get('category'),
         'description': request.form.get('description'),
-        'current_stock': int(request.form.get('current_stock', 0)),
-        'min_stock_level': int(request.form.get('min_stock_level', 5)),
-        'cost_price': float(request.form.get('cost_price', 0)),
-        'selling_price': float(request.form.get('selling_price', 0)),
+        'current_stock': safe_num(request.form.get('current_stock'), int, 0),
+        'min_stock_level': safe_num(request.form.get('min_stock_level'), int, 5),
+        'cost_price': safe_num(request.form.get('cost_price'), float, 0.0),
+        'selling_price': safe_num(request.form.get('selling_price'), float, 0.0),
         'supplier': request.form.get('supplier'),
         'location': request.form.get('location')
     }
@@ -122,7 +132,6 @@ def add_product():
         flash('Error adding product. SKU might already exist.', 'error')
 
     return redirect(url_for('inventory.inventory'))
-
 #delete 4
 @inventory_bp.route("/delete_product", methods=['POST'])
 def delete_product():
