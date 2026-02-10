@@ -14,12 +14,17 @@
                     <option value="">-- Select Registered Vendor --</option>
                     {% for s in suppliers %}
                     <option value="{{ s.id }}" 
-                            data-name="{{ s.name }}">
-                        {{ s.name }} ({{ s.vendor_id if s.vendor_id else 'No ID' }})
+                            data-name="{{ s.name }}"
+                            data-email="{{ s.email or '' }}"
+                            data-phone="{{ s.phone or '' }}">
+                        {{ s.name }}
                     </option>
                     {% endfor %}
                 </select>                
-                <input type="hidden" name="supplier_name" id="hidden_supplier_name">                
+                <input type="hidden" name="supplier_name" id="hidden_supplier_name">
+                <input type="hidden" name="supplier_email" id="hidden_supplier_email">
+                <input type="hidden" name="supplier_phone" id="hidden_supplier_phone">
+                                
                 <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#supplierModal">
                     + Add New Supplier
                 </button>
@@ -130,10 +135,11 @@ document.addEventListener('DOMContentLoaded', function() {
         supplierSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             if (selectedOption && selectedOption.value) {
-                hiddenNameInput.value = selectedOption.getAttribute('data-name') || "";
+                document.getElementById('hidden_supplier_name').value = selectedOption.getAttribute('data-name') || "";
+                document.getElementById('hidden_supplier_email').value = selectedOption.getAttribute('data-email') || "";
+                document.getElementById('hidden_supplier_phone').value = selectedOption.getAttribute('data-phone') || "";
             }
         });
-    }
 
     // 3. INVENTORY ITEM ADDITION
     document.getElementById('addInventoryItems').addEventListener('click', function() {

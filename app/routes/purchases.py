@@ -79,25 +79,50 @@ def po_preview(po_number):
                 WHERE user_id = :user_id AND po_number = :po_number
                 ORDER BY created_at DESC LIMIT 1
             """), {"user_id": user_id, "po_number": po_number}).fetchone()
+        
         if not result:
             flash("Purchase order not found", "error")
             return redirect(url_for('purchases.purchase_orders'))
+            
         po_data = json.loads(result[0])
         po_data['po_number'] = po_number
         po_data['invoice_number'] = po_number
+
+        # --- NEW SAFETY SYNC FOR SUPPLIER CONTACT INFO ---
+        # If email or phone are missing, pull them from the Supplier module
+        if not po_data.get('supplier_email') or not po_data.get('supplier_phone'):
+            from app.services.suppliers import SupplierManager
+            suppliers = SupplierManager.get_suppliers(user_id)
+            # Find the supplier by name to get their current contact details
+            match = next((s for s in suppliers if s['name'] == po_data.get('supplier_name')), None)
+            if match:
+                po_data['supplier_email'] = match.get('email', '')
+                po_data['supplier_phone'] = match.get('phone', '')
+        # ------------------------------------------------
+
         inventory_items = InventoryManager.get_inventory_items(user_id)
         product_lookup = {str(p['id']): p for p in inventory_items}
         product_lookup.update({int(k): v for k, v in product_lookup.items() if str(k).isdigit()})
+        
         for item in po_data.get('items', []):
             pid = item.get('product_id')
             if pid and pid in product_lookup:
                 p = product_lookup[pid]
                 item['sku'] = p.get('sku', 'N/A')
                 item['name'] = p.get('name', item.get('name', 'Unknown'))
-                item['supplier'] = p.get('supplier', po_data.get('supplier_name', 'Unknown Supplier'))
+                #item['supplier'] = p.get('supplier', po_data.get('supplier_name', 'Unknown Supplier'))
+                # Use the main PO supplier name as the primary fallback to ensure consistency
+                item['supplier'] = p.get('supplier') or po_data.get('supplier_name') or 'Unknown Supplier'
+        
         qr_b64 = generate_simple_qr(po_data)
-        html = render_template('purchase_order_pdf.html', data=po_data, preview=True, custom_qr_b64=qr_b64, currency_symbol=g.get('currency_symbol', 'Rs.'))
+        html = render_template('purchase_order_pdf.html', 
+                             data=po_data, 
+                             preview=True, 
+                             custom_qr_b64=qr_b64, 
+                             currency_symbol=g.get('currency_symbol', 'Rs.'))
+                             
         return render_template('po_preview.html', html=html, data=po_data, po_number=po_number, nonce=g.nonce)
+        
     except Exception as e:
         current_app.logger.error(f"PO preview error: {str(e)}", exc_info=True)
         flash("Error loading purchase order", "error")
