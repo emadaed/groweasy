@@ -14,14 +14,16 @@
                     <option value="">-- Select Registered Vendor --</option>
                     {% for s in suppliers %}
                     <option value="{{ s.id }}" 
-                            data-name="{{ s.name }}"
-                            data-email="{{ s.email or '' }}"
-                            data-phone="{{ s.phone or '' }}">
+                            data-name="{{ s.name }}" 
+                            data-address="{{ s.address }}"
+                            data-email="{{ s.email }}"
+                            data-phone="{{ s.phone }}">
                         {{ s.name }}
                     </option>
                     {% endfor %}
                 </select>                
                 <input type="hidden" name="supplier_name" id="hidden_supplier_name">
+                <input type="hidden" name="supplier_address" id="hidden_supplier_address">
                 <input type="hidden" name="supplier_email" id="hidden_supplier_email">
                 <input type="hidden" name="supplier_phone" id="hidden_supplier_phone">
                                 
@@ -109,6 +111,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const tbody = document.querySelector('#itemsTable tbody');
     const supplierSelect = document.getElementById('supplier_select');
     const hiddenNameInput = document.getElementById('hidden_supplier_name');
+    const hiddenEmailInput = document.getElementById('hidden_supplier_email');
+    const hiddenPhoneInput = document.getElementById('hidden_supplier_phone');
+    const hiddenAddressInput = document.getElementById('hidden_supplier_address');
 
     // 1. SAFE MODAL HANDLING (Fixes the "Stuck" Issue)
     function hideModal(modalId) {
@@ -138,6 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('hidden_supplier_name').value = selectedOption.getAttribute('data-name') || "";
                 document.getElementById('hidden_supplier_email').value = selectedOption.getAttribute('data-email') || "";
                 document.getElementById('hidden_supplier_phone').value = selectedOption.getAttribute('data-phone') || "";
+                document.getElementById('hidden_supplier_address').value = selectedOption.getAttribute('data-address') || "";
             }
         });
     }

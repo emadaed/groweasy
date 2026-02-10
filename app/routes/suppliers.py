@@ -35,3 +35,19 @@ def add_supplier():
         flash('Error adding supplier.', 'danger')
         
     return redirect(url_for('suppliers.list_suppliers'))
+
+# app/routes/suppliers.py
+@suppliers_bp.route('/suppliers/edit/<int:id>', methods=['POST'])
+def edit_supplier(id):
+    if 'user_id' not in session: return redirect(url_for('auth.login'))
+    data = {k: request.form.get(k) for k in ['name', 'contact_person', 'email', 'phone', 'address', 'tax_id', 'payment_terms', 'bank_details']}
+    SupplierManager.update_supplier(session['user_id'], id, data)
+    flash('Supplier updated!', 'success')
+    return redirect(url_for('suppliers.list_suppliers'))
+
+@suppliers_bp.route('/suppliers/delete/<int:id>')
+def delete_supplier(id):
+    if 'user_id' not in session: return redirect(url_for('auth.login'))
+    SupplierManager.delete_supplier(session['user_id'], id)
+    flash('Supplier removed.', 'info')
+    return redirect(url_for('suppliers.list_suppliers'))

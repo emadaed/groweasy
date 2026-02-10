@@ -54,6 +54,7 @@ def create_po_process():
             
         if po_data:
             from app.services.session_storage import SessionStorage
+            SupplierManager.update_volume(user_id, request.form.get('supplier_id'), po_data['grand_total'])
             session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
             session['last_po_ref'] = session_ref
             #flash(f"✅ PO {po_data['po_number']} created for {form_data.get('supplier_name')}!", "success")
@@ -66,6 +67,7 @@ def create_po_process():
         current_app.logger.error(f"PO creation error: {str(e)}", exc_info=True)
         flash("❌ An unexpected error occurred", "error")
         return redirect(url_for('purchases.create_purchase_order'))
+
 # po preview =3 
 @purchases_bp.route('/po/preview/<po_number>')
 def po_preview(po_number):
