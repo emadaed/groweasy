@@ -22,7 +22,6 @@
                         <th class="text-center">Actions</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     {% for s in suppliers %}
                     <tr>
@@ -49,26 +48,36 @@
                             </div>
                         </td>
                     </tr>
-
-                    <div class="modal fade" id="deleteModal{{ s.id }}" tabindex="-1" aria-hidden="true">
+                    
+                    <div class="modal fade" id="deleteModal{{ s.id }}" tabindex="-1">
                         <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content border-danger">
-                                <div class="modal-header bg-danger text-white">
-                                    <h5 class="modal-title">⚠️ Confirm Deletion</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body text-center py-4">
-                                    <p class="mb-0">Are you sure you want to delete <strong>{{ s.name }}</strong>?</p>
-                                    <small class="text-danger">This action cannot be undone and will remove the vendor from your records.</small>
-                                </div>
-                                <div class="modal-footer justify-content-center">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white"><h5>Confirm Deletion</h5></div>
+                                <div class="modal-body">Are you sure you want to delete <strong>{{ s.name }}</strong>?</div>
+                                <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <a href="{{ url_for('suppliers.delete_supplier', id=s.id) }}" class="btn btn-danger">Yes, Delete Vendor</a>
+                                    <a href="{{ url_for('suppliers.delete_supplier', id=s.id) }}" class="btn btn-danger">Delete Vendor</a>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
+                    <div class="modal fade" id="editModal{{ s.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <form class="modal-content" method="POST" action="{{ url_for('suppliers.edit_supplier', id=s.id) }}">
+                                <div class="modal-header"><h5>Edit {{ s.name }}</h5></div>
+                                <div class="modal-body">
+                                    <input type="text" name="name" value="{{ s.name }}" class="form-control mb-2" required>
+                                    <textarea name="address" class="form-control mb-2" rows="2">{{ s.address }}</textarea>
+                                    <input type="text" name="phone" value="{{ s.phone }}" class="form-control mb-2">
+                                    <input type="email" name="email" value="{{ s.email }}" class="form-control mb-2">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                     {% endfor %}
                 </tbody>
             </table>
@@ -78,45 +87,18 @@
 
 <div class="modal fade" id="addSupplierModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <form action="{{ url_for('suppliers.add_supplier') }}" method="POST" class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Register New Vendor</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <form class="modal-content" method="POST" action="{{ url_for('suppliers.add_supplier') }}">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Add New Vendor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Company Name *</label>
-                        <input type="text" name="name" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Tax ID (NTN/STRN)</label>
-                        <input type="text" name="tax_id" class="form-control">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="email" class="form-control">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Phone</label>
-                        <input type="text" name="phone" class="form-control">
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Address</label>
-                        <textarea name="address" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Payment Terms</label>
-                        <select name="payment_terms" class="form-select">
-                            <option value="Due on Receipt">Due on Receipt</option>
-                            <option value="Net 15">Net 15</option>
-                            <option value="Net 30">Net 30</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Bank Details</label>
-                        <input type="text" name="bank_details" class="form-control" placeholder="IBAN / Bank Name">
-                    </div>
+                    <div class="col-md-6"><label class="form-label">Vendor Name *</label><input type="text" name="name" class="form-control" required></div>
+                    <div class="col-md-6"><label class="form-label">Contact Person</label><input type="text" name="contact_person" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label">Phone</label><input type="text" name="phone" class="form-control"></div>
+                    <div class="col-md-12"><label class="form-label">Address</label><textarea name="address" class="form-control" rows="2"></textarea></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -126,4 +108,17 @@
         </form>
     </div>
 </div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    // Manual trigger for modals to bypass CSP Backdrop bug
+    const btns = document.querySelectorAll('[data-bs-toggle="modal"]');
+    btns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = document.querySelector(this.dataset.bsTarget);
+            if(target) { (new bootstrap.Modal(target)).show(); }
+        });
+    });
+});
+</script>
 {% endblock %}

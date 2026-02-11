@@ -14,7 +14,6 @@
                 </div>
             </div>
 
-            <!-- Search Box -->
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" class="row g-3">
@@ -33,112 +32,50 @@
                 </div>
             </div>
 
-            <!-- Results Summary -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5>
-                    {% if search_query %}
-                        🔍 {{ total_invoices }} invoice(s) found for "{{ search_query }}"
-                    {% else %}
-                        📊 All Invoices ({{ total_invoices }} total)
-                    {% endif %}
-                </h5>
-            </div>
-
-            <!-- Invoices Table -->
             {% if invoices %}
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Invoice #</th>
-                                    <th>Client</th>
-                                    <th>Date</th>
-                                    <th>Due Date</th>
-                                    <th class="text-end">Amount</th>
-                                    <th class="text-center">Status</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for invoice in invoices %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ invoice.invoice_number }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ invoice.created_at[:10] if invoice.created_at else '' }}</small>
-                                    </td>
-                                    <td>{{ invoice.client_name }}</td>
-                                    <td>{{ invoice.invoice_date }}</td>
-                                    <td>
-                                        {% if invoice.due_date %}
-                                            {{ invoice.due_date }}
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end">
-                                        <strong>{{ currency_symbol }}{{ "%.2f"|format(invoice.grand_total) }}</strong>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-success">Paid</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary"
-                                                    onclick="downloadInvoice({{ invoice.id }})"
-                                                    title="Download PDF">
-                                                📄
-                                            </button>
-                                            <button class="btn btn-outline-info"
-                                                    onclick="viewInvoice({{ invoice.id }})"
-                                                    title="View Details">
-                                                👁️
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Client Name</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in invoices %}
+                            <tr>
+                                <td><code>{{ inv.invoice_number }}</code></td>
+                                <td>{{ inv.invoice_date }}</td>
+                                <td>{{ inv.client_name }}</td>
+                                <td>{{ currency_symbol }}{{ "%.2f"|format(inv.grand_total) }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-info view-inv-btn" 
+                                                data-id="{{ inv.invoice_number }}">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success download-inv-btn" 
+                                                data-id="{{ inv.invoice_number }}">
+                                            <i class="bi bi-download"></i> PDF
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-
-            <!-- Pagination -->
-            {% if total_pages > 1 %}
-            <nav class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if current_page > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ current_page-1 }}{% if search_query %}&search={{ search_query }}{% endif %}">← Previous</a>
-                    </li>
-                    {% endif %}
-
-                    {% for p in range(1, total_pages + 1) %}
-                    <li class="page-item {% if p == current_page %}active{% endif %}">
-                        <a class="page-link" href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ p }}</a>
-                    </li>
-                    {% endfor %}
-
-                    {% if current_page < total_pages %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ current_page+1 }}{% if search_query %}&search={{ search_query }}{% endif %}">Next →</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-
             {% else %}
-            <!-- Empty State -->
             <div class="text-center py-5">
-                <div class="mb-4">
-                    <i class="fas fa-file-invoice fa-4x text-muted mb-3"></i>
-                    <h4>No Invoices Found</h4>
+                <div class="mb-3">
+                    <i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i>
                 </div>
-                <p class="text-muted mb-4">
+                <p class="text-muted">
                     {% if search_query %}
                         No invoices match your search criteria.
                     {% else %}
@@ -154,7 +91,6 @@
     </div>
 </div>
 
-<!-- Invoice Modal -->
 <div class="modal fade" id="invoiceModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -163,26 +99,30 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="invoiceModalBody">
-                <!-- Content loaded by JavaScript -->
-            </div>
+                </div>
         </div>
     </div>
 </div>
 
 <script nonce="{{ nonce }}">
-function viewInvoice(invoiceId) {
-    // Simple alert for now - we'll enhance this later
-    alert('Invoice details view coming soon! For now, use the download button.');
-}
-
-function downloadInvoice(invoiceId) {
-    // Simple alert for now - we'll implement actual download later
-    alert('Invoice download functionality coming in next update!');
-}
-
-// Quick actions for demo
 document.addEventListener('DOMContentLoaded', function() {
-    // Add some interactive features here later
+    // 1. View Invoice Action
+    document.querySelectorAll('.view-inv-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const invoiceId = this.getAttribute('data-id');
+            // Navigates to the preview page (Same as your "View Details" logic)
+            window.location.href = `/invoice/preview/${invoiceId}`;
+        });
+    });
+
+    // 2. Download PDF Action
+    document.querySelectorAll('.download-inv-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const invoiceId = this.getAttribute('data-id');
+            // Navigates to your download endpoint
+            window.location.href = `/invoice/download/${invoiceId}`;
+        });
+    });
 });
 </script>
 {% endblock %}
