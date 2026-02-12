@@ -3,9 +3,7 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>🏭 Vendor / Supplier Management</h2>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-            + Add New Vendor
-        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">+ Add New Vendor</button>
     </div>
 
     <div class="card shadow-sm">
@@ -26,55 +24,30 @@
                     {% for s in suppliers %}
                     <tr>
                         <td><code>{{ s.vendor_id }}</code></td>
-                        <td>
-                            <strong>{{ s.name }}</strong><br>
-                            <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ s.address or 'No address provided' }}</small>
-                        </td>
-                        <td>
-                            <i class="bi bi-telephone"></i> {{ s.phone }}<br>
-                            <i class="bi bi-envelope"></i> <small class="text-muted">{{ s.email }}</small>
-                        </td>
-                        <td><span class="badge bg-info text-dark">{{ s.payment_terms }}</span></td>
-                        <td><strong>{{ currency_symbol }}{{ "%.2f"|format(s.total_purchased) }}</strong></td>
+                        <td><strong>{{ s.name }}</strong><br><small class="text-muted">{{ s.address or 'No address' }}</small></td>
+                        <td>{{ s.phone }}<br><small class="text-muted">{{ s.email }}</small></td>
+                        <td>{{ s.payment_terms }}</td>
+                        <td>{{ currency_symbol }}{{ "%.2f"|format(s.total_purchased) }}</td>
                         <td><span class="badge bg-success">Active</span></td>
                         <td class="text-center">
                             <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ s.id }}">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ s.id }}">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ s.id }}">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ s.id }}">Delete</button>
                             </div>
                         </td>
                     </tr>
-                    
-                    <div class="modal fade" id="deleteModal{{ s.id }}" tabindex="-1">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header bg-danger text-white"><h5>Confirm Deletion</h5></div>
-                                <div class="modal-body">Are you sure you want to delete <strong>{{ s.name }}</strong>?</div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <a href="{{ url_for('suppliers.delete_supplier', id=s.id) }}" class="btn btn-danger">Delete Vendor</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="modal fade" id="editModal{{ s.id }}" tabindex="-1">
+                    <div class="modal fade" id="editModal{{ s.id }}" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog">
                             <form class="modal-content" method="POST" action="{{ url_for('suppliers.edit_supplier', id=s.id) }}">
-                                <div class="modal-header"><h5>Edit {{ s.name }}</h5></div>
+                                <div class="modal-header"><h5>Edit {{ s.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                 <div class="modal-body">
                                     <input type="text" name="name" value="{{ s.name }}" class="form-control mb-2" required>
-                                    <textarea name="address" class="form-control mb-2" rows="2">{{ s.address }}</textarea>
+                                    <textarea name="address" class="form-control mb-2">{{ s.address }}</textarea>
                                     <input type="text" name="phone" value="{{ s.phone }}" class="form-control mb-2">
                                     <input type="email" name="email" value="{{ s.email }}" class="form-control mb-2">
                                 </div>
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </div>
+                                <div class="modal-footer"><button type="submit" class="btn btn-primary">Save Changes</button></div>
                             </form>
                         </div>
                     </div>
@@ -84,41 +57,13 @@
         </div>
     </div>
 </div>
-
-<div class="modal fade" id="addSupplierModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <form class="modal-content" method="POST" action="{{ url_for('suppliers.add_supplier') }}">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Add New Vendor</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Vendor Name *</label><input type="text" name="name" class="form-control" required></div>
-                    <div class="col-md-6"><label class="form-label">Contact Person</label><input type="text" name="contact_person" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label">Phone</label><input type="text" name="phone" class="form-control"></div>
-                    <div class="col-md-12"><label class="form-label">Address</label><textarea name="address" class="form-control" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Vendor</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script nonce="{{ nonce }}">
-document.addEventListener('DOMContentLoaded', function() {
-    // Manual trigger for modals to bypass CSP Backdrop bug
-    const btns = document.querySelectorAll('[data-bs-toggle="modal"]');
-    btns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const target = document.querySelector(this.dataset.bsTarget);
-            if(target) { (new bootstrap.Modal(target)).show(); }
-        });
-    });
+document.addEventListener('hidden.bs.modal', function () {
+    // This ensures any "stuck" backdrops are removed when you close or cancel a modal
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(b => b.remove());
+    document.body.style.overflow = 'auto';
+    document.body.style.paddingRight = '0';
 });
 </script>
 {% endblock %}
