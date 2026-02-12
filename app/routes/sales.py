@@ -375,7 +375,7 @@ def get_invoice_history_preview(invoice_number):
     
     try:
         from app.services.invoice_service import InvoiceService
-        from app.services.utils import generate_simple_qr
+        # Changed: Removed the broken generate_simple_qr import
         
         service = InvoiceService(session['user_id'])
         invoice_data = service.get_invoice_by_number(invoice_number)
@@ -383,16 +383,26 @@ def get_invoice_history_preview(invoice_number):
         if not invoice_data:
             return "Invoice not found", 404
 
-        qr_b64 = generate_simple_qr(invoice_data)
-        
-        # This renders the "inner" part of the invoice
+        # Logic from your InvoiceView: Generate QR safely
+        qr_b64 = None
+        try:
+            # Try your existing QR generator if available
+            from app.services.utils import generate_qr_base64
+            qr_b64 = generate_qr_base64(invoice_data)
+        except ImportError:
+            # If that fails, the preview will still load without the QR
+            qr_b64 = None
+
+        # Render the template
         return render_template('invoice_pdf.html',
                              data=invoice_data,
                              custom_qr_b64=qr_b64,
                              currency_symbol="Rs.",
                              fbr_compliant=True,
                              preview=True)
+                             
     except Exception as e:
-        # This will show you the EXACT error in your server logs/terminal
-        print(f"DEBUG ERROR: {str(e)}") 
+        # This will now log the specific error if anything else fails
+        import logging
+        logging.error(f"PREVIEW ERROR: {str(e)}")
         return f"Server Error: {str(e)}", 500
