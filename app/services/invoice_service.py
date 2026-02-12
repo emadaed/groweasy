@@ -94,30 +94,31 @@ class InvoiceService:
 
 
     def get_invoice_by_number(self, invoice_number):
-        """Fetches a saved invoice and its items from the database"""
+        """Fetches a saved invoice from the user_invoices table"""
+        import json
         from sqlalchemy import text
         from app.services.db import DB_ENGINE
         
+        #  app stores the full invoice data as JSON in the 'invoice_data' column
         query = text("""
-            SELECT * FROM invoices 
+            SELECT invoice_data FROM user_invoices 
             WHERE invoice_number = :inv_num AND user_id = :user_id
         """)
         
-        items_query = text("""
-            SELECT * FROM invoice_items 
-            WHERE invoice_number = :inv_num
-        """)
-        
-        with DB_ENGINE.connect() as conn:
-            inv = conn.execute(query, {"inv_num": invoice_number, "user_id": self.user_id}).fetchone()
-            if not inv:
+        try:
+            with DB_ENGINE.connect() as conn:
+                result = conn.execute(query, {
+                    "inv_num": invoice_number, 
+                    "user_id": self.user_id
+                }).fetchone()
+                
+                if result and result[0]:
+                    # The data is stored as a string or JSONB, we parse it to a dict
+                    if isinstance(result[0], str):
+                        return json.loads(result[0])
+                    return result[0] # Already a dict
+                
                 return None
-            
-            # Convert row to dictionary
-            invoice_data = dict(inv._mapping)
-            
-            # Fetch items
-            items = conn.execute(items_query, {"inv_num": invoice_number}).fetchall()
-            invoice_data['items'] = [dict(item._mapping) for item in items]
-            
-            return invoice_data
+        except Exception as e:
+            logger.error(f"Error fetching invoice from DB: {e}")
+            return None

@@ -383,10 +383,10 @@ def get_invoice_history_preview(invoice_number):
         if not invoice_data:
             return "Invoice not found", 404
 
-        # Logic from your InvoiceView: Generate QR safely
+        # Logic from  InvoiceView: Generate QR safely
         qr_b64 = None
         try:
-            # Try your existing QR generator if available
+            # Try  existing QR generator if available
             from app.services.utils import generate_qr_base64
             qr_b64 = generate_qr_base64(invoice_data)
         except ImportError:
