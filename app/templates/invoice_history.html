@@ -107,38 +107,38 @@
 
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    const invModal = new bootstrap.Modal(document.getElementById('invoiceDetailsModal'));
-    const modalContent = document.getElementById('invoiceDetailsContent');
-    const downloadBtn = document.getElementById('downloadInvoiceFromModal');
+    const invModalEl = document.getElementById('invoiceModal');
+    const invModal = new bootstrap.Modal(invModalEl);
+    const modalContent = document.getElementById('invoiceModalBody');
+    const downloadBtn = document.getElementById('downloadInvoiceFromModal'); // Ensure this ID exists in your footer
 
-    document.querySelectorAll('.view-inv-details').forEach(button => {
-        button.addEventListener('click', function() {
-            const invNum = this.dataset.invoiceNumber;
-            const downloadBtn = document.getElementById('downloadInvoiceFromModal');
-            // FIXED: Point to your verified download route
-            downloadBtn.setAttribute('href', `/invoice/download/${invNum}?type=invoice`);
+    // 1. View Invoice Action (Opens Modal)
+    document.querySelectorAll('.view-inv-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const invNum = this.getAttribute('data-id');
             
-            // Set Loading state
-            modalContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Fetching invoice...</p></div>';
+            // Set the download link in the modal footer
+            if (downloadBtn) {
+                downloadBtn.setAttribute('href', `/invoice/download/${invNum}?type=invoice`);
+            }
             
-            // Set the download link (Matching  existing structure)
-            downloadBtn.href = `/download/invoice/${invNum}`; 
-            
+            modalContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading Invoice Details...</p></div>';
             invModal.show();
 
-            // Fetch from the new route we created
             fetch(`/invoice/preview/${invNum}?ajax=true`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.text();
-                })
-                .then(html => {
-                    modalContent.innerHTML = html;
-                })
+                .then(response => response.text())
+                .then(html => { modalContent.innerHTML = html; })
                 .catch(err => {
-                    console.error('Error:', err);
-                    modalContent.innerHTML = '<div class="alert alert-danger">Error loading details. Please use the Download PDF button instead.</div>';
+                    modalContent.innerHTML = '<div class="alert alert-danger">Error loading details. Please use the PDF button.</div>';
                 });
+        });
+    });
+
+    // 2. Direct Download PDF Action (Table Button)
+    document.querySelectorAll('.download-inv-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const invoiceId = this.getAttribute('data-id');
+            window.location.href = `/invoice/download/${invoiceId}?type=invoice`;
         });
     });
 });
