@@ -372,7 +372,7 @@ def cancel_invoice():
 def get_invoice_history_preview(invoice_number):
     if 'user_id' not in session:
         return "Unauthorized", 401
-
+    
     try:
         from app.services.invoice_service import InvoiceService
         from app.services.utils import generate_simple_qr
@@ -383,22 +383,16 @@ def get_invoice_history_preview(invoice_number):
         if not invoice_data:
             return "Invoice not found", 404
 
-        # Generate QR and render the "paper" part of the invoice
         qr_b64 = generate_simple_qr(invoice_data)
-        html = render_template('invoice_pdf.html',
+        
+        # This renders the "inner" part of the invoice
+        return render_template('invoice_pdf.html',
                              data=invoice_data,
                              custom_qr_b64=qr_b64,
                              currency_symbol="Rs.",
                              fbr_compliant=True,
                              preview=True)
-
-        # If AJAX, return only the invoice HTML (for the modal)
-        if request.args.get('ajax'):
-            return html
-            
-        # Otherwise return full preview page
-        return render_template('invoice_preview.html', html=html, data=invoice_data, nonce=g.nonce)
-        
     except Exception as e:
-        current_app.logger.error(f"Preview error: {str(e)}")
-        return f"Error: {str(e)}", 500
+        # This will show you the EXACT error in your server logs/terminal
+        print(f"DEBUG ERROR: {str(e)}") 
+        return f"Server Error: {str(e)}", 500

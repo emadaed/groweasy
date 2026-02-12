@@ -109,7 +109,7 @@ class InvoiceService:
         """)
         
         with DB_ENGINE.connect() as conn:
-            inv = conn.execute(query, {"inv_num": invoice_number, "user_id": self.user_id}).마커fetchone()
+            inv = conn.execute(query, {"inv_num": invoice_number, "user_id": self.user_id}).fetchone()
             if not inv:
                 return None
             
