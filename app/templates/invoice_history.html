@@ -107,38 +107,48 @@
 
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    const invModalEl = document.getElementById('invoiceModal');
+    // 1. Initialize the Modal
+    const invModalEl = document.getElementById('invoiceDetailsModal');
     const invModal = new bootstrap.Modal(invModalEl);
-    const modalContent = document.getElementById('invoiceModalBody');
-    const downloadBtn = document.getElementById('downloadInvoiceFromModal'); // Ensure this ID exists in your footer
+    const modalContent = document.getElementById('invoiceDetailsContent');
+    const downloadBtn = document.getElementById('downloadInvoiceFromModal');
 
-    // 1. View Invoice Action (Opens Modal)
-    document.querySelectorAll('.view-inv-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const invNum = this.getAttribute('data-id');
+    // 2. Handle the "View" button click
+    document.querySelectorAll('.view-inv-details').forEach(button => {
+        button.addEventListener('click', function() {
+            const invNum = this.dataset.invoiceNumber;
             
-            // Set the download link in the modal footer
-            if (downloadBtn) {
-                downloadBtn.setAttribute('href', `/invoice/download/${invNum}?type=invoice`);
-            }
+            // 3. Update the Download Link immediately
+            // Based on your logs, this is the route that works:
+            downloadBtn.setAttribute('href', `/invoice/download/${invNum}?type=invoice`);
             
-            modalContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading Invoice Details...</p></div>';
+            // 4. Show Loading State
+            modalContent.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2">Fetching Invoice ${invNum}...</p>
+                </div>`;
+            
+            // 5. Open the Modal
             invModal.show();
 
+            // 6. Fetch the preview HTML
             fetch(`/invoice/preview/${invNum}?ajax=true`)
-                .then(response => response.text())
-                .then(html => { modalContent.innerHTML = html; })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(html => {
+                    modalContent.innerHTML = html;
+                })
                 .catch(err => {
-                    modalContent.innerHTML = '<div class="alert alert-danger">Error loading details. Please use the PDF button.</div>';
+                    console.error('Error:', err);
+                    modalContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> Could not load the preview. 
+                            Please use the "Download PDF" button below to view the document.
+                        </div>`;
                 });
-        });
-    });
-
-    // 2. Direct Download PDF Action (Table Button)
-    document.querySelectorAll('.download-inv-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const invoiceId = this.getAttribute('data-id');
-            window.location.href = `/invoice/download/${invoiceId}?type=invoice`;
         });
     });
 });
