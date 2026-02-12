@@ -366,3 +366,35 @@ def cancel_invoice():
         session.pop('invoice_finalized', None)
         flash('Invoice cancelled', 'info')
     return redirect(url_for('sales.create_invoice'))
+
+# for view invoice detail button in history
+@sales_bp.route('/invoice/preview/<invoice_number>')
+def get_invoice_preview(invoice_number):
+    if 'user_id' not in session:
+        return "Unauthorized", 401
+
+    try:
+        from app.services.invoice_service import InvoiceService
+        from app.services.utils import generate_simple_qr
+        
+        service = InvoiceService(session['user_id'])
+        # Fetch existing invoice data from your database/storage
+        invoice_data = service.get_invoice_by_number(invoice_number)
+
+        if not invoice_data:
+            return "Invoice not found", 404
+
+        # Generate QR Code for the specific invoice
+        qr_b64 = generate_simple_qr(invoice_data)
+
+        # Render the template
+        # 'preview=True' ensures it uses your professional layout logic
+        return render_template('invoice_pdf.html',
+                             data=invoice_data,
+                             custom_qr_b64=qr_b64,
+                             currency_symbol="Rs.",
+                             fbr_compliant=True,
+                             preview=True)
+    except Exception as e:
+        current_app.logger.error(f"Error fetching invoice preview: {str(e)}")
+        return "Error loading preview", 500

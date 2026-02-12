@@ -54,14 +54,8 @@
                                 <td>{{ currency_symbol }}{{ "%.2f"|format(inv.grand_total) }}</td>
                                 <td>
                                     <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-info view-inv-btn" 
-                                                data-id="{{ inv.invoice_number }}">
-                                            <i class="bi bi-eye"></i> View
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-success download-inv-btn" 
-                                                data-id="{{ inv.invoice_number }}">
-                                            <i class="bi bi-download"></i> PDF
-                                        </button>
+                                        <button class="btn btn-sm btn-info view-inv-details" data-invoice-number="{{ inv.invoice_number }}">View</button>
+                                        <a href="{{ url_for('sales.download_document', document_number=inv.invoice_number, type='invoice') }}" class="btn btn-sm btn-success">Download</a>
                                     </div>
                                 </td>
                             </tr>
@@ -72,55 +66,66 @@
             </div>
             {% else %}
             <div class="text-center py-5">
-                <div class="mb-3">
-                    <i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i>
-                </div>
-                <p class="text-muted">
-                    {% if search_query %}
-                        No invoices match your search criteria.
-                    {% else %}
-                        You haven't created any invoices yet.
-                    {% endif %}
-                </p>
-                <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success btn-lg">
-                    🧾 Create Your First Invoice
-                </a>
+                <div class="mb-3"><i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i></div>
+                <p class="text-muted">{% if search_query %}No invoices match.{% else %}No invoices yet.{% endif %}</p>
+                <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success btn-lg">🧾 Create Your First Invoice</a>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="invoiceModal" tabindex="-1">
+<div class="modal fade" id="invoiceDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Invoice Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="invoiceModalBody">
+            <div class="modal-body" id="invoiceDetailsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" class="btn btn-primary" id="downloadInvoiceFromModal">
+                    <i class="bi bi-download"></i> Download PDF
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. View Invoice Action
-    document.querySelectorAll('.view-inv-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const invoiceId = this.getAttribute('data-id');
-            // Navigates to the preview page (Same as your "View Details" logic)
-            window.location.href = `/invoice/preview/${invoiceId}`;
-        });
-    });
+    const invModal = new bootstrap.Modal(document.getElementById('invoiceDetailsModal'));
+    const modalContent = document.getElementById('invoiceDetailsContent');
+    const downloadBtn = document.getElementById('downloadInvoiceFromModal');
 
-    // 2. Download PDF Action
-    document.querySelectorAll('.download-inv-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const invoiceId = this.getAttribute('data-id');
-            // Navigates to your download endpoint
-            window.location.href = `/invoice/download/${invoiceId}`;
+    document.querySelectorAll('.view-inv-details').forEach(button => {
+        button.addEventListener('click', function() {
+            const invNum = this.dataset.invoiceNumber;
+            
+            // Show loading state
+            modalContent.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+            downloadBtn.href = `/invoice/download/${invNum}`; // Update footer link
+            invModal.show();
+
+            // Fetch from the new route
+            fetch(`/invoice/preview/${invNum}?ajax=true`)
+                .then(response => {
+                    if (!response.ok) throw new Error();
+                    return response.text();
+                })
+                .then(html => {
+                    modalContent.innerHTML = html;
+                })
+                .catch(() => {
+                    modalContent.innerHTML = '<div class="alert alert-danger">Error loading details. Please try Download.</div>';
+                });
         });
     });
 });
