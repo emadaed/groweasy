@@ -40,7 +40,10 @@
                         <td><span class="badge bg-success">Active</span></td>
                         <td class="text-center">
                             <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ s.id }}">
+                                <button class="btn btn-sm btn-outline-primary edit-supplier-btn" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editSupplierModal"
+                                        data-supplier='{{ s | tojson | safe }}'>
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ s.id }}">
@@ -126,4 +129,25 @@
         </form>
     </div>
 </div>
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle Edit Supplier Modal Data
+    const editButtons = document.querySelectorAll('.edit-supplier-btn');
+    editButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const data = JSON.parse(this.getAttribute('data-supplier'));
+            const modal = document.getElementById('editSupplierModal');
+            
+            // Fill the form fields
+            modal.querySelector('input[name="vendor_id"]').value = data.vendor_id;
+            modal.querySelector('input[name="name"]').value = data.name;
+            modal.querySelector('input[name="email"]').value = data.email || '';
+            modal.querySelector('input[name="phone"]').value = data.phone || '';
+            modal.querySelector('textarea[name="address"]').value = data.address || '';
+            modal.querySelector('input[name="tax_id"]').value = data.tax_id || '';
+            modal.querySelector('select[name="payment_terms"]').value = data.payment_terms || 'Due on Receipt';
+        });
+    });
+});
+</script>
 {% endblock %}

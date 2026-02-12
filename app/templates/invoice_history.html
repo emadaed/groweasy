@@ -114,11 +114,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.view-inv-details').forEach(button => {
         button.addEventListener('click', function() {
             const invNum = this.dataset.invoiceNumber;
+            const downloadBtn = document.getElementById('downloadInvoiceFromModal');
+            // FIXED: Point to your verified download route
+            downloadBtn.setAttribute('href', `/invoice/download/${invNum}?type=invoice`);
             
             // Set Loading state
             modalContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Fetching invoice...</p></div>';
             
-            // Set the download link (Matching your existing structure)
+            // Set the download link (Matching  existing structure)
             downloadBtn.href = `/download/invoice/${invNum}`; 
             
             invModal.show();
