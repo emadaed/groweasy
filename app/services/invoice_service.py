@@ -59,24 +59,6 @@ class InvoiceService:
             po_data['invoice_type'] = 'P'
 
             save_purchase_order(self.user_id, po_data)
-
-##            # === STOCK INCREASE ON PO CREATION ===
-##            for item in po_data.get('items', []):
-##                if item.get('product_id'):
-##                    qty = int(item.get('qty', 0))
-##                    if qty > 0:
-##                        success = InventoryManager.update_stock_delta(
-##                            self.user_id,
-##                            item['product_id'],
-##                            qty,
-##                            'purchase',
-##                            po_data['po_number'],
-##                            f"Goods received via PO {po_data['po_number']}"
-##                        )
-##                        if not success:
-##                            self.warnings.append(f"Failed to add stock for {item.get('name', 'item')}")
-##
-##            logger.info(f"PO {po_data['po_number']} created and stock updated for user {self.user_id}")
             return po_data, self.errors or self.warnings
 
         except Exception as e:
@@ -109,3 +91,33 @@ class InvoiceService:
         except Exception as e:
             logger.error(f"Error fetching PO: {e}")
         return None
+
+
+    def get_invoice_by_number(self, invoice_number):
+        """Fetches a saved invoice and its items from the database"""
+        from sqlalchemy import text
+        from app.services.db import DB_ENGINE
+        
+        query = text("""
+            SELECT * FROM invoices 
+            WHERE invoice_number = :inv_num AND user_id = :user_id
+        """)
+        
+        items_query = text("""
+            SELECT * FROM invoice_items 
+            WHERE invoice_number = :inv_num
+        """)
+        
+        with DB_ENGINE.connect() as conn:
+            inv = conn.execute(query, {"inv_num": invoice_number, "user_id": self.user_id}).마커fetchone()
+            if not inv:
+                return None
+            
+            # Convert row to dictionary
+            invoice_data = dict(inv._mapping)
+            
+            # Fetch items
+            items = conn.execute(items_query, {"inv_num": invoice_number}).fetchall()
+            invoice_data['items'] = [dict(item._mapping) for item in items]
+            
+            return invoice_data

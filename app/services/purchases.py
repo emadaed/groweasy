@@ -116,27 +116,6 @@ def get_purchase_orders(user_id, limit=50, offset=0):
         })
     return result
 
-##def get_suppliers(user_id):
-##    """Get all suppliers"""
-##    with DB_ENGINE.connect() as conn:
-##        suppliers = conn.execute(text('''
-##            SELECT id, name, email, phone, address, tax_id, total_purchased, order_count
-##            FROM suppliers WHERE user_id = :user_id ORDER BY name
-##        '''), {"user_id": user_id}).fetchall()
-##
-##    result = []
-##    for supplier in suppliers:
-##        result.append({
-##            'id': supplier[0],
-##            'name': supplier[1],
-##            'email': supplier[2],
-##            'phone': supplier[3],
-##            'address': supplier[4],
-##            'tax_id': supplier[5],
-##            'total_purchased': float(supplier[6]) if supplier[6] else 0,
-##            'order_count': supplier[7]
-##        })
-##    return result
 
 def get_purchase_order(user_id, po_number):
     """Get single purchase order by number"""

@@ -54,8 +54,14 @@
                                 <td>{{ currency_symbol }}{{ "%.2f"|format(inv.grand_total) }}</td>
                                 <td>
                                     <div class="btn-group">
-                                        <button class="btn btn-sm btn-info view-inv-details" data-invoice-number="{{ inv.invoice_number }}">View</button>
-                                        <a href="{{ url_for('sales.download_document', document_number=inv.invoice_number, type='invoice') }}" class="btn btn-sm btn-success">Download</a>
+                                        <button class="btn btn-sm btn-info view-inv-details" 
+                                                data-invoice-number="{{ inv.invoice_number }}">
+                                            <i class="bi bi-eye"></i> View Details
+                                        </button>
+                                        <a href="{{ url_for('sales.download_document', document_number=inv.invoice_number, type='invoice') }}" 
+                                           class="btn btn-sm btn-success">
+                                            <i class="bi bi-download"></i> Download PDF
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -67,8 +73,8 @@
             {% else %}
             <div class="text-center py-5">
                 <div class="mb-3"><i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i></div>
-                <p class="text-muted">{% if search_query %}No invoices match.{% else %}No invoices yet.{% endif %}</p>
-                <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success btn-lg">🧾 Create Your First Invoice</a>
+                <p class="text-muted">No invoices found.</p>
+                <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success btn-lg">🧾 Create First Invoice</a>
             </div>
             {% endif %}
         </div>
@@ -109,22 +115,26 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const invNum = this.dataset.invoiceNumber;
             
-            // Show loading state
-            modalContent.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
-            downloadBtn.href = `/invoice/download/${invNum}`; // Update footer link
+            // Set Loading state
+            modalContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Fetching invoice...</p></div>';
+            
+            // Set the download link (Matching your existing structure)
+            downloadBtn.href = `/download/invoice/${invNum}`; 
+            
             invModal.show();
 
-            // Fetch from the new route
+            // Fetch from the new route we created
             fetch(`/invoice/preview/${invNum}?ajax=true`)
                 .then(response => {
-                    if (!response.ok) throw new Error();
+                    if (!response.ok) throw new Error('Network response was not ok');
                     return response.text();
                 })
                 .then(html => {
                     modalContent.innerHTML = html;
                 })
-                .catch(() => {
-                    modalContent.innerHTML = '<div class="alert alert-danger">Error loading details. Please try Download.</div>';
+                .catch(err => {
+                    console.error('Error:', err);
+                    modalContent.innerHTML = '<div class="alert alert-danger">Error loading details. Please use the Download PDF button instead.</div>';
                 });
         });
     });

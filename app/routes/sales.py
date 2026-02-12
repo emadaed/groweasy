@@ -369,7 +369,7 @@ def cancel_invoice():
 
 # for view invoice detail button in history
 @sales_bp.route('/invoice/preview/<invoice_number>')
-def get_invoice_preview(invoice_number):
+def get_invoice_history_preview(invoice_number):
     if 'user_id' not in session:
         return "Unauthorized", 401
 
@@ -378,23 +378,27 @@ def get_invoice_preview(invoice_number):
         from app.services.utils import generate_simple_qr
         
         service = InvoiceService(session['user_id'])
-        # Fetch existing invoice data from your database/storage
         invoice_data = service.get_invoice_by_number(invoice_number)
 
         if not invoice_data:
             return "Invoice not found", 404
 
-        # Generate QR Code for the specific invoice
+        # Generate QR and render the "paper" part of the invoice
         qr_b64 = generate_simple_qr(invoice_data)
-
-        # Render the template
-        # 'preview=True' ensures it uses your professional layout logic
-        return render_template('invoice_pdf.html',
+        html = render_template('invoice_pdf.html',
                              data=invoice_data,
                              custom_qr_b64=qr_b64,
                              currency_symbol="Rs.",
                              fbr_compliant=True,
                              preview=True)
+
+        # If AJAX, return only the invoice HTML (for the modal)
+        if request.args.get('ajax'):
+            return html
+            
+        # Otherwise return full preview page
+        return render_template('invoice_preview.html', html=html, data=invoice_data, nonce=g.nonce)
+        
     except Exception as e:
-        current_app.logger.error(f"Error fetching invoice preview: {str(e)}")
-        return "Error loading preview", 500
+        current_app.logger.error(f"Preview error: {str(e)}")
+        return f"Error: {str(e)}", 500
