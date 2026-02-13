@@ -175,26 +175,29 @@
         </div>
     </div>
 </div>
-<<script nonce="{{ nonce }}">
+
+<script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Initialize the Modal manually to prevent Bootstrap "backdrop" errors
     const editModalEl = document.getElementById('editVendorModal');
     if (!editModalEl) {
         console.error("CRITICAL: Modal with ID 'editVendorModal' not found in HTML.");
         return;
     }
     const bsEditModal = new bootstrap.Modal(editModalEl);
+    
     // CHANGE 2: Reference the form element
     const editForm = document.getElementById('editSupplierForm');
-    // 2. Listen for clicks on edit buttons
+
     document.querySelectorAll('.edit-supplier-trigger').forEach(btn => {
         btn.addEventListener('click', function() {
             try {
                 const rawData = this.getAttribute('data-supplier-json');
                 const data = JSON.parse(rawData);
-                **editForm.action = `/suppliers/edit/${data.id}`;**
 
-                // 3. Deep-set values with safety checks
+                // CHANGE 3: Set the form action dynamically to use the numeric 'id'
+                // This points to @suppliers_bp.route('/suppliers/edit/<int:id>')
+                editForm.action = '/suppliers/edit/' + data.id;
+
                 const setVal = (id, val) => {
                     const el = document.getElementById(id);
                     if (el) el.value = val || '';
@@ -208,7 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 setVal('edit_tax_id', data.tax_id);
                 setVal('edit_payment_terms', data.payment_terms);
 
-                // 4. Show the modal only AFTER data is set
                 bsEditModal.show();
             } catch (err) {
                 console.error("Error parsing supplier data:", err);
@@ -217,5 +219,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 {% endblock %}
