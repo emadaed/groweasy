@@ -134,7 +134,7 @@
 
         <div class="modal-content">
 
-            <form action="{{ url_for('suppliers.add_supplier') }}" method="POST">
+            <form id="editSupplierForm" method="POST">
 
                 <div class="modal-header">
 
@@ -239,6 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const bsEditModal = new bootstrap.Modal(editModalEl);
+    const editForm = document.getElementById('editSupplierForm');
 
 
 
@@ -253,6 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const rawData = this.getAttribute('data-supplier-json');
 
                 const data = JSON.parse(rawData);
+                editForm.action = `/suppliers/edit/${data.id}`;
 
 
 
