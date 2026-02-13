@@ -131,7 +131,7 @@
 <div class="modal fade" id="editVendorModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="{{ url_for('suppliers.add_supplier') }}" method="POST">
+            <form **id="editSupplierForm"** method="POST">
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Vendor</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -158,6 +158,14 @@
                         <label class="form-label">Tax ID (NTN/STRN)</label>
                         <input type="text" name="tax_id" id="edit_tax_id" class="form-control">
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Terms</label>
+                        <select name="payment_terms" id="edit_payment_terms" class="form-select">
+                            <option value="Due on Receipt">Due on Receipt</option>
+                            <option value="Net 15">Net 15</option>
+                            <option value="Net 30">Net 30</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -176,13 +184,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     const bsEditModal = new bootstrap.Modal(editModalEl);
-
+    // CHANGE 2: Reference the form element
+    const editForm = document.getElementById('editSupplierForm');
     // 2. Listen for clicks on edit buttons
     document.querySelectorAll('.edit-supplier-trigger').forEach(btn => {
         btn.addEventListener('click', function() {
             try {
                 const rawData = this.getAttribute('data-supplier-json');
                 const data = JSON.parse(rawData);
+                **editForm.action = `/suppliers/edit/${data.id}`;**
 
                 // 3. Deep-set values with safety checks
                 const setVal = (id, val) => {
@@ -196,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 setVal('edit_phone', data.phone);
                 setVal('edit_address', data.address);
                 setVal('edit_tax_id', data.tax_id);
+                setVal('edit_payment_terms', data.payment_terms);
 
                 // 4. Show the modal only AFTER data is set
                 bsEditModal.show();
