@@ -1,6 +1,6 @@
 # app/routes/auth.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
-from app import limiter
+from app.extensions import limiter
 from app.services.db import DB_ENGINE
 from app.services.auth import verify_user, get_user_profile, create_user
 from app.services.utils import random_success_message

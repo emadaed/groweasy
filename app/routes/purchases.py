@@ -14,11 +14,11 @@ from app.services.purchases import get_purchase_orders, get_purchase_order,save_
 from app.services.suppliers import SupplierManager #, get_suppliers #
 
 from app.services.cache import get_user_profile_cached
-from app import limiter, generate_simple_qr
+from app import generate_simple_qr
+from app.extensions import limiter
 
 purchases_bp = Blueprint('purchases', __name__)
 
-CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
 #create po 1
 @purchases_bp.route("/create_purchase_order")
 def create_purchase_order():

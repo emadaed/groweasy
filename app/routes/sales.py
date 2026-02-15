@@ -4,7 +4,8 @@ from sqlalchemy import text
 import json
 import io
 from app.services.db import DB_ENGINE
-from app import limiter, generate_simple_qr
+from app import generate_simple_qr
+from app.extensions import limiter
 from app.services.utils import random_success_message
 from app.services.cache import get_user_profile_cached
 from app.services.inventory import InventoryManager

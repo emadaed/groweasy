@@ -5,17 +5,11 @@ import base64
 import os
 import io
 from pathlib import Path
-from datetime import datetime, timedelta
-import secrets
 import logging
 
 # Third-party
 from sqlalchemy import text
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from flask import Flask, render_template, request, g, send_file, session, redirect, url_for, send_from_directory, flash, jsonify, Response, make_response, current_app
-from flask_compress import Compress
-from flask_session import Session
 from dotenv import load_dotenv
 import redis
 import sentry_sdk
@@ -23,11 +17,11 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 # Local application imports
 from app.services.db import DB_ENGINE
 from app.services.middleware import security_headers
-from app.services.cache import init_cache, get_user_profile_cached
+from app.services.cache import init_cache
 from app.services.purchases import save_purchase_order, get_purchase_orders
 from app.services.suppliers import SupplierManager
-# Global Limiter instance
-limiter = Limiter(key_func=get_remote_address)
+from app.extensions import limiter, compress
+from app.context_processors import register_context_processors
 
 def create_app():
     load_dotenv()
@@ -42,6 +36,7 @@ def create_app():
         )
 
     app = Flask(__name__)
+    app.config.from_object('config.Config')
     app.secret_key = os.getenv('SECRET_KEY')
 
     # --- Path Configuration (Inside /app folder) ---
@@ -49,7 +44,7 @@ def create_app():
     app.template_folder = str(app_root / "templates")
     app.static_folder = str(app_root / "static")
 
-    # --- Extensions ---
+    # --- Initialize Extensions ---
     init_cache(app)
     setup_redis_sessions(app)
     
@@ -64,9 +59,10 @@ def create_app():
     
     limiter.init_app(app)
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
+    register_context_processors(app)
 
     # --- Middleware ---
-    Compress(app)
+    compress.init_app(app)
     security_headers(app)
 
     # --- Blueprints ---
@@ -96,24 +92,7 @@ def create_app():
     # --- Logging Noise Reduction ---
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
-    # --- Global Context Processor ---
-    CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
-
-    #context processor
-    @app.context_processor
-    def inject_currency():
-        """Make currency available in all templates"""
-        currency = 'PKR'
-        symbol = 'Rs.'
-
-        if 'user_id' in session:
-            profile = get_user_profile_cached(session['user_id'])
-            if profile:
-                currency = profile.get('preferred_currency', 'PKR')
-                symbol = CURRENCY_SYMBOLS.get(currency, 'Rs.')
-
-        return dict(currency=currency, currency_symbol=symbol)
-
+   
     # --- Custom Jinja Filters ---
     @app.template_filter('escapejs')
     def escapejs_filter(s):
@@ -125,56 +104,8 @@ def create_app():
                 .replace('"', '\\"')
                 .replace('\n', '\\n')
                 .replace('\r', '\\r'))
-
-    @app.context_processor
-    def inject_nonce():
-        if not hasattr(g, 'nonce'):
-            g.nonce = base64.b64encode(secrets.token_bytes(16)).decode('utf-8')
-        return dict(nonce=g.nonce)
-
-    @app.context_processor
-    def utility_processor():
-        """Add utility functions to all templates"""
-        def now():
-            return datetime.now()
-
-        def today():
-            return datetime.now().date()
-
-        def month_equalto_filter(value, month):
-            """Custom filter for month comparison - FIXED"""
-            try:
-                if hasattr(value, 'month'):
-                    return value.month == month
-                elif isinstance(value, str):
-                    # Try to parse date string
-                    from datetime import datetime as dt
-                    # Handle different date formats
-                    for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f']:
-                        try:
-                            date_obj = dt.strptime(value, fmt)
-                            return date_obj.month == month
-                        except:
-                            continue
-                    return False
-                elif hasattr(value, 'order_date'):
-                    # Handle purchase order objects
-                    return value.order_date.month == month if hasattr(value.order_date, 'month') else False
-                return False
-            except:
-                return False
-
-        return {
-            'now': now,
-            'today': today,
-            'month_equalto': month_equalto_filter
-        }
-
     
-    @app.before_request
-    def set_nonce():
-        g.nonce = secrets.token_hex(16)
-
+    
     return app
 
 def setup_redis_sessions(app):

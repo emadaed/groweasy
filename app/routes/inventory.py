@@ -6,7 +6,7 @@ from app.services.inventory import InventoryManager
 from app.services.utils import random_success_message
 from flask import Response
 from app.services.db import DB_ENGINE # Ensure this import exists
-from app import limiter
+from app.extensions import limiter
 
 inventory_bp = Blueprint('inventory', __name__)
 
