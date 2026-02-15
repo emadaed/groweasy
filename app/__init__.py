@@ -22,6 +22,7 @@ from app.services.purchases import save_purchase_order, get_purchase_orders
 from app.services.suppliers import SupplierManager
 from app.extensions import limiter, compress
 from app.context_processors import register_context_processors
+from config import Config
 
 def create_app():
     load_dotenv()
@@ -38,16 +39,13 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     app.secret_key = os.getenv('SECRET_KEY')
-
     # --- Path Configuration (Inside /app folder) ---
     app_root = Path(__file__).parent
     app.template_folder = str(app_root / "templates")
     app.static_folder = str(app_root / "static")
-
     # --- Initialize Extensions ---
     init_cache(app)
-    setup_redis_sessions(app)
-    
+    setup_redis_sessions(app)    
     # --- Rate Limiting ---
     storage_uri = os.getenv('REDIS_URL', 'memory://')
     if storage_uri and '://' not in storage_uri:
@@ -60,7 +58,6 @@ def create_app():
     limiter.init_app(app)
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
     register_context_processors(app)
-
     # --- Middleware ---
     compress.init_app(app)
     security_headers(app)
