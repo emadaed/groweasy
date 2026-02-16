@@ -1,11 +1,14 @@
 # app/routes/reports.py
-from flask import Blueprint, render_template, session, redirect, url_for, g, current_app, request, jsonify
+import csv
+from io import StringIO
+from flask import Blueprint, render_template, Response, session, redirect, url_for, g, current_app, request, jsonify
 from sqlalchemy import text
+from datetime import datetime, timedelta
 from app.services.report_service import ReportService
 from app.services.ai_service import get_gemini_insights
 from app.services.cache import get_user_profile_cached
 from app.context_processors import CURRENCY_SYMBOLS 
-
+from app.services.report_service import ReportService # Assumes you have this service
 reports_bp = Blueprint('reports', __name__)
 
 @reports_bp.route('/reports/dashboard')
@@ -51,3 +54,38 @@ def ask_ai():
     answer = get_gemini_insights(data, custom_prompt=user_query)
     
     return jsonify({'answer': answer})
+
+@reports_bp.route('/reports/download/<type>')
+def download_report(type):
+    user_id = session.get('user_id')
+    # Fetch  data as a list of dicts or objects
+    # Example: summary_data = ReportService.get_financial_details(user_id)
+    
+    if type == 'csv':
+        # 1. Get the data (This is an example, replace with your real query)
+        data_to_export = [
+            {'Category': 'Total Revenue', 'Value': 5000.00},
+            {'Category': 'Net Profit', 'Value': 1200.00},
+            {'Category': 'Tax Liability', 'Value': 350.00},
+            # Add more rows here from your DB
+        ]
+        
+        # 2. Generate CSV in memory
+        si = StringIO()
+        cw = csv.DictWriter(si, fieldnames=data_to_export[0].keys())
+        cw.writeheader()
+        cw.writerows(data_to_export)
+        
+        # 3. Create response
+        output = si.getvalue()
+        return Response(
+            output,
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=business_report.csv"}
+        )
+    
+    elif type == 'pdf':
+        # PDF logic usually requires WeasyPrint:
+        # html = render_template('pdf/report_template.html', data=data)
+        # return render_pdf(HTML(string=html))
+        return "PDF generation triggered (Configure WeasyPrint template first)"

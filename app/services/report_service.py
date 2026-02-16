@@ -2,6 +2,11 @@
 from sqlalchemy import text
 from app.services.db import DB_ENGINE
 from datetime import datetime, timedelta
+from flask_caching import Cache
+
+# Setup a cache that all workers can see
+cache = Cache(config={'CACHE_TYPE': 'FileSystemCache', 'CACHE_DIR': '/tmp/flask_cache'})
+
 
 class ReportService:
     @staticmethod
@@ -52,3 +57,14 @@ class ReportService:
                 "net_profit": (sales_query[0] or 0) - (purchases_query[0] or 0),
                 "tax_liability": (sales_query[1] or 0) - (purchases_query[1] or 0)
             }
+
+def get_cached_insights(user_id, data):
+    cache_key = f"ai_insights_{user_id}"
+    existing = cache.get(cache_key)
+    if existing:
+        return existing
+    
+    # Only call the API if the cache is empty
+    new_insights = get_gemini_insights(data)
+    cache.set(cache_key, new_insights, timeout=3600) # Cache for 1 hour
+    return new_insights
