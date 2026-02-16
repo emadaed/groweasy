@@ -162,6 +162,9 @@ def download_document(document_number):
 
     try:
         # Fetch document data
+        user_profile = get_user_profile_cached(user_id)
+        user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
+        user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
         if document_type == 'purchase_order':
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(text("""
