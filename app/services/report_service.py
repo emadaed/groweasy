@@ -1,0 +1,43 @@
+# app/services/report_service.py
+from sqlalchemy import text
+from app.services.db import DB_ENGINE
+from datetime import datetime, timedelta
+
+class ReportService:
+    @staticmethod
+    def get_financial_summary(user_id):
+        """Calculates Tax, Sales, and Costs for the last 30 days"""
+        with DB_ENGINE.connect() as conn:
+            # 1. Sales & Tax Collected
+            sales_query = conn.execute(text("""
+                SELECT 
+                    SUM(total_amount) as total_revenue,
+                    SUM(CAST(json_extract(invoice_data, '$.tax_amount') AS FLOAT)) as tax_collected
+                FROM invoices 
+                WHERE user_id = :uid AND created_at >= date('now', '-30 days')
+            """), {"uid": user_id}).fetchone()
+
+            # 2. Purchases & Tax Paid
+            purchases_query = conn.execute(text("""
+                SELECT 
+                    SUM(grand_total) as total_costs,
+                    SUM(CAST(json_extract(order_data, '$.tax_amount') AS FLOAT)) as tax_paid
+                FROM purchase_orders 
+                WHERE user_id = :uid AND status = 'Received'
+                AND created_at >= date('now', '-30 days')
+            """), {"uid": user_id}).fetchone()
+
+            # 3. Inventory Valuation
+            inventory = conn.execute(text("""
+                SELECT SUM(stock_level * cost_price) FROM inventory WHERE user_id = :uid
+            """), {"uid": user_id}).scalar() or 0
+
+            return {
+                "revenue": sales_query[0] or 0,
+                "tax_collected": sales_query[1] or 0,
+                "costs": purchases_query[0] or 0,
+                "tax_paid": purchases_query[1] or 0,
+                "inventory_value": inventory,
+                "net_profit": (sales_query[0] or 0) - (purchases_query[0] or 0),
+                "tax_liability": (sales_query[1] or 0) - (purchases_query[1] or 0)
+            }

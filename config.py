@@ -28,3 +28,6 @@ class Config:
     SESSION_USE_SIGNER = True
     SESSION_KEY_PREFIX = 'invoice_sess:'
     SESSION_FILE_DIR = '/tmp/flask_sessions'
+
+    #4 Gemini
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')

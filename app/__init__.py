@@ -69,6 +69,8 @@ def create_app():
     app.register_blueprint(api_bp)
     from app.routes.suppliers import suppliers_bp
     app.register_blueprint(suppliers_bp)
+    from app.routes.reports import reports_bp
+    app.register_blueprint(reports_bp)
 ##    from app.routes.common import common_bp
 ##    app.register_blueprint(common_bp)
 

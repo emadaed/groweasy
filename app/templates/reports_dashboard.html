@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📊 Business Intelligence Dashboard</h2>
+        <span class="badge bg-primary">Last 30 Days</span>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Total Revenue</small>
+                <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(data.revenue) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Net Profit</small>
+                <h3 class="{% if data.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    {{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}
+                </h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Tax Liability</small>
+                <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Stock Value</small>
+                <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm p-4 mb-4">
+                <h5>Revenue vs. Costs</h5>
+                <canvas id="financeChart" height="150"></canvas>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-light p-4" style="border-left: 5px solid #6f42c1 !important;">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="fs-4 me-2">♊</span>
+                    <h5 class="mb-0" style="color: #6f42c1;">Groweasy Gemini's Corner</h5>
+                </div>
+                <div id="ai-insight" class="small text-dark italic">
+                    <p>{{ ai_advice | safe }}</p>
+                </div>
+                <hr>
+                <small class="text-muted">AI generated advice based on your real-time data.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
+<script nonce="{{ nonce }}">
+    const ctx = document.getElementById('financeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Revenue', 'Costs'],
+            datasets: [{
+                label: 'Amount',
+                data: [{{ data.revenue }}, {{ data.costs }}],
+                backgroundColor: ['#28a745', '#dc3545'],
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } }
+        }
+    });
+</script>
+{% endblock %}
