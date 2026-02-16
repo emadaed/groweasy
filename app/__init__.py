@@ -1,65 +1,51 @@
 #app/__init__.py
-import time
-import json
-import base64
 import os
-import io
-from pathlib import Path
 import logging
-
-# Third-party
-from sqlalchemy import text
-from flask import Flask, render_template, request, g, send_file, session, redirect, url_for, send_from_directory, flash, jsonify, Response, make_response, current_app
+from pathlib import Path
+from flask import Flask
+from flask_session import Session
 from dotenv import load_dotenv
-import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-# Local application imports
-from app.services.db import DB_ENGINE
-from app.services.middleware import security_headers
+
+# Local Imports
+from .extensions import limiter, compress
+from .context_processors import register_context_processors
 from app.services.cache import init_cache
-from app.services.purchases import save_purchase_order, get_purchase_orders
-from app.services.suppliers import SupplierManager
-from app.extensions import limiter, compress
-from app.context_processors import register_context_processors
+from app.services.middleware import security_headers
 from config import Config
 
 def create_app():
     load_dotenv()
 
-    # --- Sentry Setup ---
+    # --- Sentry ---
     if os.getenv('SENTRY_DSN'):
         sentry_sdk.init(
             dsn=os.getenv('SENTRY_DSN'),
             integrations=[FlaskIntegration()],
-            traces_sample_rate=1.0,
-            environment='production' if os.getenv('RAILWAY_ENVIRONMENT') else 'development'
+            traces_sample_rate=1.0
         )
 
     app = Flask(__name__)
-    app.config.from_object('config.Config')
-    app.secret_key = os.getenv('SECRET_KEY')
-    # --- Path Configuration (Inside /app folder) ---
+    app.config.from_object(Config)
+
+    # Path Config
     app_root = Path(__file__).parent
     app.template_folder = str(app_root / "templates")
     app.static_folder = str(app_root / "static")
+
     # --- Initialize Extensions ---
     init_cache(app)
-    setup_redis_sessions(app)    
-    # --- Rate Limiting ---
-    storage_uri = os.getenv('REDIS_URL', 'memory://')
-    if storage_uri and '://' not in storage_uri:
-        if '@' in storage_uri:
-            password, host = storage_uri.split('@', 1)
-            storage_uri = f"redis://default:{password}@{host}:6379"
-        else:
-            storage_uri = f"redis://default:{storage_uri}@redis.railway.internal:6379"
     
+    # Simple Session Setup (Logic is now in Config)
+    if app.config['SESSION_TYPE'] == 'redis':
+        import redis
+        app.config['SESSION_REDIS'] = redis.from_url(app.config['REDIS_URL'])
+    Session(app)
+
     limiter.init_app(app)
-    app.config["RATELIMIT_STORAGE_URI"] = storage_uri
-    register_context_processors(app)
-    # --- Middleware ---
     compress.init_app(app)
+    register_context_processors(app)
     security_headers(app)
 
     # --- Blueprints ---
@@ -105,28 +91,28 @@ def create_app():
     
     return app
 
-def setup_redis_sessions(app):
-    REDIS_URL = os.getenv('REDIS_URL', '').strip()
-    if not REDIS_URL or REDIS_URL == 'memory://':
-        app.config.update(SESSION_TYPE='filesystem', SESSION_FILE_DIR='/tmp/flask_sessions')
-        Session(app)
-        return
-    try:
-        if '://' not in REDIS_URL:
-            REDIS_URL = f"redis://default:{REDIS_URL}@redis.railway.internal:6379"
-        redis_client = redis.from_url(REDIS_URL, socket_connect_timeout=5)
-        app.config.update(
-            SESSION_TYPE='redis',
-            SESSION_REDIS=redis_client,
-            SESSION_PERMANENT=True,
-            SESSION_USE_SIGNER=True,
-            SESSION_KEY_PREFIX='invoice_sess:',
-            PERMANENT_SESSION_LIFETIME=86400
-        )
-        Session(app)
-    except:
-        app.config.update(SESSION_TYPE='filesystem', SESSION_FILE_DIR='/tmp/flask_sessions')
-        Session(app)
+##def setup_redis_sessions(app):
+##    REDIS_URL = os.getenv('REDIS_URL', '').strip()
+##    if not REDIS_URL or REDIS_URL == 'memory://':
+##        app.config.update(SESSION_TYPE='filesystem', SESSION_FILE_DIR='/tmp/flask_sessions')
+##        Session(app)
+##        return
+##    try:
+##        if '://' not in REDIS_URL:
+##            REDIS_URL = f"redis://default:{REDIS_URL}@redis.railway.internal:6379"
+##        redis_client = redis.from_url(REDIS_URL, socket_connect_timeout=5)
+##        app.config.update(
+##            SESSION_TYPE='redis',
+##            SESSION_REDIS=redis_client,
+##            SESSION_PERMANENT=True,
+##            SESSION_USE_SIGNER=True,
+##            SESSION_KEY_PREFIX='invoice_sess:',
+##            PERMANENT_SESSION_LIFETIME=86400
+##        )
+##        Session(app)
+##    except:
+##        app.config.update(SESSION_TYPE='filesystem', SESSION_FILE_DIR='/tmp/flask_sessions')
+##        Session(app)
 
 
 # STOCK VALIDATION
