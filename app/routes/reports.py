@@ -13,21 +13,38 @@ reports_bp = Blueprint('reports', __name__)
 
 @reports_bp.route('/reports/dashboard')
 def dashboard():
+    # 1. Access Control
     if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-        
+        return redirect(url_for('auth.login'))        
     user_id = session['user_id']
     
-    # Check if we already have AI advice from the last 10 mins
-    if 'ai_advice' in session and session.get('ai_timestamp'):
-        # (Optional: Check time delta here)
+    # 2. BOT PROTECTION: Only run AI for real browsers
+    user_agent = request.headers.get('User-Agent', '').lower()
+    # List of common bot strings to block from AI usage
+    is_bot = any(bot in user_agent for bot in [
+        'bot', 'spider', 'uptime', 'python-requests', 'health', 'crawler', 'sentry'
+    ])
+
+    # 3. Handle AI Insights with specific 10-minute expiry
+    now = datetime.now()
+    last_run = session.get('ai_timestamp')
+    
+    # Logic: If it's a bot, skip AI. If we have fresh advice (under 10 mins), use it.
+    if is_bot:
+        ai_advice = "AI analysis is reserved for active users."
+    elif 'ai_advice' in session and last_run and (now - last_run) < timedelta(minutes=10):
         ai_advice = session['ai_advice']
     else:
+        # Fetch fresh data and call Gemini
         data = ReportService.get_financial_summary(user_id)
         ai_advice = get_gemini_insights(data)
+        
+        # Save to session to prevent re-calls for 10 minutes
         session['ai_advice'] = ai_advice
-        session['ai_timestamp'] = datetime.now()
-    
+        session['ai_timestamp'] = now
+
+    # 4. Final UI Setup
+    data = ReportService.get_financial_summary(user_id) # Ensure data is loaded for the cards
     user_profile = get_user_profile_cached(user_id)
     user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
     user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
@@ -38,6 +55,7 @@ def dashboard():
                            currency_symbol=user_symbol,
                            nonce=g.nonce)
 
+#ask AI
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
 def ask_ai():
     """Handles custom prompts from the Gemini Corner"""
@@ -55,12 +73,11 @@ def ask_ai():
     
     return jsonify({'answer': answer})
 
+#PDF&CSV download
 @reports_bp.route('/reports/download/<type>')
 def download_report(type):
     user_id = session.get('user_id')
-    # Fetch  data as a list of dicts or objects
-    # Example: summary_data = ReportService.get_financial_details(user_id)
-    
+        
     if type == 'csv':
         # 1. Get the data (This is an example, replace with your real query)
         data_to_export = [
