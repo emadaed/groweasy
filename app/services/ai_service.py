@@ -34,5 +34,7 @@ def get_gemini_insights(data, custom_prompt=None):
         )
         return response.text
     except Exception as e:
+        if "429" in str(e):
+            return "Gemini is taking a quick breather (Rate Limit). Your business data is safe! Please refresh in 60 seconds."
         current_app.logger.error(f"AI Service Error: {str(e)}")
-        return "Gemini is currently analyzing your market data. Please check back in a moment!"
+        return "Gemini is currently analyzing your data. Check back shortly!"

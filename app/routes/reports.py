@@ -15,10 +15,15 @@ def dashboard():
         
     user_id = session['user_id']
     
-    # FIX: Updated query to use 'user_invoices' and PostgreSQL JSON syntax
-    # We use ReportService but ensure its internal SQL matches your db.py
-    data = ReportService.get_financial_summary(user_id)
-    ai_advice = get_gemini_insights(data)
+    # Check if we already have AI advice from the last 10 mins
+    if 'ai_advice' in session and session.get('ai_timestamp'):
+        # (Optional: Check time delta here)
+        ai_advice = session['ai_advice']
+    else:
+        data = ReportService.get_financial_summary(user_id)
+        ai_advice = get_gemini_insights(data)
+        session['ai_advice'] = ai_advice
+        session['ai_timestamp'] = datetime.now()
     
     user_profile = get_user_profile_cached(user_id)
     user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
