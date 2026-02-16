@@ -44,20 +44,54 @@
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-0 bg-light p-4" style="border-left: 5px solid #6f42c1 !important;">
-                <div class="d-flex align-items-center mb-2">
-                    <span class="fs-4 me-2">♊</span>
-                    <h5 class="mb-0" style="color: #6f42c1;">Groweasy Gemini's Corner</h5>
-                </div>
-                <div id="ai-insight" class="small text-dark italic">
-                    <p>{{ ai_advice | safe }}</p>
-                </div>
-                <hr>
-                <small class="text-muted">AI generated advice based on your real-time data.</small>
-            </div>
+            <div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="card-title text-primary"><i class="bi bi-stars"></i> Groweasy Gemini's Corner</h5>
+        <div id="ai-response-area" class="alert alert-info">
+            {{ ai_advice | safe }}
+        </div>
+
+        <hr>
+        <div class="input-group">
+            <input type="text" id="user-ai-prompt" class="form-control" placeholder="Ask Gemini about your profit, stock, or tax...">
+            <button class="btn btn-primary" type="button" id="send-ai-btn">
+                <span id="btn-text">Ask AI</span>
+                <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
+            </button>
         </div>
     </div>
 </div>
+
+<script nonce="{{ g.nonce }}">
+document.getElementById('send-ai-btn').addEventListener('click', async () => {
+    const promptInput = document.getElementById('user-ai-prompt');
+    const responseArea = document.getElementById('ai-response-area');
+    const btnText = document.getElementById('btn-text');
+    const spinner = document.getElementById('btn-spinner');
+
+    if (!promptInput.value) return;
+
+    // Loading State
+    btnText.innerText = "Consulting...";
+    spinner.classList.remove('d-none');
+    
+    try {
+        const response = await fetch("{{ url_for('reports.ask_ai') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: promptInput.value })
+        });
+        const result = await response.json();
+        responseArea.innerHTML = result.answer;
+        promptInput.value = ""; // Clear input
+    } catch (e) {
+        responseArea.innerHTML = "❌ Error reaching Gemini. Please try again.";
+    } finally {
+        btnText.innerText = "Ask AI";
+        spinner.classList.add('d-none');
+    }
+});
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
 <script nonce="{{ nonce }}">

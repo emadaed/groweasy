@@ -1,9 +1,9 @@
 # app/routes/reports.py
-from flask import Blueprint, render_template, session, redirect, url_for, g, current_app
+from flask import Blueprint, render_template, session, redirect, url_for, g, current_app, request, jsonify
+from sqlalchemy import text
 from app.services.report_service import ReportService
 from app.services.ai_service import get_gemini_insights
 from app.services.cache import get_user_profile_cached
-# You MUST import this to avoid a NameError
 from app.context_processors import CURRENCY_SYMBOLS 
 
 reports_bp = Blueprint('reports', __name__)
@@ -15,25 +15,34 @@ def dashboard():
         
     user_id = session['user_id']
     
-    try:
-        data = ReportService.get_financial_summary(user_id)
-        ai_advice = get_gemini_insights(data)
-        
-        # Get user currency preference
-        user_profile = get_user_profile_cached(user_id)
-        user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
-        user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
+    # FIX: Updated query to use 'user_invoices' and PostgreSQL JSON syntax
+    # We use ReportService but ensure its internal SQL matches your db.py
+    data = ReportService.get_financial_summary(user_id)
+    ai_advice = get_gemini_insights(data)
+    
+    user_profile = get_user_profile_cached(user_id)
+    user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
+    user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
 
-        return render_template('reports_dashboard.html', 
-                               data=data, 
-                               ai_advice=ai_advice,
-                               currency_symbol=user_symbol,
-                               nonce=g.nonce)
-    except Exception as e:
-        current_app.logger.error(f"Dashboard Error: {str(e)}")
-        # Fallback if AI or DB fails temporarily
-        return render_template('reports_dashboard.html', 
-                               data={'revenue':0, 'costs':0, 'net_profit':0, 'tax_liability':0, 'inventory_value':0}, 
-                               ai_advice="Gemini is analyzing your data. Please refresh in a moment.",
-                               currency_symbol="Rs.",
-                               nonce=g.nonce)
+    return render_template('reports_dashboard.html', 
+                           data=data, 
+                           ai_advice=ai_advice,
+                           currency_symbol=user_symbol,
+                           nonce=g.nonce)
+
+@reports_bp.route('/reports/ask_ai', methods=['POST'])
+def ask_ai():
+    """Handles custom prompts from the Gemini Corner"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    user_query = request.json.get('prompt')
+    user_id = session['user_id']
+    
+    # Get current data so Gemini has context for the specific question
+    data = ReportService.get_financial_summary(user_id)
+    
+    # We pass the custom prompt to our service
+    answer = get_gemini_insights(data, custom_prompt=user_query)
+    
+    return jsonify({'answer': answer})
