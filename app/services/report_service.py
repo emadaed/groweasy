@@ -7,6 +7,7 @@ class ReportService:
     @staticmethod
     def get_financial_summary(user_id):
         with DB_ENGINE.connect() as conn:
+            # Use the CAST fix we discussed for Postgres TEXT columns
             sales_query = conn.execute(text("""
                 SELECT 
                     SUM(CAST(CAST(invoice_data AS JSONB)->>'total_amount' AS FLOAT)) as total_revenue,
@@ -16,11 +17,17 @@ class ReportService:
                   AND created_at >= CURRENT_DATE - INTERVAL '30 days'
             """), {"uid": user_id}).mappings().first()
             
+            # Align keys to what the UI/AI expects: 'revenue' instead of 'total_revenue'
             return {
-                "total_revenue": sales_query['total_revenue'] or 0,
-                "tax_collected": sales_query['tax_collected'] or 0
+                "revenue": sales_query['total_revenue'] or 0,
+                "tax_collected": sales_query['tax_collected'] or 0,
+                "costs": 0,  # Placeholder until you add Purchase Order logic
+                "tax_paid": 0,
+                "inventory_value": 0,
+                "net_profit": (sales_query['total_revenue'] or 0) - 0,
+                "tax_liability": (sales_query['tax_collected'] or 0) - 0
             }
-
+        
             # 2. Purchases & Tax Paid
             purchases_query = conn.execute(text("""
                 SELECT 
