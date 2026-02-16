@@ -9,8 +9,8 @@ import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 # Local Imports
-from .extensions import limiter, compress
-from .context_processors import register_context_processors
+from app.extensions import limiter, compress
+from app.context_processors import register_context_processors
 from app.services.cache import init_cache
 from app.services.middleware import security_headers
 from config import Config
@@ -90,30 +90,6 @@ def create_app():
     
     
     return app
-
-##def setup_redis_sessions(app):
-##    REDIS_URL = os.getenv('REDIS_URL', '').strip()
-##    if not REDIS_URL or REDIS_URL == 'memory://':
-##        app.config.update(SESSION_TYPE='filesystem', SESSION_FILE_DIR='/tmp/flask_sessions')
-##        Session(app)
-##        return
-##    try:
-##        if '://' not in REDIS_URL:
-##            REDIS_URL = f"redis://default:{REDIS_URL}@redis.railway.internal:6379"
-##        redis_client = redis.from_url(REDIS_URL, socket_connect_timeout=5)
-##        app.config.update(
-##            SESSION_TYPE='redis',
-##            SESSION_REDIS=redis_client,
-##            SESSION_PERMANENT=True,
-##            SESSION_USE_SIGNER=True,
-##            SESSION_KEY_PREFIX='invoice_sess:',
-##            PERMANENT_SESSION_LIFETIME=86400
-##        )
-##        Session(app)
-##    except:
-##        app.config.update(SESSION_TYPE='filesystem', SESSION_FILE_DIR='/tmp/flask_sessions')
-##        Session(app)
-
 
 # STOCK VALIDATION
 def validate_stock_availability(user_id, invoice_items, invoice_type='S'):
