@@ -45,4 +45,4 @@ celery==5.3.6   # (or latest: celery==5.6.2  newest)
 # Optional but recommended for monitoring Celery tasks
 flower==2.0.1
 
-google-generativeai
+google-genai

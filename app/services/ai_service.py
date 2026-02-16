@@ -1,13 +1,12 @@
 # app/services/ai_service.py
-import google.generativeai as genai
+from google import genai
 from flask import current_app
 
 def get_gemini_insights(data):
-    """Feeds ERP data to Gemini and returns professional advice"""
+    """Feeds ERP data to Gemini 2.0 and returns professional advice"""
     try:
-        # Configure the API (Key stored in Config)
-        genai.configure(api_key=current_app.config['GEMINI_API_KEY'])
-        model = genai.GenerativeModel('gemini-pro')
+        # Initialize the new Client
+        client = genai.Client(api_key=current_app.config['GEMINI_API_KEY'])
         
         prompt = f"""
         You are the Groweasy AI Business Consultant. Analyze this monthly data for a business owner:
@@ -18,10 +17,16 @@ def get_gemini_insights(data):
         - Inventory Value: {data['inventory_value']}
         
         Provide 3 short, actionable bullet points to improve the business. 
-        Keep the tone professional, encouraging, and brief.
+        Focus on cash flow, tax management, and inventory.
+        Keep the tone professional and brief.
         """
         
-        response = model.generate_content(prompt)
+        # Use the latest model
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", 
+            contents=prompt
+        )
         return response.text
     except Exception as e:
-        return "Gemini is resting right now. Check back in a moment for your insights!"
+        current_app.logger.error(f"AI Service Error: {str(e)}")
+        return "Gemini is currently analyzing your market data. Please check back in a moment!"
