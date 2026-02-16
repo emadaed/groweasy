@@ -11,10 +11,12 @@ from app.services.qr_engine import generate_qr_base64
 
 logger = logging.getLogger(__name__)
 
-def generate_invoice_pdf(service_data):
+def generate_invoice_pdf(service_data, currency_symbol='Rs.'):
+    service_data['currency_symbol'] = currency_symbol # Inject it here
     return _generate_pdf(service_data, template="invoice_pdf.html")
 
-def generate_purchase_order_pdf(service_data):
+def generate_purchase_order_pdf(service_data, currency_symbol='Rs.'):
+    service_data['currency_symbol'] = currency_symbol # Inject it here
     return _generate_pdf(service_data, template="purchase_order_pdf.html")
 
 def _generate_pdf(service_data, template):

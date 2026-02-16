@@ -71,14 +71,14 @@ class InvoiceView(MethodView):
             user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
 
             # Then change your return line to use user_symbol:
-            return render_template('invoice_pdf.html',
+            html = render_template('invoice_pdf.html',
                                  data=invoice_data,
                                  custom_qr_b64=qr_b64,
                                  currency_symbol=user_symbol, # Use the dynamic symbol here!
                                  fbr_compliant=True,
                                  preview=True)
 
-            html = render_template('invoice_preview.html',
+            return render_template('invoice_preview.html',
                                  html=html,
                                  data=invoice_data,
                                  nonce=g.nonce)
@@ -216,7 +216,7 @@ def download_document(document_number):
 
             # Generate PDF
             from app.services.pdf_generator import generate_purchase_order_pdf
-            pdf_bytes = generate_purchase_order_pdf(service_data)
+            pdf_bytes = generate_purchase_order_pdf(service_data, currency_symbol=user_symbol)
 
         else:  # Sales Invoice
             with DB_ENGINE.connect() as conn:
@@ -252,7 +252,7 @@ def download_document(document_number):
 
             # Generate PDF
             from app.services.pdf_generator import generate_invoice_pdf
-            pdf_bytes = generate_invoice_pdf(service_data)
+            pdf_bytes = generate_invoice_pdf(service_data, currency_symbol=user_symbol)
 
         # Create filename
         import re
