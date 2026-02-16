@@ -4,7 +4,7 @@ import secrets
 import base64
 from flask import g, session
 from app.services.cache import get_user_profile_cached
-
+from flask import current_app
 
  # --- Global Context Processor ---
 CURRENCY_SYMBOLS = {'PKR': 'Rs.', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ', 'SAR': '﷼'}
