@@ -1,4 +1,4 @@
-# core/pdf_generator.py - FINAL CLEAN VERSION
+# app/services/pdf_generator.py - FINAL CLEAN VERSION
 import io
 import logging
 from datetime import datetime

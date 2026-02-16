@@ -71,7 +71,7 @@ class InvoiceView(MethodView):
             user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
 
             # Then change your return line to use user_symbol:
-            return render_template('invoice_pdf.html',
+            html = render_template('invoice_pdf.html',
                                  data=invoice_data,
                                  custom_qr_b64=qr_b64,
                                  currency_symbol=user_symbol, # Use the dynamic symbol here!
