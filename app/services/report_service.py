@@ -12,10 +12,11 @@ class ReportService:
             sales_query = conn.execute(text("""
                 SELECT 
                     SUM(total_amount) as total_revenue,
-                    SUM(CAST(json_extract(invoice_data, '$.tax_amount') AS FLOAT)) as tax_collected
-                FROM invoices 
-                WHERE user_id = :uid AND created_at >= date('now', '-30 days')
-            """), {"uid": user_id}).fetchone()
+                    SUM(CAST(invoice_data->>'tax_amount' AS FLOAT)) as tax_collected
+                FROM user_invoices 
+                WHERE user_id = :uid 
+                  AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+            """), {'uid': user_id})
 
             # 2. Purchases & Tax Paid
             purchases_query = conn.execute(text("""
