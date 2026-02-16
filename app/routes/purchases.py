@@ -92,7 +92,6 @@ def po_preview(po_number):
         po_data['po_number'] = po_number
         po_data['invoice_number'] = po_number
 
-        # --- NEW SAFETY SYNC FOR SUPPLIER CONTACT INFO ---
         # If email or phone are missing, pull them from the Supplier module
         if not po_data.get('supplier_email') or not po_data.get('supplier_phone'):
             from app.services.suppliers import SupplierManager
@@ -103,7 +102,6 @@ def po_preview(po_number):
                 po_data['supplier_email'] = match.get('email', '')
                 po_data['supplier_phone'] = match.get('phone', '')
         # ------------------------------------------------
-
         inventory_items = InventoryManager.get_inventory_items(user_id)
         product_lookup = {str(p['id']): p for p in inventory_items}
         product_lookup.update({int(k): v for k, v in product_lookup.items() if str(k).isdigit()})
@@ -117,13 +115,16 @@ def po_preview(po_number):
                 #item['supplier'] = p.get('supplier', po_data.get('supplier_name', 'Unknown Supplier'))
                 # Use the main PO supplier name as the primary fallback to ensure consistency
                 item['supplier'] = p.get('supplier') or po_data.get('supplier_name') or 'Unknown Supplier'
-        
+
+        user_profile = get_user_profile_cached(session['user_id'])
+        user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
+        user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
         qr_b64 = generate_simple_qr(po_data)
         html = render_template('purchase_order_pdf.html', 
                              data=po_data, 
                              preview=True, 
                              custom_qr_b64=qr_b64, 
-                             currency_symbol=g.get('currency_symbol', 'Rs.'))
+                             currency_symbol=user_symbol)
                              
         return render_template('po_preview.html', html=html, data=po_data, po_number=po_number, nonce=g.nonce)
         
@@ -213,9 +214,9 @@ def purchase_orders():
             current_app.logger.error(f"Error loading purchase orders: {e}")
             flash("Could not load purchase orders", "warning")
         user_profile = get_user_profile_cached(session['user_id'])
-        currency_code = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
-        currency_symbol = CURRENCY_SYMBOLS.get(currency_code, 'Rs.')
-        return render_template("purchase_orders.html", orders=orders, current_page=page, currency_symbol=currency_symbol, nonce=g.nonce)
+        user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
+        user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
+        return render_template("purchase_orders.html", orders=orders, current_page=page, currency_symbol=user_symbol, nonce=g.nonce)
     except Exception as e:
         current_app.logger.error(f"Purchase orders route error: {e}")
         flash("Error loading purchase orders", "error")
