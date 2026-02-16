@@ -9,8 +9,8 @@ class ReportService:
         with DB_ENGINE.connect() as conn:
             sales_query = conn.execute(text("""
                 SELECT 
-                    SUM(CAST(invoice_data->>'total_amount' AS FLOAT)) as total_revenue,
-                    SUM(CAST(invoice_data->>'tax_amount' AS FLOAT)) as tax_collected
+                    SUM(CAST(CAST(invoice_data AS JSONB)->>'total_amount' AS FLOAT)) as total_revenue,
+                    SUM(CAST(CAST(invoice_data AS JSONB)->>'tax_amount' AS FLOAT)) as tax_collected
                 FROM user_invoices 
                 WHERE user_id = :uid 
                   AND created_at >= CURRENT_DATE - INTERVAL '30 days'
