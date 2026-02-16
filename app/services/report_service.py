@@ -6,17 +6,20 @@ from datetime import datetime, timedelta
 class ReportService:
     @staticmethod
     def get_financial_summary(user_id):
-        """Calculates Tax, Sales, and Costs for the last 30 days"""
         with DB_ENGINE.connect() as conn:
-            # 1. Sales & Tax Collected
             sales_query = conn.execute(text("""
                 SELECT 
-                    SUM(total_amount) as total_revenue,
+                    SUM(CAST(invoice_data->>'total_amount' AS FLOAT)) as total_revenue,
                     SUM(CAST(invoice_data->>'tax_amount' AS FLOAT)) as tax_collected
                 FROM user_invoices 
                 WHERE user_id = :uid 
                   AND created_at >= CURRENT_DATE - INTERVAL '30 days'
-            """), {'uid': user_id})
+            """), {"uid": user_id}).mappings().first()
+            
+            return {
+                "total_revenue": sales_query['total_revenue'] or 0,
+                "tax_collected": sales_query['tax_collected'] or 0
+            }
 
             # 2. Purchases & Tax Paid
             purchases_query = conn.execute(text("""
