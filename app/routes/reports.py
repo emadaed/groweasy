@@ -11,6 +11,22 @@ from app.context_processors import CURRENCY_SYMBOLS
 from app.services.report_service import ReportService # Assumes you have this service
 reports_bp = Blueprint('reports', __name__)
 
+from flask import request, abort
+
+# List of known bots from your logs and common crawlers
+BLOCKED_BOTS = [
+    'sentry', 'uptime', 'bot', 'spider', 'crawler', 
+    'python-requests', 'health', 'headless'
+]
+
+def block_automation():
+    user_agent = request.headers.get('User-Agent', '').lower()
+    # If the user agent is a bot, block access to AI-heavy routes
+    if any(bot in user_agent for bot in BLOCKED_BOTS):
+        if request.path.startswith('/reports/'):
+            # Return a 403 Forbidden to stop the bot without calling Gemini
+            abort(403)
+
 
 @reports_bp.route('/reports/dashboard')
 def dashboard():
@@ -114,3 +130,34 @@ def download_report(type):
         # html = render_template('pdf/report_template.html', data=data)
         # return render_pdf(HTML(string=html))
         return "PDF generation triggered (Configure WeasyPrint template first)"
+
+from weasyprint import HTML
+from io import BytesIO
+from flask import send_file
+
+@reports_bp.route('/reports/download/pdf')
+def download_pdf():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    user_id = session['user_id']
+    data = ReportService.get_financial_summary(user_id)
+    
+    # 1. Reuse your existing dashboard template or a special 'print' version
+    # Note: Use a simplified template for PDF if the dashboard has too many buttons
+    rendered_html = render_template('reports_dashboard.html', 
+                                    data=data, 
+                                    ai_advice=session.get('ai_advice', "No analysis available."),
+                                    is_pdf=True) # Flag to hide buttons in PDF
+
+    # 2. Convert HTML to PDF in memory
+    pdf_buffer = BytesIO()
+    HTML(string=rendered_html, base_url=request.base_url).write_pdf(pdf_buffer)
+    pdf_buffer.seek(0)
+
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f"Finance_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
+    )

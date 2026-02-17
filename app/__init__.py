@@ -18,13 +18,13 @@ from config import Config
 def create_app():
     load_dotenv()
 
-##    # --- Sentry ---
-##    if os.getenv('SENTRY_DSN'):
-##        sentry_sdk.init(
-##            dsn=os.getenv('SENTRY_DSN'),
-##            integrations=[FlaskIntegration()],
-##            traces_sample_rate=1.0
-##        )
+    # --- Sentry ---
+    if os.getenv('SENTRY_DSN'):
+        sentry_sdk.init(
+            dsn=os.getenv('SENTRY_DSN'),
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=1.0
+        )
 
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -36,6 +36,7 @@ def create_app():
 
     # --- Initialize Extensions ---
     init_cache(app)
+    app.before_request(block_automation)
     
     # Simple Session Setup (Logic is now in Config)
     if app.config['SESSION_TYPE'] == 'redis':
