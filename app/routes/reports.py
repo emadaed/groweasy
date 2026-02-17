@@ -46,21 +46,33 @@ def dashboard():
 #Ask AI
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
 def ask_ai():
-    """Handles custom prompts from the Gemini Corner"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-        
-    user_query = request.json.get('prompt')
-    user_id = session['user_id']
+    user_id = session.get('user_id')
+    user_prompt = request.json.get('prompt')
     
-    # Get current data so Gemini has context for the specific question
+    # 1. Fetch current warehouse data to give the Manager "Eyes"
     data = ReportService.get_financial_summary(user_id)
     
-    # We pass the custom prompt to our service
-    answer = get_gemini_insights(data, custom_prompt=user_query)
+    # 2. Add a "Fashionable Manager" persona to the instructions
+    system_instruction = f"""
+    You are a World-Class Virtual Warehouse Manager. 
+    Current Business Stats:
+    - Revenue: {data['revenue']}
+    - Stock Value: {data['inventory_value']}
+    - Net Profit: {data['net_profit']}
     
-    return jsonify({'answer': answer})
-
+    Provide actionable, professional, and data-driven advice. 
+    Use bullet points and bold text for key KPIs.
+    """
+    
+    # 3. Call Gemini
+    try:
+        response = call_gemini(system_instruction, user_prompt) 
+        session['ai_advice'] = response # Save it so it stays on the dashboard
+        return jsonify({"answer": response})
+    except Exception as e:
+        # If rate limit hits, return the fashionable "breather" message
+        return jsonify({"answer": "👔 <strong>Manager's Note:</strong> I'm currently auditing the books. Please give me 60 seconds to finish my review."})
+    
 #PDF&CSV download
 @reports_bp.route('/reports/download/<type>')
 def download_report(type):
@@ -125,3 +137,9 @@ def download_pdf():
         as_attachment=True,
         download_name=f"Finance_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
     )
+
+@reports_bp.route('/reports/clear_ai', methods=['POST'])
+def clear_ai():
+    # 'pop' removes the key from the session if it exists
+    session.pop('ai_advice', None)
+    return jsonify({"status": "cleared"})

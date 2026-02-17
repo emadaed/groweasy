@@ -53,42 +53,70 @@
         </div>
 
         <div class="col-md-5">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0 text-primary"><i class="bi bi-robot"></i> Warehouse Manager Gemini</h5>
+            <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 15px;">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+        <div class="d-flex align-items-center">
+            <div class="rounded-circle bg-primary me-2 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                <i class="bi bi-robot"></i>
+            </div>
+            <h5 class="mb-0">Gemini <span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">PRO</span></h5>
+        </div>
+        <button class="btn btn-outline-light btn-sm border-0" id="clear-ai-btn" title="Clear Chat History">
+            <i class="bi bi-trash3"></i>
+        </button>
+    </div>
+    
+    <div class="card-body bg-light-subtle">
+        <div id="ai-response-area" class="ai-response-area mb-3 shadow-sm" style="min-height: 200px; border-left: 4px solid #0d6efd;">
+            {% if ai_advice %}
+                {{ ai_advice | safe }}
+            {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-stars mb-2 d-block" style="font-size: 2rem;"></i>
+                    <p>I'm ready to audit your warehouse performance.</p>
                 </div>
-                <div class="card-body">
-                    <div id="ai-response-area" class="ai-response-area mb-3" style="min-height: 150px;">
-                        {% if ai_advice %}
-                            {{ ai_advice | safe }}
-                        {% else %}
-                            <div class="text-center text-muted">
-                                <i class="bi bi-info-circle"></i> No analysis generated yet.<br>
-                                Ask a question below to consult the Manager.
-                            </div>
-                        {% endif %}
-                    </div>
+            {% endif %}
+        </div>
 
-                    <div class="mb-3">
-                        <textarea id="user-ai-prompt" class="form-control ai-prompt-box" 
-                                  placeholder="e.g., 'Analyze my tax and suggest stock reorders...'"></textarea>
-                    </div>
-
-                    <button class="btn btn-primary w-100 py-2 shadow-sm" type="button" id="send-ai-btn">
-                        <span id="btn-text">Consult Gemini</span>
-                        <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
-                    </button>
-                </div>
+        <div class="input-group">
+            <textarea id="user-ai-prompt" class="form-control ai-prompt-box" 
+                      placeholder="Ask your manager anything..."></textarea>
+        </div>
+        
+        <button class="btn btn-dark w-100 mt-3 py-2 shadow d-flex align-items-center justify-content-center" type="button" id="send-ai-btn">
+            <span id="btn-text">Consult Manager</span>
+            <span id="btn-spinner" class="spinner-border spinner-border-sm d-none ms-2"></span>
+        </button>
+    </div>
+</div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Total Revenue</small>
+                <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(data.revenue) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Net Profit</small>
+                <h3 class="{% if data.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    {{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}
+                </h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Tax Liability</small>
+                <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Stock Value</small>
+                <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
             </div>
         </div>
     </div>
-</div>
-
-<style>
-    .ai-prompt-box { min-height: 100px; resize: vertical; border: 2px solid #e0e0e0; border-radius: 12px; padding: 12px; }
-    .ai-prompt-box:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-    .ai-response-area { background: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eee; white-space: pre-wrap; line-height: 1.5; font-size: 0.95rem; }
-</style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
 <script nonce="{{ nonce }}">
@@ -139,6 +167,21 @@
         } finally {
             btnText.innerText = "Consult Gemini";
             spinner.classList.add('d-none');
+        }
+    });
+    // Clear Chat Logic
+    document.getElementById('clear-ai-btn').addEventListener('click', async () => {
+        if (!confirm("Start a fresh analysis?")) return;
+        
+        try {
+            await fetch("{{ url_for('reports.clear_ai') }}", { method: "POST" });
+            document.getElementById('ai-response-area').innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-stars mb-2 d-block" style="font-size: 2rem;"></i>
+                    <p>History cleared. How can I help today?</p>
+                </div>`;
+        } catch (e) {
+            console.error("Failed to clear AI session");
         }
     });
 </script>
