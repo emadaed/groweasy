@@ -8,11 +8,10 @@ from app.services.report_service import ReportService
 from app.services.ai_service import get_gemini_insights
 from app.services.cache import get_user_profile_cached
 from app.context_processors import CURRENCY_SYMBOLS 
-from app.services.report_service import ReportService # Assumes you have this service
-reports_bp = Blueprint('reports', __name__)
-
+from app.services.report_service import ReportService
 from flask import request, abort
 
+reports_bp = Blueprint('reports', __name__)
 
 
 @reports_bp.route('/reports/dashboard')
@@ -22,41 +21,18 @@ def dashboard():
         
     user_id = session['user_id']
     
-    # 1. BOT PROTECTION: Only run AI for real browsers
+    # 1. Bot Protection Middleware
     user_agent = request.headers.get('User-Agent', '').lower()
-    is_bot = any(bot in user_agent for bot in [
-        'bot', 'spider', 'uptime', 'python-requests', 'health', 'crawler', 'sentry'
-    ])
-
-    # 2. HANDLE SESSION DATA SAFELY
-    now = datetime.now()
-    last_run = session.get('ai_timestamp')
-
-    # Convert last_run from string back to datetime if necessary
-    if isinstance(last_run, str):
-        try:
-            # Flask's default session serializer might store this as an ISO string
-            last_run = datetime.fromisoformat(last_run)
-        except (ValueError, TypeError):
-            last_run = None
-
-    # 3. LOGIC FOR AI INSIGHTS
-    ai_advice = None
-    if is_bot:
-        ai_advice = "AI analysis is reserved for active users."
-    # Now that last_run is a datetime object, the subtraction will work
-    elif 'ai_advice' in session and last_run and (now - last_run) < timedelta(minutes=10):
-        ai_advice = session['ai_advice']
-    else:
-        data = ReportService.get_financial_summary(user_id)
-        ai_advice = get_gemini_insights(data)
-        
-        session['ai_advice'] = ai_advice
-        # Store as ISO string to ensure it's handled correctly by the session cookie
-        session['ai_timestamp'] = now.isoformat()
-
-    # 4. FINAL UI SETUP
+    is_bot = any(bot in user_agent for bot in ['bot', 'spider', 'uptime', 'sentry', 'python-requests'])
+    
+    # 2. Financial & Inventory Data for the cards/chart
     data = ReportService.get_financial_summary(user_id)
+    
+    # 3. Handle AI Insights (Manual Only)
+    # We only show existing advice from the session. 
+    # We NEVER call get_gemini_insights() here anymore.
+    ai_advice = session.get('ai_advice')
+
     user_profile = get_user_profile_cached(user_id)
     user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
     user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
@@ -66,7 +42,8 @@ def dashboard():
                            ai_advice=ai_advice,
                            currency_symbol=user_symbol,
                            nonce=g.nonce)
-#ask AI
+
+#Ask AI
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
 def ask_ai():
     """Handles custom prompts from the Gemini Corner"""

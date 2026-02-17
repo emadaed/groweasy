@@ -1,14 +1,15 @@
 {% extends "base.html" %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>📊 Business Intelligence Dashboard</h2>
         <div>
             <a href="{{ url_for('reports.download_report', type='pdf') }}" class="btn btn-outline-danger btn-sm me-2">
-                <i class="bi bi-file-pdf"></i> Download PDF
+                <i class="bi bi-file-pdf"></i> PDF
             </a>
             <a href="{{ url_for('reports.download_report', type='csv') }}" class="btn btn-outline-success btn-sm">
-                <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
             </a>
             <span class="badge bg-primary ms-2">Last 30 Days</span>
         </div>
@@ -17,17 +18,37 @@
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Total Revenue</small>
+                <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(data.revenue) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Net Profit</small>
+                <h3 class="{% if data.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    {{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}
+                </h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <small class="text-muted">Tax Liability</small>
+                <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
                 <small class="text-muted">Stock Value</small>
                 <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
             </div>
         </div>
-        </div>
+    </div>
 
     <div class="row">
         <div class="col-md-7">
             <div class="card shadow-sm p-4 mb-4">
                 <h5>Revenue vs. Costs</h5>
-                <canvas id="financeChart" height="150"></canvas>
+                <canvas id="financeChart" height="200"></canvas>
             </div>
         </div>
 
@@ -38,16 +59,23 @@
                 </div>
                 <div class="card-body">
                     <div id="ai-response-area" class="ai-response-area mb-3" style="min-height: 150px;">
-                        {{ ai_advice | safe if ai_advice else "Ask me to analyze your stock levels..." }}
+                        {% if ai_advice %}
+                            {{ ai_advice | safe }}
+                        {% else %}
+                            <div class="text-center text-muted">
+                                <i class="bi bi-info-circle"></i> No analysis generated yet.<br>
+                                Ask a question below to consult the Manager.
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="mb-3">
                         <textarea id="user-ai-prompt" class="form-control ai-prompt-box" 
-                                placeholder="e.g., 'Which items are below minimum stock and need reordering?'"></textarea>
+                                  placeholder="e.g., 'Analyze my tax and suggest stock reorders...'"></textarea>
                     </div>
-                    
+
                     <button class="btn btn-primary w-100 py-2 shadow-sm" type="button" id="send-ai-btn">
-                        <span id="btn-text">Consult Manager</span>
+                        <span id="btn-text">Consult Gemini</span>
                         <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
                     </button>
                 </div>
@@ -57,7 +85,61 @@
 </div>
 
 <style>
-    .ai-prompt-box { min-height: 100px; border: 2px solid #e0e0e0; border-radius: 12px; padding: 12px; }
-    .ai-response-area { background: #f9fafb; border-radius: 12px; padding: 15px; border: 1px solid #eee; font-size: 0.95rem; line-height: 1.5; }
+    .ai-prompt-box { min-height: 100px; resize: vertical; border: 2px solid #e0e0e0; border-radius: 12px; padding: 12px; }
+    .ai-prompt-box:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+    .ai-response-area { background: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eee; white-space: pre-wrap; line-height: 1.5; font-size: 0.95rem; }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
+<script nonce="{{ nonce }}">
+    // Chart Initialization
+    const ctx = document.getElementById('financeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Revenue', 'Costs'],
+            datasets: [{
+                data: [{{ data.revenue }}, {{ data.costs }}],
+                backgroundColor: ['#28a745', '#dc3545'],
+                borderRadius: 8
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // Manual AI Request Logic
+    document.getElementById('send-ai-btn').addEventListener('click', async () => {
+        const promptInput = document.getElementById('user-ai-prompt');
+        const responseArea = document.getElementById('ai-response-area');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('btn-spinner');
+
+        if (!promptInput.value.trim()) return;
+
+        btnText.innerText = "Analyzing...";
+        spinner.classList.remove('d-none');
+        
+        try {
+            const response = await fetch("{{ url_for('reports.ask_ai') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: promptInput.value })
+            });
+            const result = await response.json();
+            
+            // Handle cases where the backend might return error or limit reached
+            if (result.answer) {
+                responseArea.innerHTML = result.answer;
+            } else {
+                responseArea.innerHTML = "⚠️ Manager is busy. Try again in a moment.";
+            }
+            promptInput.value = "";
+        } catch (e) {
+            responseArea.innerHTML = "❌ Connection error.";
+        } finally {
+            btnText.innerText = "Consult Gemini";
+            spinner.classList.add('d-none');
+        }
+    });
+</script>
 {% endblock %}
