@@ -5,39 +5,36 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>📊 Business Intelligence Dashboard</h2>
         <div>
-            <a href="{{ url_for('reports.download_report', type='pdf') }}" class="btn btn-outline-danger btn-sm me-2">
-                <i class="bi bi-file-pdf"></i> PDF
+            <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="bi bi-arrow-clockwise"></i> Sync Live Data
+            </button>
+            <a href="{{ url_for('reports.download_report', type='pdf') }}" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-file-pdf"></i> PDF Report
             </a>
-            <a href="{{ url_for('reports.download_report', type='csv') }}" class="btn btn-outline-success btn-sm">
-                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
-            </a>
-            <span class="badge bg-primary ms-2">Last 30 Days</span>
         </div>
     </div>
 
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
+            <div class="card shadow-sm border-0 text-center p-3 border-start border-success border-4">
                 <small class="text-muted">Total Revenue</small>
                 <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(data.revenue) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
+            <div class="card shadow-sm border-0 text-center p-3 border-start border-primary border-4">
                 <small class="text-muted">Net Profit</small>
-                <h3 class="{% if data.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
-                    {{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}
-                </h3>
+                <h3 class="text-primary">{{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
+            <div class="card shadow-sm border-0 text-center p-3 border-start border-warning border-4">
                 <small class="text-muted">Tax Liability</small>
                 <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
+            <div class="card shadow-sm border-0 text-center p-3 border-start border-info border-4">
                 <small class="text-muted">Stock Value</small>
                 <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
             </div>
@@ -47,95 +44,66 @@
     <div class="row">
         <div class="col-md-7">
             <div class="card shadow-sm p-4 mb-4">
-                <h5>Revenue vs. Costs</h5>
-                <canvas id="financeChart" height="200"></canvas>
+                <h5>Financial Performance Overview</h5>
+                <canvas id="financeChart" height="180"></canvas>
             </div>
         </div>
 
         <div class="col-md-5">
-            <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 15px;">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-        <div class="d-flex align-items-center">
-            <div class="rounded-circle bg-primary me-2 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                <i class="bi bi-robot"></i>
-            </div>
-            <h5 class="mb-0">Gemini <span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">PRO</span></h5>
-        </div>
-        <button class="btn btn-outline-light btn-sm border-0" id="clear-ai-btn" title="Clear Chat History">
-            <i class="bi bi-trash3"></i>
-        </button>
-    </div>
-    
-    <div class="card-body bg-light-subtle">
-        <div id="ai-response-area" class="ai-response-area mb-3 shadow-sm" style="min-height: 200px; border-left: 4px solid #0d6efd;">
-            {% if ai_advice %}
-                {{ ai_advice | safe }}
-            {% else %}
-                <div class="text-center py-4 text-muted">
-                    <i class="bi bi-stars mb-2 d-block" style="font-size: 2rem;"></i>
-                    <p>I'm ready to audit your warehouse performance.</p>
+            <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-robot"></i> Gemini Warehouse Manager</span>
+                    <button class="btn btn-sm btn-outline-light border-0" id="clear-btn" title="Clear Analysis">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </div>
-            {% endif %}
-        </div>
+                <div class="card-body bg-light">
+                    <div id="ai-response-area" class="ai-response-area mb-3 bg-white p-3 border rounded shadow-sm" style="min-height: 180px;">
+                        {% if ai_advice %}
+                            {{ ai_advice | safe }}
+                        {% else %}
+                            <p class="text-muted text-center pt-4">Manager is ready. Type your query below.</p>
+                        {% endif %}
+                    </div>
 
-        <div class="input-group">
-            <textarea id="user-ai-prompt" class="form-control ai-prompt-box" 
-                      placeholder="Ask your manager anything..."></textarea>
+                    <div class="input-group">
+                        <textarea id="user-ai-prompt" class="form-control" rows="3" placeholder="e.g. 'Is my current profit margin healthy compared to my tax?'"></textarea>
+                    </div>
+                    
+                    <button class="btn btn-primary w-100 mt-3 py-2" type="button" id="send-ai-btn">
+                        <span id="btn-text">Consult Manager</span>
+                        <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
+                    </button>
+                </div>
+            </div>
         </div>
-        
-        <button class="btn btn-dark w-100 mt-3 py-2 shadow d-flex align-items-center justify-content-center" type="button" id="send-ai-btn">
-            <span id="btn-text">Consult Manager</span>
-            <span id="btn-spinner" class="spinner-border spinner-border-sm d-none ms-2"></span>
-        </button>
     </div>
 </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <small class="text-muted">Total Revenue</small>
-                <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(data.revenue) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <small class="text-muted">Net Profit</small>
-                <h3 class="{% if data.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
-                    {{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}
-                </h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <small class="text-muted">Tax Liability</small>
-                <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <small class="text-muted">Stock Value</small>
-                <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
-            </div>
-        </div>
-    </div>
+
+<style>
+    .ai-response-area { font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; overflow-y: auto; max-height: 400px; }
+    .card { transition: transform 0.2s; }
+    .card:hover { transform: translateY(-3px); }
+</style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
 <script nonce="{{ nonce }}">
-    // Chart Initialization
+    // 1. Chart Data
     const ctx = document.getElementById('financeChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Revenue', 'Costs'],
+            labels: ['Revenue', 'Costs', 'Profit'],
             datasets: [{
-                data: [{{ data.revenue }}, {{ data.costs }}],
-                backgroundColor: ['#28a745', '#dc3545'],
-                borderRadius: 8
+                data: [{{ data.revenue }}, {{ data.costs }}, {{ data.net_profit }}],
+                backgroundColor: ['#28a745', '#dc3545', '#007bff'],
+                borderRadius: 5
             }]
         },
         options: { responsive: true, plugins: { legend: { display: false } } }
     });
 
-    // Manual AI Request Logic
+    // 2. AI Request Logic
     document.getElementById('send-ai-btn').addEventListener('click', async () => {
         const promptInput = document.getElementById('user-ai-prompt');
         const responseArea = document.getElementById('ai-response-area');
@@ -154,35 +122,20 @@
                 body: JSON.stringify({ prompt: promptInput.value })
             });
             const result = await response.json();
-            
-            // Handle cases where the backend might return error or limit reached
-            if (result.answer) {
-                responseArea.innerHTML = result.answer;
-            } else {
-                responseArea.innerHTML = "⚠️ Manager is busy. Try again in a moment.";
-            }
-            promptInput.value = "";
+            responseArea.innerHTML = result.answer;
+            promptInput.value = ""; 
         } catch (e) {
-            responseArea.innerHTML = "❌ Connection error.";
+            responseArea.innerHTML = "❌ Connection failed.";
         } finally {
-            btnText.innerText = "Consult Gemini";
+            btnText.innerText = "Consult Manager";
             spinner.classList.add('d-none');
         }
     });
-    // Clear Chat Logic
-    document.getElementById('clear-ai-btn').addEventListener('click', async () => {
-        if (!confirm("Start a fresh analysis?")) return;
-        
-        try {
-            await fetch("{{ url_for('reports.clear_ai') }}", { method: "POST" });
-            document.getElementById('ai-response-area').innerHTML = `
-                <div class="text-center py-4 text-muted">
-                    <i class="bi bi-stars mb-2 d-block" style="font-size: 2rem;"></i>
-                    <p>History cleared. How can I help today?</p>
-                </div>`;
-        } catch (e) {
-            console.error("Failed to clear AI session");
-        }
+
+    // 3. Clear Button Logic
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        fetch("{{ url_for('reports.clear_ai') }}", { method: 'POST' })
+            .then(() => location.reload());
     });
 </script>
 {% endblock %}

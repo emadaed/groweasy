@@ -46,32 +46,42 @@ def dashboard():
 #Ask AI
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
 def ask_ai():
-    user_id = session.get('user_id')
-    user_prompt = request.json.get('prompt')
+    if 'user_id' not in session:
+        return jsonify({"answer": "Please log in."}), 401
+
+    user_id = session['user_id']
+    user_prompt = request.json.get('prompt', '').strip()
     
-    # 1. Fetch current warehouse data to give the Manager "Eyes"
+    if not user_prompt:
+        return jsonify({"answer": "Please provide a question."})
+
+    # 1. Fetch live data from all tables
+    # Ensure your ReportService is actually summing grand_total from user_invoices
     data = ReportService.get_financial_summary(user_id)
     
-    # 2. Add a "Fashionable Manager" persona to the instructions
+    # 2. Fashionable Manager System Instruction
     system_instruction = f"""
-    You are a World-Class Virtual Warehouse Manager. 
-    Current Business Stats:
-    - Revenue: {data['revenue']}
-    - Stock Value: {data['inventory_value']}
-    - Net Profit: {data['net_profit']}
+    You are a World-Class Warehouse Manager. Respond with professional, actionable insights.
+    CURRENT DATA:
+    - Revenue: {data.get('revenue', 0)}
+    - Profit: {data.get('net_profit', 0)}
+    - Stock Value: {data.get('inventory_value', 0)}
+    - Tax: {data.get('tax_liability', 0)}
     
-    Provide actionable, professional, and data-driven advice. 
-    Use bullet points and bold text for key KPIs.
+    Use bold text for KPIs and bullet points for advice.
     """
-    
-    # 3. Call Gemini
+
     try:
-        response = call_gemini(system_instruction, user_prompt) 
-        session['ai_advice'] = response # Save it so it stays on the dashboard
+        # Call Gemini and cache result in session for 1 hour
+        response = call_gemini(system_instruction, user_prompt)
+        session['ai_advice'] = response
+        session.modified = True
         return jsonify({"answer": response})
     except Exception as e:
-        # If rate limit hits, return the fashionable "breather" message
-        return jsonify({"answer": "👔 <strong>Manager's Note:</strong> I'm currently auditing the books. Please give me 60 seconds to finish my review."})
+        # Check if it's specifically a rate limit
+        if "429" in str(e):
+            return jsonify({"answer": "👔 <strong>Manager's Note:</strong> I'm currently auditing the warehouse. Please wait 60 seconds before our next consultation."})
+        return jsonify({"answer": "❌ Manager is currently unavailable. Please try again shortly."})
     
 #PDF&CSV download
 @reports_bp.route('/reports/download/<type>')
