@@ -15,6 +15,20 @@ from app.services.cache import init_cache
 from app.services.middleware import security_headers
 from config import Config
 
+
+from flask import request, abort
+
+# 1. Define the function FIRST
+def block_automation():
+    # List of known bots from your logs
+    BLOCKED_BOTS = ['sentry', 'uptime', 'bot', 'spider', 'crawler', 'python-requests']
+    user_agent = request.headers.get('User-Agent', '').lower()
+    
+    # Block bots from reaching the reports routes to save your Gemini limit
+    if any(bot in user_agent for bot in BLOCKED_BOTS):
+        if request.path.startswith('/reports/'):
+            abort(403)
+
 def create_app():
     load_dotenv()
 

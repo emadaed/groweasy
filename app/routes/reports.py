@@ -13,19 +13,6 @@ reports_bp = Blueprint('reports', __name__)
 
 from flask import request, abort
 
-# List of known bots from your logs and common crawlers
-BLOCKED_BOTS = [
-    'sentry', 'uptime', 'bot', 'spider', 'crawler', 
-    'python-requests', 'health', 'headless'
-]
-
-def block_automation():
-    user_agent = request.headers.get('User-Agent', '').lower()
-    # If the user agent is a bot, block access to AI-heavy routes
-    if any(bot in user_agent for bot in BLOCKED_BOTS):
-        if request.path.startswith('/reports/'):
-            # Return a 403 Forbidden to stop the bot without calling Gemini
-            abort(403)
 
 
 @reports_bp.route('/reports/dashboard')
