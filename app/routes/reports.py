@@ -7,17 +7,16 @@ import io
 reports_bp = Blueprint('reports', __name__)
 
 def get_live_business_data(user_id):
-    """Calculates live stats with a robust fallback for tax."""
+    """Calculates live stats using the correct 'tax' column name."""
     with DB_ENGINE.connect() as conn:
-        # 1. Revenue & Tax from Invoices (Invoices usually store the tax)
-        # We try to get tax_amount from user_invoices
+        # 1. Revenue & Tax from Invoices (Using 'tax' as verified)
         inv_stats = conn.execute(text("""
-            SELECT SUM(grand_total) as rev, SUM(tax_amount) as tax 
+            SELECT SUM(grand_total) as rev, SUM(tax) as tax_val 
             FROM user_invoices WHERE user_id = :uid
         """), {'uid': user_id}).fetchone()
         
         revenue = inv_stats.rev or 0.0
-        tax_from_invoices = inv_stats.tax or 0.0
+        tax_liability = inv_stats.tax_val or 0.0
 
         # 2. Stock Value
         inv_res = conn.execute(text("SELECT SUM(current_stock * cost_price) FROM inventory_items WHERE user_id = :uid"), {'uid': user_id})
@@ -30,7 +29,7 @@ def get_live_business_data(user_id):
     return {
         "revenue": float(revenue),
         "inventory_value": float(inventory_value),
-        "tax_liability": float(tax_from_invoices),
+        "tax_liability": float(tax_liability),
         "costs": float(total_expenses),
         "net_profit": float(revenue - total_expenses)
     }
@@ -57,8 +56,8 @@ def ask_ai():
     
     system_instruction = (
         f"You are a World-Class Warehouse Manager. "
-        f"Stats: Rev {data['revenue']}, Stock {data['inventory_value']}, Profit {data['net_profit']}. "
-        f"Give sharp, bulleted advice."
+        f"Current Stats: Revenue {data['revenue']}, Tax {data['tax_liability']}, Profit {data['net_profit']}. "
+        f"Provide professional advice using bullet points."
     )
 
     try:
@@ -67,8 +66,8 @@ def ask_ai():
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        # We return the actual error string to debug the "Breather" issue
-        return jsonify({"answer": f"👔 <strong>Manager's Note:</strong> Issue: {str(e)[:100]}"})
+        # Returning the actual error so we can stop the "Auditing" loop
+        return jsonify({"answer": f"👔 <strong>Manager's Note:</strong> Connection issue: {str(e)[:100]}"})
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])
 def clear_ai():
@@ -88,4 +87,4 @@ def download_csv():
     writer.writerow(['Stock Value', data['inventory_value']])
     
     return Response(output.getvalue(), mimetype="text/csv", 
-                    headers={"Content-disposition": "attachment; filename=live_report.csv"})
+                    headers={"Content-disposition": "attachment; filename=warehouse_report.csv"})
