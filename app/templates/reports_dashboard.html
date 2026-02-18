@@ -4,7 +4,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>📊 Business Intelligence Dashboard</h2>
         <div>
-            <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm me-2">
+            <button id="sync-data-btn" class="btn btn-outline-secondary btn-sm me-2">
                 <i class="bi bi-arrow-clockwise"></i> Sync Live Data
             </button>
             <a href="{{ url_for('reports.download_csv') }}" class="btn btn-outline-success btn-sm">
@@ -14,21 +14,36 @@
     </div>
 
     <div class="row mb-4">
-        {% set colors = [('Revenue', 'success', data.revenue), ('Profit', 'primary', data.net_profit), ('Tax', 'warning', data.tax_liability), ('Stock', 'info', data.inventory_value)] %}
-        {% for label, color, val in colors %}
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-{{ color }} border-4">
-                <small class="text-muted">{{ label }}</small>
-                <h3 class="text-{{ color }}">{{ currency_symbol }}{{ "%.2f"|format(val) }}</h3>
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-success border-4">
+                <small class="text-muted">Revenue</small>
+                <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(data.revenue) }}</h3>
             </div>
         </div>
-        {% endfor %}
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-primary border-4">
+                <small class="text-muted">Profit</small>
+                <h3 class="text-primary">{{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-warning border-4">
+                <small class="text-muted">Tax</small>
+                <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-info border-4">
+                <small class="text-muted">Stock</small>
+                <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
+            </div>
+        </div>
     </div>
 
     <div class="row">
         <div class="col-md-7">
             <div class="card shadow-sm p-4 mb-4">
-                <h5>Revenue vs. Costs</h5>
+                <h5>Live Performance</h5>
                 <canvas id="financeChart" height="200"></canvas>
             </div>
         </div>
@@ -41,9 +56,9 @@
                 </div>
                 <div class="card-body bg-light">
                     <div id="ai-response-area" class="ai-response-area mb-3 p-3 bg-white rounded border" style="min-height: 200px;">
-                        {{ ai_advice | safe if ai_advice else "Ask the manager to audit your data..." }}
+                        {{ ai_advice | safe if ai_advice else "Consult the manager..." }}
                     </div>
-                    <textarea id="user-ai-prompt" class="form-control mb-3" rows="3" placeholder="Analyze my stock reorder levels..."></textarea>
+                    <textarea id="user-ai-prompt" class="form-control mb-3" rows="3" placeholder="Analyze my tax vs profit..."></textarea>
                     <button class="btn btn-primary w-100 py-2" type="button" id="send-ai-btn">
                         <span id="btn-text">Consult Manager</span>
                         <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
@@ -56,7 +71,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
 <script nonce="{{ nonce }}">
-    // Chart Logic
+    // 1. Chart
     const ctx = document.getElementById('financeChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
@@ -66,7 +81,9 @@
         }
     });
 
-    // AI Request Logic
+    // 2. CSP FIX: Event Listeners
+    document.getElementById('sync-data-btn').addEventListener('click', () => location.reload());
+
     document.getElementById('send-ai-btn').addEventListener('click', async () => {
         const promptInput = document.getElementById('user-ai-prompt');
         const responseArea = document.getElementById('ai-response-area');
@@ -74,7 +91,7 @@
         const spinner = document.getElementById('btn-spinner');
 
         if (!promptInput.value.trim()) return;
-        btnText.innerText = "Analyzing...";
+        btnText.innerText = "Processing...";
         spinner.classList.remove('d-none');
         
         try {
@@ -86,14 +103,13 @@
             const result = await response.json();
             responseArea.innerHTML = result.answer;
         } catch (e) {
-            responseArea.innerHTML = "❌ Error reaching Manager.";
+            responseArea.innerHTML = "❌ Connection failed.";
         } finally {
             btnText.innerText = "Consult Manager";
             spinner.classList.add('d-none');
         }
     });
 
-    // Clear Logic
     document.getElementById('clear-ai-btn').addEventListener('click', async () => {
         await fetch("{{ url_for('reports.clear_ai') }}", { method: 'POST' });
         location.reload();
