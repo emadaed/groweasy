@@ -67,22 +67,17 @@ def ask_ai():
     user_prompt = request.json.get('prompt', '').strip()
     data = get_live_business_data(user_id)
     
-    system_instruction = (
-        f"You are a Warehouse Manager. Stats: Rev {data['revenue']}, Tax {data['tax_liability']}, Stock {data['inventory_value']}."
-    )
-
     try:
-        # UPDATED PATH: Trying app.services based on your project structure
-        try:
-            from app.services.ai_handler import call_gemini
-        except ImportError:
-            from app.utils.ai_handler import call_gemini # Fallback
-            
-        response = call_gemini(system_instruction, user_prompt)
+        # Correct path and function name from your ai_service.py
+        from app.services.ai_service import get_gemini_insights
+        
+        # Calling the correct function with your live data
+        response = get_gemini_insights(data, custom_prompt=user_prompt)
+        
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        # This will tell us the EXACT path needed if it fails again
+        # This will now show the exact error if the import still fails
         return jsonify({"answer": f"👔 <strong>Note:</strong> System busy. Error: {str(e)}"})
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])

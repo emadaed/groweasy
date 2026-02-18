@@ -69,15 +69,28 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" crossorigin="anonymous" referrerpolicy="no-referrer" nonce="{{ nonce }}"></script>
+
 <script nonce="{{ nonce }}">
-    // 1. Chart
+    // Explicitly disable source map tracking in the chart instance
     const ctx = document.getElementById('financeChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
         data: {
             labels: ['Revenue', 'Costs'],
-            datasets: [{ data: [{{ data.revenue }}, {{ data.costs }}], backgroundColor: ['#198754', '#dc3545'], borderRadius: 8 }]
+            datasets: [{
+                label: 'Business Performance',
+                data: [{{ data.revenue }}, {{ data.costs }}],
+                backgroundColor: ['#198754', '#dc3545'],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            }
         }
     });
 
