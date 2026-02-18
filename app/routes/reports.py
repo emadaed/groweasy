@@ -68,28 +68,26 @@ def ask_ai():
     user_id = session.get('user_id')
     user_prompt = request.json.get('prompt', '').strip()
     
-    # 1. PERMANENT FIX: Check session cache first
-    # Only call Gemini if the user asks a NEW question or cache is empty
-    if not user_prompt and session.get('ai_cache'):
-        return jsonify({"answer": session.get('ai_cache')})
+    # NEW: If the user hasn't typed a new question, check if we have a saved answer
+    # This prevents hitting the 429 Rate Limit on every page load
+    if not user_prompt and session.get('cached_ai_advice'):
+        return jsonify({"answer": session.get('cached_ai_advice')})
 
     data = get_live_business_data(user_id)
     
     try:
         from app.services.ai_service import get_gemini_insights
-        
-        # 2. Call the service only when necessary
         response = get_gemini_insights(data, custom_prompt=user_prompt)
         
-        # 3. Save to cache
-        session['ai_cache'] = response
+        # Save this to the session so we don't call the API again until next time
+        session['cached_ai_advice'] = response
         return jsonify({"answer": response})
-        
     except Exception as e:
-        # Fallback to cache if API fails due to rate limits
-        if session.get('ai_cache'):
-            return jsonify({"answer": session.get('ai_cache')})
-        return jsonify({"answer": "👔 Manager AI is currently analyzing data. Please try again in 60s."})    
+        # If we hit a limit, but have an old answer, show the old one instead of an error
+        if session.get('cached_ai_advice'):
+            return jsonify({"answer": session.get('cached_ai_advice')})
+        return jsonify({"answer": "👔 Manager AI is busy. Your data is safe—check back in 60s."})
+
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])
 def clear_ai():

@@ -69,36 +69,36 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ nonce }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.js" nonce="{{ nonce }}"></script>
 
 <script nonce="{{ nonce }}">
-    // Performance optimization: Wait for the browser to be idle to fix the 'requestAnimationFrame' lag
-    window.requestAnimationFrame(() => {
-        const ctx = document.getElementById('financeChart').getContext('2d');
-        
-        // Ensure we don't double-initialize
-        let existingChart = Chart.getChart("financeChart");
-        if (existingChart) existingChart.destroy();
+    // 1. COMPLETELY DISABLE animations to stop 'requestAnimationFrame' violations
+    // This makes the chart instant and saves CPU.
+    Chart.defaults.animation = false;
 
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Revenue', 'Costs'],
-                datasets: [{
-                    label: 'Financials',
-                    data: [{{ data.revenue }}, {{ data.costs }}],
-                    backgroundColor: ['#198754', '#dc3545'],
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 400 } // Faster animation reduces CPU 'Violations'
-            }
-        });
-    });
+    const ctx = document.getElementById('financeChart').getContext('2d');
     
+    // 2. Prevent memory leaks/lag by destroying old charts
+    let chartStatus = Chart.getChart("financeChart");
+    if (chartStatus) { chartStatus.destroy(); }
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Revenue', 'Costs'],
+            datasets: [{
+                data: [{{ data.revenue }}, {{ data.costs }}],
+                backgroundColor: ['#198754', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            // 3. Disable anything that looks for external maps
+            plugins: { tooltip: { enabled: true } }
+        }
+    });
+
     // 2. CSP FIX: Event Listeners
     document.getElementById('sync-data-btn').addEventListener('click', () => location.reload());
 
