@@ -68,17 +68,18 @@ def ask_ai():
     data = get_live_business_data(user_id)
     
     try:
-        # Correct path and function name from your ai_service.py
+        # Final Correct Path: verified from your uploaded ai_service.py
         from app.services.ai_service import get_gemini_insights
         
-        # Calling the correct function with your live data
+        # Correct Function Name: get_gemini_insights
         response = get_gemini_insights(data, custom_prompt=user_prompt)
         
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        # This will now show the exact error if the import still fails
-        return jsonify({"answer": f"👔 <strong>Note:</strong> System busy. Error: {str(e)}"})
+        # This will catch any remaining path issues
+        return jsonify({"answer": f"👔 <strong>Note:</strong> Module path check: {str(e)}"})
+    
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])
 def clear_ai():

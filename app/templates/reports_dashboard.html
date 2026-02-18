@@ -69,29 +69,29 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" crossorigin="anonymous" referrerpolicy="no-referrer" nonce="{{ nonce }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ nonce }}"></script>
 
 <script nonce="{{ nonce }}">
-    // Explicitly disable source map tracking in the chart instance
-    const ctx = document.getElementById('financeChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Revenue', 'Costs'],
-            datasets: [{
-                label: 'Business Performance',
-                data: [{{ data.revenue }}, {{ data.costs }}],
-                backgroundColor: ['#198754', '#dc3545'],
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
+    // OPTIMIZATION: Wait for the browser to be idle to reduce 'requestAnimationFrame' violations
+    window.requestAnimationFrame(() => {
+        const ctx = document.getElementById('financeChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Revenue', 'Costs'],
+                datasets: [{
+                    label: 'Performance',
+                    data: [{{ data.revenue }}, {{ data.costs }}],
+                    backgroundColor: ['#198754', '#dc3545'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 500 } // Shorten animation to save CPU
             }
-        }
+        });
     });
 
     // 2. CSP FIX: Event Listeners
