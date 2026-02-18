@@ -183,6 +183,22 @@ def create_all_tables():
             );
         '''))
 
+        # Create table for AI Insights (The "ERP Cache")
+        conn.execute(text('''
+            CREATE TABLE IF NOT EXISTS ai_insights (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                task_id TEXT, -- For Celery tracking
+                insight_type TEXT DEFAULT 'summary', -- 'summary' or 'custom_query'
+                content TEXT, -- The actual AI response
+                status TEXT DEFAULT 'pending', -- 'pending', 'completed', 'failed'
+                currency_code TEXT DEFAULT 'PKR',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        '''))
+        print("✅ AI Insights table verified")
+        
         # Session storage for large data
         conn.execute(text('''
             CREATE TABLE IF NOT EXISTS session_storage (

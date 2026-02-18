@@ -12,7 +12,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from app.extensions import limiter, compress
 from app.context_processors import register_context_processors
 from app.services.cache import init_cache
-from app.services.middleware import security_headers
+from app.services.middleware import init_middleware
 from config import Config
 
 
@@ -50,6 +50,7 @@ def create_app():
 
     # --- Initialize Extensions ---
     init_cache(app)
+    init_middleware(app)
     app.before_request(block_automation)
     
     # Simple Session Setup (Logic is now in Config)
@@ -61,7 +62,7 @@ def create_app():
     limiter.init_app(app)
     compress.init_app(app)
     register_context_processors(app)
-    security_headers(app)
+    #security_headers(app)
 
     # --- Blueprints ---
     from app.routes.auth import auth_bp
