@@ -88,8 +88,7 @@ def ask_ai():
         # Fallback to cache if API fails due to rate limits
         if session.get('ai_cache'):
             return jsonify({"answer": session.get('ai_cache')})
-        return jsonify({"answer": "👔 Manager AI is currently analyzing data. Please try again in 60s."})
-    
+        return jsonify({"answer": "👔 Manager AI is currently analyzing data. Please try again in 60s."})    
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])
 def clear_ai():
