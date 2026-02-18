@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, g, Response
-from app.services.db import DB_ENGINE  # Corrected based on your db.py
+from app.services.db import DB_ENGINE  # Correct import from your db.py
 from sqlalchemy import text
 import csv
 import io
@@ -8,10 +8,9 @@ import json
 reports_bp = Blueprint('reports', __name__)
 
 def get_live_business_data(user_id):
-    """Calculates live stats correctly from the invoice_data column."""
+    """Parses invoice_data JSON to get accurate tax and revenue"""
     with DB_ENGINE.connect() as conn:
-        # 1. Pull all invoices for this user
-        # Your db.py shows grand_total is available, but tax is inside invoice_data
+        # 1. Get Invoices (Tax is stored inside invoice_data JSON)
         inv_res = conn.execute(text("""
             SELECT grand_total, invoice_data 
             FROM user_invoices WHERE user_id = :uid
@@ -23,21 +22,20 @@ def get_live_business_data(user_id):
         for row in inv_res:
             total_revenue += float(row.grand_total)
             try:
-                # Parsing the invoice_data string to find the tax
+                # Based on your db.py, we parse the JSON data field
                 data = json.loads(row.invoice_data)
                 total_tax += float(data.get('tax', 0) or data.get('tax_amount', 0))
             except:
-                # Fallback: If parsing fails, assume 5% tax included in grand_total
-                total_tax += float(row.grand_total) * 0.05
+                total_tax += 0.0
 
-        # 2. Stock Value (Using current_stock and cost_price from inventory_items)
+        # 2. Inventory Value
         inv_val_res = conn.execute(text("""
             SELECT SUM(current_stock * cost_price) 
             FROM inventory_items WHERE user_id = :uid
         """), {'uid': user_id})
         inventory_value = inv_val_res.scalar() or 0.0
 
-        # 3. Expenses (Using amount from expenses table)
+        # 3. Expenses
         exp_res = conn.execute(text("SELECT SUM(amount) FROM expenses WHERE user_id = :uid"), {'uid': user_id})
         total_expenses = exp_res.scalar() or 0.0
 
@@ -70,9 +68,7 @@ def ask_ai():
     data = get_live_business_data(user_id)
     
     system_instruction = (
-        f"You are a World-Class Warehouse Manager. "
-        f"Stats: Rev {data['revenue']}, Tax {data['tax_liability']}, Stock {data['inventory_value']}. "
-        f"Analyze this and give advice."
+        f"You are a Warehouse Manager. Stats: Rev {data['revenue']}, Tax {data['tax_liability']}, Stock {data['inventory_value']}."
     )
 
     try:
@@ -81,7 +77,13 @@ def ask_ai():
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        return jsonify({"answer": f"👔 <strong>Manager's Note:</strong> Busy with audit. {str(e)[:50]}"})
+        return jsonify({"answer": f"👔 <strong>Note:</strong> System busy. Error: {str(e)[:40]}"})
+
+@reports_bp.route('/reports/clear_ai', methods=['POST'])
+def clear_ai():
+    """This route was missing and caused the BuildError"""
+    session.pop('ai_advice', None)
+    return jsonify({"status": "cleared"})
 
 @reports_bp.route('/reports/download/csv')
 def download_csv():
