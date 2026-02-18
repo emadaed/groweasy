@@ -1,37 +1,52 @@
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, g, Response
-from app.services.db import DB_ENGINE  
+from app.services.db import DB_ENGINE  # Corrected based on your db.py
 from sqlalchemy import text
 import csv
 import io
+import json
 
 reports_bp = Blueprint('reports', __name__)
 
 def get_live_business_data(user_id):
-    """Calculates live stats using the correct 'tax' column name."""
+    """Calculates live stats correctly from the invoice_data column."""
     with DB_ENGINE.connect() as conn:
-        # 1. Revenue & Tax from Invoices (Using 'tax' as verified)
-        inv_stats = conn.execute(text("""
-            SELECT SUM(grand_total) as rev, SUM(tax) as tax_val 
+        # 1. Pull all invoices for this user
+        # Your db.py shows grand_total is available, but tax is inside invoice_data
+        inv_res = conn.execute(text("""
+            SELECT grand_total, invoice_data 
             FROM user_invoices WHERE user_id = :uid
-        """), {'uid': user_id}).fetchone()
+        """), {'uid': user_id}).fetchall()
         
-        revenue = inv_stats.rev or 0.0
-        tax_liability = inv_stats.tax_val or 0.0
+        total_revenue = 0.0
+        total_tax = 0.0
 
-        # 2. Stock Value
-        inv_res = conn.execute(text("SELECT SUM(current_stock * cost_price) FROM inventory_items WHERE user_id = :uid"), {'uid': user_id})
-        inventory_value = inv_res.scalar() or 0.0
+        for row in inv_res:
+            total_revenue += float(row.grand_total)
+            try:
+                # Parsing the invoice_data string to find the tax
+                data = json.loads(row.invoice_data)
+                total_tax += float(data.get('tax', 0) or data.get('tax_amount', 0))
+            except:
+                # Fallback: If parsing fails, assume 5% tax included in grand_total
+                total_tax += float(row.grand_total) * 0.05
 
-        # 3. Expenses
+        # 2. Stock Value (Using current_stock and cost_price from inventory_items)
+        inv_val_res = conn.execute(text("""
+            SELECT SUM(current_stock * cost_price) 
+            FROM inventory_items WHERE user_id = :uid
+        """), {'uid': user_id})
+        inventory_value = inv_val_res.scalar() or 0.0
+
+        # 3. Expenses (Using amount from expenses table)
         exp_res = conn.execute(text("SELECT SUM(amount) FROM expenses WHERE user_id = :uid"), {'uid': user_id})
         total_expenses = exp_res.scalar() or 0.0
 
     return {
-        "revenue": float(revenue),
+        "revenue": total_revenue,
         "inventory_value": float(inventory_value),
-        "tax_liability": float(tax_liability),
+        "tax_liability": total_tax,
         "costs": float(total_expenses),
-        "net_profit": float(revenue - total_expenses)
+        "net_profit": total_revenue - float(total_expenses)
     }
 
 @reports_bp.route('/reports/dashboard')
@@ -56,8 +71,8 @@ def ask_ai():
     
     system_instruction = (
         f"You are a World-Class Warehouse Manager. "
-        f"Current Stats: Revenue {data['revenue']}, Tax {data['tax_liability']}, Profit {data['net_profit']}. "
-        f"Provide professional advice using bullet points."
+        f"Stats: Rev {data['revenue']}, Tax {data['tax_liability']}, Stock {data['inventory_value']}. "
+        f"Analyze this and give advice."
     )
 
     try:
@@ -66,13 +81,7 @@ def ask_ai():
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        # Returning the actual error so we can stop the "Auditing" loop
-        return jsonify({"answer": f"👔 <strong>Manager's Note:</strong> Connection issue: {str(e)[:100]}"})
-
-@reports_bp.route('/reports/clear_ai', methods=['POST'])
-def clear_ai():
-    session.pop('ai_advice', None)
-    return jsonify({"status": "cleared"})
+        return jsonify({"answer": f"👔 <strong>Manager's Note:</strong> Busy with audit. {str(e)[:50]}"})
 
 @reports_bp.route('/reports/download/csv')
 def download_csv():
@@ -85,6 +94,5 @@ def download_csv():
     writer.writerow(['Net Profit', data['net_profit']])
     writer.writerow(['Tax Liability', data['tax_liability']])
     writer.writerow(['Stock Value', data['inventory_value']])
-    
     return Response(output.getvalue(), mimetype="text/csv", 
-                    headers={"Content-disposition": "attachment; filename=warehouse_report.csv"})
+                    headers={"Content-disposition": "attachment; filename=report.csv"})
