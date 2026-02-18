@@ -72,12 +72,18 @@ def ask_ai():
     )
 
     try:
-        from app.utils.ai_handler import call_gemini 
+        # UPDATED PATH: Trying app.services based on your project structure
+        try:
+            from app.services.ai_handler import call_gemini
+        except ImportError:
+            from app.utils.ai_handler import call_gemini # Fallback
+            
         response = call_gemini(system_instruction, user_prompt)
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        return jsonify({"answer": f"👔 <strong>Note:</strong> System busy. Error: {str(e)[:40]}"})
+        # This will tell us the EXACT path needed if it fails again
+        return jsonify({"answer": f"👔 <strong>Note:</strong> System busy. Error: {str(e)}"})
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])
 def clear_ai():
