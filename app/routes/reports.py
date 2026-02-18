@@ -1,32 +1,28 @@
 # app/routes/reports.py
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, g, Response
-from app.db import get_db_connection  # Correct import for your project
+from app.services.db import DB_ENGINE  # Using verified import
+from sqlalchemy import text
 import csv
 import io
 
 reports_bp = Blueprint('reports', __name__)
 
 def get_live_business_data(user_id):
-    """Calculates live stats using raw SQL to match your db.py tables"""
-    conn = get_db_connection()
-    cur = conn.cursor()
+    """Calculates live stats using your verified DB_ENGINE"""
+    with DB_ENGINE.connect() as conn:
+        # 1. Revenue from Invoices
+        rev_res = conn.execute(text("SELECT SUM(grand_total) FROM user_invoices WHERE user_id = :uid"), {'uid': user_id})
+        revenue = rev_res.scalar() or 0.0
 
-    # 1. Revenue from Invoices
-    cur.execute("SELECT SUM(grand_total) FROM user_invoices WHERE user_id = %s", (user_id,))
-    revenue = cur.fetchone()[0] or 0.0
+        # 2. Stock Value from Inventory
+        inv_res = conn.execute(text("SELECT SUM(current_stock * cost_price) FROM inventory_items WHERE user_id = :uid"), {'uid': user_id})
+        inventory_value = inv_res.scalar() or 0.0
 
-    # 2. Stock Value from Inventory
-    cur.execute("SELECT SUM(current_stock * cost_price) FROM inventory_items WHERE user_id = %s", (user_id,))
-    inventory_value = cur.fetchone()[0] or 0.0
-
-    # 3. Tax and Expenses
-    cur.execute("SELECT SUM(amount), SUM(tax_amount) FROM expenses WHERE user_id = %s", (user_id,))
-    exp_data = cur.fetchone()
-    total_expenses = exp_data[0] or 0.0
-    tax_liability = exp_data[1] or 0.0
-
-    cur.close()
-    conn.close()
+        # 3. Tax and Expenses
+        exp_res = conn.execute(text("SELECT SUM(amount) as total_exp, SUM(tax_amount) as total_tax FROM expenses WHERE user_id = :uid"), {'uid': user_id})
+        exp_data = exp_res.fetchone()
+        total_expenses = exp_data.total_exp or 0.0
+        tax_liability = exp_data.total_tax or 0.0
 
     return {
         "revenue": float(revenue),
@@ -57,7 +53,7 @@ def ask_ai():
     user_prompt = request.json.get('prompt', '').strip()
     data = get_live_business_data(user_id)
     
-    system_instruction = f"Manager Persona. Stats: Revenue {data['revenue']}, Stock {data['inventory_value']}, Profit {data['net_profit']}."
+    system_instruction = f"You are a World-Class Warehouse Manager. Live Stats: Revenue {data['revenue']}, Stock {data['inventory_value']}, Profit {data['net_profit']}."
 
     try:
         from app.utils.ai_handler import call_gemini 
@@ -65,7 +61,8 @@ def ask_ai():
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        return jsonify({"answer": "👔 <strong>Manager's Note:</strong> I'm busy. Please try again in 60s."})
+        # Return the specific error to help us debug if it's not a rate limit
+        return jsonify({"answer": f"👔 <strong>Manager's Note:</strong> I hit an issue: {str(e)[:50]}"})
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])
 def clear_ai():
@@ -84,4 +81,4 @@ def download_csv():
     writer.writerow(['Tax Liability', data['tax_liability']])
     writer.writerow(['Stock Value', data['inventory_value']])
     return Response(output.getvalue(), mimetype="text/csv", 
-                    headers={"Content-disposition": "attachment; filename=report.csv"})
+                    headers={"Content-disposition": "attachment; filename=live_report.csv"})
