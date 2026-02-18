@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -8,33 +7,33 @@
             <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm me-2">
                 <i class="bi bi-arrow-clockwise"></i> Sync Live Data
             </button>
-            <a href="{{ url_for('reports.download_report', type='pdf') }}" class="btn btn-outline-danger btn-sm">
-                <i class="bi bi-file-pdf"></i> PDF Report
+            <a href="{{ url_for('reports.download_csv') }}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
             </a>
         </div>
     </div>
 
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3 border-start border-success border-4">
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-success border-4">
                 <small class="text-muted">Total Revenue</small>
                 <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(data.revenue) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3 border-start border-primary border-4">
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-primary border-4">
                 <small class="text-muted">Net Profit</small>
                 <h3 class="text-primary">{{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3 border-start border-warning border-4">
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-warning border-4">
                 <small class="text-muted">Tax Liability</small>
                 <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3 border-start border-info border-4">
+            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-info border-4">
                 <small class="text-muted">Stock Value</small>
                 <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
             </div>
@@ -44,33 +43,23 @@
     <div class="row">
         <div class="col-md-7">
             <div class="card shadow-sm p-4 mb-4">
-                <h5>Financial Performance Overview</h5>
-                <canvas id="financeChart" height="180"></canvas>
+                <h5>Revenue vs. Costs</h5>
+                <canvas id="financeChart" height="200"></canvas>
             </div>
         </div>
 
         <div class="col-md-5">
-            <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 12px;">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-robot"></i> Gemini Warehouse Manager</span>
-                    <button class="btn btn-sm btn-outline-light border-0" id="clear-btn" title="Clear Analysis">
-                        <i class="bi bi-trash"></i>
-                    </button>
+            <div class="card shadow-sm border-0 mb-4 overflow-hidden">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0"><i class="bi bi-robot"></i> Warehouse Manager</h5>
+                    <button class="btn btn-sm btn-outline-light border-0" id="clear-ai-btn"><i class="bi bi-trash"></i></button>
                 </div>
                 <div class="card-body bg-light">
-                    <div id="ai-response-area" class="ai-response-area mb-3 bg-white p-3 border rounded shadow-sm" style="min-height: 180px;">
-                        {% if ai_advice %}
-                            {{ ai_advice | safe }}
-                        {% else %}
-                            <p class="text-muted text-center pt-4">Manager is ready. Type your query below.</p>
-                        {% endif %}
+                    <div id="ai-response-area" class="ai-response-area mb-3 p-3 bg-white rounded border shadow-sm" style="min-height: 180px;">
+                        {{ ai_advice | safe if ai_advice else "Ask the manager to analyze your live data..." }}
                     </div>
-
-                    <div class="input-group">
-                        <textarea id="user-ai-prompt" class="form-control" rows="3" placeholder="e.g. 'Is my current profit margin healthy compared to my tax?'"></textarea>
-                    </div>
-                    
-                    <button class="btn btn-primary w-100 mt-3 py-2" type="button" id="send-ai-btn">
+                    <textarea id="user-ai-prompt" class="form-control mb-3" rows="3" placeholder="Analyze my current profit..."></textarea>
+                    <button class="btn btn-primary w-100 py-2" type="button" id="send-ai-btn">
                         <span id="btn-text">Consult Manager</span>
                         <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
                     </button>
@@ -81,29 +70,22 @@
 </div>
 
 <style>
-    .ai-response-area { font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; overflow-y: auto; max-height: 400px; }
-    .card { transition: transform 0.2s; }
-    .card:hover { transform: translateY(-3px); }
+    .ai-response-area { font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ nonce }}"></script>
 <script nonce="{{ nonce }}">
-    // 1. Chart Data
+    // Chart
     const ctx = document.getElementById('financeChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Revenue', 'Costs', 'Profit'],
-            datasets: [{
-                data: [{{ data.revenue }}, {{ data.costs }}, {{ data.net_profit }}],
-                backgroundColor: ['#28a745', '#dc3545', '#007bff'],
-                borderRadius: 5
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+            labels: ['Revenue', 'Costs'],
+            datasets: [{ data: [{{ data.revenue }}, {{ data.costs }}], backgroundColor: ['#28a745', '#dc3545'], borderRadius: 8 }]
+        }
     });
 
-    // 2. AI Request Logic
+    // AI Request
     document.getElementById('send-ai-btn').addEventListener('click', async () => {
         const promptInput = document.getElementById('user-ai-prompt');
         const responseArea = document.getElementById('ai-response-area');
@@ -111,8 +93,7 @@
         const spinner = document.getElementById('btn-spinner');
 
         if (!promptInput.value.trim()) return;
-
-        btnText.innerText = "Analyzing...";
+        btnText.innerText = "Processing...";
         spinner.classList.remove('d-none');
         
         try {
@@ -123,19 +104,18 @@
             });
             const result = await response.json();
             responseArea.innerHTML = result.answer;
-            promptInput.value = ""; 
         } catch (e) {
-            responseArea.innerHTML = "❌ Connection failed.";
+            responseArea.innerHTML = "❌ Connection Error.";
         } finally {
             btnText.innerText = "Consult Manager";
             spinner.classList.add('d-none');
         }
     });
 
-    // 3. Clear Button Logic
-    document.getElementById('clear-btn').addEventListener('click', () => {
-        fetch("{{ url_for('reports.clear_ai') }}", { method: 'POST' })
-            .then(() => location.reload());
+    // Clear
+    document.getElementById('clear-ai-btn').addEventListener('click', async () => {
+        await fetch("{{ url_for('reports.clear_ai') }}", { method: 'POST' });
+        location.reload();
     });
 </script>
 {% endblock %}
