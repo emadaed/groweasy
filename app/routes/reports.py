@@ -61,24 +61,27 @@ def dashboard():
                            currency_symbol="د.إ",
                            nonce=getattr(g, 'nonce', ''))
 
+
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
 def ask_ai():
     user_id = session.get('user_id')
     user_prompt = request.json.get('prompt', '').strip()
+    
+    # 1. Check if we already have a recent response in the session to avoid API limits
+    if not user_prompt and session.get('ai_advice'):
+        return jsonify({"answer": session.get('ai_advice')})
+
     data = get_live_business_data(user_id)
     
     try:
-        # Final Correct Path: verified from your uploaded ai_service.py
         from app.services.ai_service import get_gemini_insights
-        
-        # Correct Function Name: get_gemini_insights
         response = get_gemini_insights(data, custom_prompt=user_prompt)
         
+        # 2. Store in session so refreshes don't trigger new API calls
         session['ai_advice'] = response
         return jsonify({"answer": response})
     except Exception as e:
-        # This will catch any remaining path issues
-        return jsonify({"answer": f"👔 <strong>Note:</strong> Module path check: {str(e)}"})
+        return jsonify({"answer": "👔 <strong>Manager's Note:</strong> System is busy. Please try again in a moment."})
     
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])

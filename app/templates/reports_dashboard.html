@@ -69,29 +69,36 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ nonce }}"></script>
+<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js" nonce="{{ nonce }}"></script>
 
 <script nonce="{{ nonce }}">
-    // OPTIMIZATION: Wait for the browser to be idle to reduce 'requestAnimationFrame' violations
-    window.requestAnimationFrame(() => {
-        const ctx = document.getElementById('financeChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Revenue', 'Costs'],
-                datasets: [{
-                    label: 'Performance',
-                    data: [{{ data.revenue }}, {{ data.costs }}],
-                    backgroundColor: ['#198754', '#dc3545'],
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 500 } // Shorten animation to save CPU
+    // This line tells the browser/charting engine we are in production mode
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    const ctx = document.getElementById('financeChart').getContext('2d');
+    
+    // Check if instance exists to prevent re-initialization lag
+    let statusChart = Chart.getChart("financeChart"); 
+    if (statusChart) { statusChart.destroy(); }
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Revenue', 'Costs'],
+            datasets: [{
+                data: [{{ data.revenue }}, {{ data.costs }}],
+                backgroundColor: ['#198754', '#dc3545'],
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            // Disable all plugins that might try to phone home or use external resources
+            plugins: {
+                legend: { display: false }
             }
-        });
+        }
     });
 
     // 2. CSP FIX: Event Listeners
