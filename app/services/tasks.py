@@ -12,6 +12,7 @@ import os
 from config import Config
 from app.services.services import InvoiceService
 from flask import current_app
+print("Broker URL:", current_app.config.get('CELERY_BROKER_URL'))
 
 # Initialize Celery using the Config class we just updated
 celery = Celery('groweasy', 
