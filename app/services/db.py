@@ -188,16 +188,16 @@ def create_all_tables():
             CREATE TABLE IF NOT EXISTS ai_insights (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
-                task_id TEXT, -- For Celery tracking
-                insight_type TEXT DEFAULT 'summary', -- 'summary' or 'custom_query'
-                content TEXT, -- The actual AI response
-                status TEXT DEFAULT 'pending', -- 'pending', 'completed', 'failed'
+                task_id TEXT,
+                insight_type TEXT DEFAULT 'summary',
+                content TEXT,
+                status TEXT DEFAULT 'pending',
                 currency_code TEXT DEFAULT 'PKR',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         '''))
-        print("✅ AI Insights table verified")
+        print("✅ AI Insights table verified (Robust)")
         
         # Session storage for large data
         conn.execute(text('''

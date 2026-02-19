@@ -69,68 +69,43 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.js" nonce="{{ nonce }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ g.nonce }}"></script>
 
-<script nonce="{{ nonce }}">
-    // 1. COMPLETELY DISABLE animations to stop 'requestAnimationFrame' violations
-    // This makes the chart instant and saves CPU.
-    Chart.defaults.animation = false;
-
-    const ctx = document.getElementById('financeChart').getContext('2d');
-    
-    // 2. Prevent memory leaks/lag by destroying old charts
-    let chartStatus = Chart.getChart("financeChart");
-    if (chartStatus) { chartStatus.destroy(); }
-
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Revenue', 'Costs'],
-            datasets: [{
-                data: [{{ data.revenue }}, {{ data.costs }}],
-                backgroundColor: ['#198754', '#dc3545']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            // 3. Disable anything that looks for external maps
-            plugins: { tooltip: { enabled: true } }
+<script nonce="{{ g.nonce }}">
+    const checkAIStatus = async () => {
+        const responseArea = document.getElementById('ai-response-area');
+        const res = await fetch("{{ url_for('reports.get_ai_status') }}");
+        const data = await res.json();
+        
+        if (data.status === 'completed') {
+            responseArea.innerHTML = data.answer;
+            // Stop polling
+            return true;
+        } else if (data.status === 'failed') {
+            responseArea.innerHTML = "❌ AI Manager encountered an error. Retrying...";
+            return true;
         }
-    });
-
-    // 2. CSP FIX: Event Listeners
-    document.getElementById('sync-data-btn').addEventListener('click', () => location.reload());
+        return false;
+    };
 
     document.getElementById('send-ai-btn').addEventListener('click', async () => {
         const promptInput = document.getElementById('user-ai-prompt');
         const responseArea = document.getElementById('ai-response-area');
-        const btnText = document.getElementById('btn-text');
-        const spinner = document.getElementById('btn-spinner');
-
-        if (!promptInput.value.trim()) return;
-        btnText.innerText = "Processing...";
-        spinner.classList.remove('d-none');
         
-        try {
-            const response = await fetch("{{ url_for('reports.ask_ai') }}", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: promptInput.value })
-            });
-            const result = await response.json();
-            responseArea.innerHTML = result.answer;
-        } catch (e) {
-            responseArea.innerHTML = "❌ Connection failed.";
-        } finally {
-            btnText.innerText = "Consult Manager";
-            spinner.classList.add('d-none');
-        }
-    });
+        responseArea.innerHTML = "<i>Manager is thinking... (Background Task Started)</i>";
+        
+        // 1. Trigger the background task
+        await fetch("{{ url_for('reports.ask_ai') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: promptInput.value })
+        });
 
-    document.getElementById('clear-ai-btn').addEventListener('click', async () => {
-        await fetch("{{ url_for('reports.clear_ai') }}", { method: 'POST' });
-        location.reload();
+        // 2. Start Polling the DB every 3 seconds
+        const poll = setInterval(async () => {
+            const finished = await checkAIStatus();
+            if (finished) clearInterval(poll);
+        }, 3000);
     });
 </script>
 <style>

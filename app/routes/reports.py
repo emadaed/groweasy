@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, g, Response
 from app.services.db import DB_ENGINE  # Correct import from your db.py
 from sqlalchemy import text
+from app.services.tasks import process_ai_insight
 import csv
 import io
 import json
@@ -66,27 +67,35 @@ def dashboard():
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
 def ask_ai():
     user_id = session.get('user_id')
-    user_prompt = request.json.get('prompt', '').strip()
+    user_prompt = request.json.get('prompt')
+    data = get_live_business_data(user_id) # Your existing data function
     
-    # NEW: If the user hasn't typed a new question, check if we have a saved answer
-    # This prevents hitting the 429 Rate Limit on every page load
-    if not user_prompt and session.get('cached_ai_advice'):
-        return jsonify({"answer": session.get('cached_ai_advice')})
+    with DB_ENGINE.begin() as conn:
+        # Clean up old pending requests
+        conn.execute(text("DELETE FROM ai_insights WHERE user_id = :uid AND status = 'pending'"), {'uid': user_id})
+        # Insert new placeholder
+        conn.execute(text("""
+            INSERT INTO ai_insights (user_id, status) VALUES (:uid, 'pending')
+        """), {'uid': user_id})
 
-    data = get_live_business_data(user_id)
+    # Trigger background work (Celery)
+    process_ai_insight.delay(user_id, data, custom_prompt=user_prompt)
     
-    try:
-        from app.services.ai_service import get_gemini_insights
-        response = get_gemini_insights(data, custom_prompt=user_prompt)
-        
-        # Save this to the session so we don't call the API again until next time
-        session['cached_ai_advice'] = response
-        return jsonify({"answer": response})
-    except Exception as e:
-        # If we hit a limit, but have an old answer, show the old one instead of an error
-        if session.get('cached_ai_advice'):
-            return jsonify({"answer": session.get('cached_ai_advice')})
-        return jsonify({"answer": "👔 Manager AI is busy. Your data is safe—check back in 60s."})
+    return jsonify({"status": "queued", "message": "Manager is analyzing your data..."})
+
+@reports_bp.route('/reports/get_ai_status')
+def get_ai_status():
+    """Polled by the frontend to see if the AI is done"""
+    user_id = session.get('user_id')
+    with DB_ENGINE.connect() as conn:
+        res = conn.execute(text("""
+            SELECT content, status FROM ai_insights 
+            WHERE user_id = :uid ORDER BY created_at DESC LIMIT 1
+        """), {'uid': user_id}).fetchone()
+    
+    if res:
+        return jsonify({"status": res.status, "answer": res.content})
+    return jsonify({"status": "none"})
 
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])
