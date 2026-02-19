@@ -183,7 +183,7 @@ def update_stock_on_invoice(user_id, invoice_items, invoice_type='S', invoice_nu
         print(f"Stock update error: {e}")
 
 
-# --- Helper functions (Outside the create_app function) ---
+# --- Helper functions (Outside the create_app function) ---move it app/utils/qr.py
 
 def generate_simple_qr(data):
     """Generate a simple QR code for document data"""
