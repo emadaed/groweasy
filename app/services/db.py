@@ -10,7 +10,7 @@ DB_ENGINE = create_engine(
     pool_size=10,
     max_overflow=20,
     pool_recycle=300,
-    pool_pre_ping=True
+
 )
 
 print(f"✅ Database connected: {DATABASE_URL[:50]}...")
