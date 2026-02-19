@@ -29,12 +29,10 @@ def init_middleware(app):
         if nonce:
             csp_directives = [
                 "default-src 'self'",
-                # 'strict-dynamic' allows Chart.js to load its dependencies safely via the nonce chain
-                f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' https://cdn.jsdelivr.net",
+               f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net",
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
                 "img-src 'self' data: blob: https:",
                 "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-                # Specifically allowing jsdelivr here fixes  connect-src 'self' error
                 "connect-src 'self' https://cdn.jsdelivr.net https://*.jsdelivr.net https://*.sentry.io",
                 "frame-ancestors 'none'",
                 "form-action 'self'",
