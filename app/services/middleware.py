@@ -3,8 +3,7 @@
 from flask import g, request
 import secrets
 
-
-def security_headers(app):
+def init_middleware(app):  # Renamed from security_headers to fix the ImportError
     """
     Add security headers to all responses.
     Implements CSP with nonce for inline scripts.
@@ -22,21 +21,20 @@ def security_headers(app):
     def add_security_headers(response):
         """Add security headers to response"""
 
-        # Skip CSP for static files
         if request.path.startswith('/static/'):
             return response
 
-        # Build CSP with nonce for HTML pages
         nonce = getattr(g, 'nonce', None)
 
         if nonce:
             csp = [
                 "default-src 'self'",
-                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net",
+                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
                 "img-src 'self' data: blob: https:",
                 "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-                "connect-src 'self'",
+                # Whitelisted Cloudflare and Sentry to fix browser console errors
+                "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io",
                 "frame-ancestors 'none'",
                 "form-action 'self'",
                 "base-uri 'self'"
@@ -59,7 +57,6 @@ def security_headers(app):
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=()'
 
-        # HSTS only in production
         if not request.host.startswith('localhost') and not request.host.startswith('127.0.0.1'):
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
 
