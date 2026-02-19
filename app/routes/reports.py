@@ -64,6 +64,21 @@ def dashboard():
                            nonce=getattr(g, 'nonce', ''))
 
 
+@reports_bp.route('/reports/get_ai_status')
+def get_ai_status():
+    """Polled by the frontend to see if the AI is done"""
+    user_id = session.get('user_id')
+    with DB_ENGINE.connect() as conn:
+        res = conn.execute(text("""
+            SELECT content, status FROM ai_insights 
+            WHERE user_id = :uid ORDER BY created_at DESC LIMIT 1
+        """), {'uid': user_id}).fetchone()
+    
+    if res:
+        return jsonify({"status": res.status, "answer": res.content})
+    return jsonify({"status": "none"})
+
+
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
 def ask_ai():
     user_id = session.get('user_id')
@@ -83,19 +98,6 @@ def ask_ai():
     
     return jsonify({"status": "queued", "message": "Manager is analyzing your data..."})
 
-@reports_bp.route('/reports/get_ai_status')
-def get_ai_status():
-    """Polled by the frontend to see if the AI is done"""
-    user_id = session.get('user_id')
-    with DB_ENGINE.connect() as conn:
-        res = conn.execute(text("""
-            SELECT content, status FROM ai_insights 
-            WHERE user_id = :uid ORDER BY created_at DESC LIMIT 1
-        """), {'uid': user_id}).fetchone()
-    
-    if res:
-        return jsonify({"status": res.status, "answer": res.content})
-    return jsonify({"status": "none"})
 
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])

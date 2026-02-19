@@ -47,38 +47,60 @@
     </div>
 </div>
 
-<script nonce="{{ g.nonce }}">
-    // 1. Chart Initialization (Runs once)
-    const ctx = document.getElementById('financeChart').getContext('2d');
-    const myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Revenue', 'Expenses', 'Profit', 'Tax'],
-            datasets: [{
-                label: 'Business Metrics',
-                data: [{{ data.revenue }}, {{ data.costs }}, {{ data.net_profit }}, {{ data.tax_liability }}],
-                backgroundColor: ['#198754', '#dc3545', '#0d6efd', '#ffc107']
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ g.nonce }}"></script>
 
-    // 2. Polling Logic (Self-Cleaning)
+<script nonce="{{ g.nonce }}">
+    // --- 1. SAFE CHART INITIALIZATION ---
+    function loadBusinessChart() {
+        const canvas = document.getElementById('financeChart');
+        if (!canvas) return;
+
+        // If Chart.js isn't ready yet, wait 200ms and try again
+        if (typeof Chart === 'undefined') {
+            console.warn("Chart.js not ready, retrying...");
+            setTimeout(loadBusinessChart, 200);
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Revenue', 'Expenses', 'Profit', 'Tax'],
+                datasets: [{
+                    label: 'Business Metrics ({{ currency_symbol }})',
+                    data: [{{ data.revenue }}, {{ data.costs }}, {{ data.net_profit }}, {{ data.tax_liability }}],
+                    backgroundColor: ['#198754', '#dc3545', '#0d6efd', '#ffc107']
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                animation: { duration: 1000 }
+            }
+        });
+    }
+
+    // --- 2. AI POLLING LOGIC ---
     let aiPollingInterval = null;
+
+    const stopPolling = () => {
+        if (aiPollingInterval) clearInterval(aiPollingInterval);
+        document.getElementById('btn-text').innerText = "Consult Manager";
+        document.getElementById('btn-spinner').classList.add('d-none');
+    };
 
     const checkAIStatus = async () => {
         const responseArea = document.getElementById('ai-response-area');
         try {
             const res = await fetch("{{ url_for('reports.get_ai_status') }}");
-            if (!res.ok) return; // Wait for next tick if server wobbles
-            
             const result = await res.json();
             
             if (result.status === 'completed') {
-                responseArea.innerHTML = result.answer; // Replaces "Thinking..." 
+                responseArea.innerHTML = `<div class="fade-in">${result.answer}</div>`;
                 stopPolling();
             } else if (result.status === 'failed') {
-                responseArea.innerHTML = "❌ Manager is unavailable. Try again.";
+                responseArea.innerHTML = "❌ AI Analysis failed. Please try again.";
                 stopPolling();
             }
         } catch (e) {
@@ -86,39 +108,41 @@
         }
     };
 
-    const stopPolling = () => {
-        clearInterval(aiPollingInterval);
-        document.getElementById('btn-text').innerText = "Consult Manager";
-        document.getElementById('btn-spinner').classList.add('d-none');
-    };
+    // --- 3. EVENT LISTENERS ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Start chart load
+        loadBusinessChart();
 
-    document.getElementById('send-ai-btn').addEventListener('click', async () => {
-        const promptInput = document.getElementById('user-ai-prompt');
-        const responseArea = document.getElementById('ai-response-area');
-        
-        // UI Feedback
-        responseArea.innerHTML = "<i>Manager is analyzing...</i>";
-        document.getElementById('btn-text').innerText = "Analyzing...";
-        document.getElementById('btn-spinner').classList.remove('d-none');
-        
-        try {
-            const response = await fetch("{{ url_for('reports.ask_ai') }}", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: promptInput.value })
+        // AI Button Click
+        const aiBtn = document.getElementById('send-ai-btn');
+        if (aiBtn) {
+            aiBtn.addEventListener('click', async () => {
+                const promptInput = document.getElementById('user-ai-prompt');
+                const responseArea = document.getElementById('ai-response-area');
+                
+                responseArea.innerHTML = "<i>Manager is analyzing your live data...</i>";
+                document.getElementById('btn-text').innerText = "Analyzing...";
+                document.getElementById('btn-spinner').classList.remove('d-none');
+                
+                try {
+                    const response = await fetch("{{ url_for('reports.ask_ai') }}", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ prompt: promptInput.value })
+                    });
+
+                    if (response.ok) {
+                        if (aiPollingInterval) clearInterval(aiPollingInterval);
+                        aiPollingInterval = setInterval(checkAIStatus, 3000);
+                    } else {
+                        responseArea.innerHTML = "❌ Server Error (500). Check Railway Worker logs.";
+                        stopPolling();
+                    }
+                } catch (e) {
+                    responseArea.innerHTML = "❌ Connection failed.";
+                    stopPolling();
+                }
             });
-
-            if (response.ok) {
-                // Start polling every 3 seconds ONLY if the request was accepted
-                if (aiPollingInterval) clearInterval(aiPollingInterval);
-                aiPollingInterval = setInterval(checkAIStatus, 3000);
-            } else {
-                responseArea.innerHTML = "❌ Server Error. Check Redis connection.";
-                stopPolling();
-            }
-        } catch (e) {
-            responseArea.innerHTML = "❌ Connection failed.";
-            stopPolling();
         }
     });
 </script>
