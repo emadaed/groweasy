@@ -20,37 +20,30 @@ def init_middleware(app):
 
     @app.after_request
     def add_security_headers(response):
-        """Applies Strict CSP and modern ERP security headers."""
-        if request.path.startswith('/static/'):
-            return response
-
+        if request.path.startswith('/static/'): return response
         nonce = getattr(g, 'nonce', None)
 
-        if nonce:
-            csp_directives = [
-                "default-src 'self'",
-               f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net",
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-                "img-src 'self' data: blob: https:",
-                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-                "connect-src 'self' https://cdn.jsdelivr.net https://*.jsdelivr.net https://*.sentry.io",
-                "frame-ancestors 'none'",
-                "form-action 'self'",
-                "base-uri 'self'"
-            ]
-            response.headers['Content-Security-Policy'] = '; '.join(csp_directives)
+        csp = [
+            "default-src 'self'",
+            f"script-src 'self' 'nonce-{nonce}' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+            "img-src 'self' data: blob: https:",
+            "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
+            "connect-src 'self' https://*.jsdelivr.net https://*.sentry.io", # Fixed the wildcard
+            "frame-ancestors 'none'",
+            "form-action 'self'",
+            "base-uri 'self'"
+        ]
         
-        # Standard Production Security Headers
+        response.headers['Content-Security-Policy'] = '; '.join(csp)
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=()'
-
-        # HSTS for Railway/Production (not local)
+        
         if not request.host.startswith(('localhost', '127.0.0.1')):
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-
         return response
 
     @app.after_request

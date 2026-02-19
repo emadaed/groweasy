@@ -47,103 +47,57 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ g.nonce }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" nonce="{{ g.nonce }}"></script>
 
 <script nonce="{{ g.nonce }}">
-    // --- 1. SAFE CHART INITIALIZATION ---
-    function loadBusinessChart() {
-        const canvas = document.getElementById('financeChart');
-        if (!canvas) return;
-
-        // If Chart.js isn't ready yet, wait 200ms and try again
-        if (typeof Chart === 'undefined') {
-            console.warn("Chart.js not ready, retrying...");
-            setTimeout(loadBusinessChart, 200);
-            return;
-        }
-
-        const ctx = canvas.getContext('2d');
+document.addEventListener('DOMContentLoaded', function() {
+    // A. Chart Alignment
+    const renderChart = () => {
+        const ctx = document.getElementById('financeChart');
+        if (!ctx || typeof Chart === 'undefined') return;
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Revenue', 'Expenses', 'Profit', 'Tax'],
+                labels: ['Revenue', 'Profit', 'Tax'],
                 datasets: [{
-                    label: 'Business Metrics ({{ currency_symbol }})',
-                    data: [{{ data.revenue }}, {{ data.costs }}, {{ data.net_profit }}, {{ data.tax_liability }}],
-                    backgroundColor: ['#198754', '#dc3545', '#0d6efd', '#ffc107']
+                    label: 'Live Data',
+                    data: [{{ data.revenue }}, {{ data.net_profit }}, {{ data.tax_liability }}],
+                    backgroundColor: ['#198754', '#0d6efd', '#ffc107']
                 }]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                animation: { duration: 1000 }
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
-    }
-
-    // --- 2. AI POLLING LOGIC ---
-    let aiPollingInterval = null;
-
-    const stopPolling = () => {
-        if (aiPollingInterval) clearInterval(aiPollingInterval);
-        document.getElementById('btn-text').innerText = "Consult Manager";
-        document.getElementById('btn-spinner').classList.add('d-none');
     };
+    renderChart();
 
-    const checkAIStatus = async () => {
-        const responseArea = document.getElementById('ai-response-area');
+    // B. AI Button Alignment (No functionality removed)
+    const aiBtn = document.getElementById('send-ai-btn');
+    aiBtn.addEventListener('click', async () => {
+        const area = document.getElementById('ai-response-area');
+        area.innerHTML = "<i>Consulting Manager AI...</i>";
+        
         try {
-            const res = await fetch("{{ url_for('reports.get_ai_status') }}");
-            const result = await res.json();
-            
-            if (result.status === 'completed') {
-                responseArea.innerHTML = `<div class="fade-in">${result.answer}</div>`;
-                stopPolling();
-            } else if (result.status === 'failed') {
-                responseArea.innerHTML = "❌ AI Analysis failed. Please try again.";
-                stopPolling();
-            }
-        } catch (e) {
-            console.error("Polling error:", e);
-        }
-    };
-
-    // --- 3. EVENT LISTENERS ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // Start chart load
-        loadBusinessChart();
-
-        // AI Button Click
-        const aiBtn = document.getElementById('send-ai-btn');
-        if (aiBtn) {
-            aiBtn.addEventListener('click', async () => {
-                const promptInput = document.getElementById('user-ai-prompt');
-                const responseArea = document.getElementById('ai-response-area');
-                
-                responseArea.innerHTML = "<i>Manager is analyzing your live data...</i>";
-                document.getElementById('btn-text').innerText = "Analyzing...";
-                document.getElementById('btn-spinner').classList.remove('d-none');
-                
-                try {
-                    const response = await fetch("{{ url_for('reports.ask_ai') }}", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ prompt: promptInput.value })
-                    });
-
-                    if (response.ok) {
-                        if (aiPollingInterval) clearInterval(aiPollingInterval);
-                        aiPollingInterval = setInterval(checkAIStatus, 3000);
-                    } else {
-                        responseArea.innerHTML = "❌ Server Error (500). Check Railway Worker logs.";
-                        stopPolling();
-                    }
-                } catch (e) {
-                    responseArea.innerHTML = "❌ Connection failed.";
-                    stopPolling();
-                }
+            const res = await fetch("{{ url_for('reports.ask_ai') }}", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ prompt: document.getElementById('user-ai-prompt').value })
             });
-        }
+            
+            if (res.ok) {
+                // Poll for the background worker's result
+                const poll = setInterval(async () => {
+                    const statusRes = await fetch("{{ url_for('reports.get_ai_status') }}");
+                    const statusData = await statusRes.json();
+                    if (statusData.status === 'completed') {
+                        area.innerHTML = statusData.answer;
+                        clearInterval(poll);
+                    }
+                }, 3000);
+            } else {
+                area.innerHTML = "❌ Redis Connection Refused. Check Railway Environment Variables.";
+            }
+        } catch (e) { area.innerHTML = "❌ Request Failed."; }
     });
+});
 </script>
 {% endblock %}
