@@ -23,13 +23,15 @@ def init_middleware(app):
         if request.path.startswith('/static/'): return response
         nonce = getattr(g, 'nonce', None)
 
+        # We must explicitly allow Cloudflare and jsdelivr for both scripts AND connections
         csp = [
             "default-src 'self'",
             f"script-src 'self' 'nonce-{nonce}' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
             "img-src 'self' data: blob: https:",
             "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-            "connect-src 'self' https://*.jsdelivr.net https://*.sentry.io", # Fixed the wildcard
+            # connect-src MUST include cloudflare because that's where you're loading Chart.js from now
+            "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io",
             "frame-ancestors 'none'",
             "form-action 'self'",
             "base-uri 'self'"
