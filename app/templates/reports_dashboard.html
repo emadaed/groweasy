@@ -122,29 +122,4 @@
         }
     });
 </script>
-<script nonce="{{ g.nonce }}">
-    // Prevent chart doubling/growing bug
-    let financeChartInstance = null;
-    
-    function initChart() {
-        const ctx = document.getElementById('financeChart').getContext('2d');
-        if (financeChartInstance) financeChartInstance.destroy();
-        
-        financeChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Revenue', 'Profit', 'Tax', 'Stock'],
-                datasets: [{
-                    label: 'Live Performance ({{ currency_symbol }})',
-                    data: [{{ data.revenue }}, {{ data.net_profit }}, {{ data.tax_liability }}, {{ data.inventory_value }}],
-                    backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#0dcaf0']
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-
-    // Call once on load
-    document.addEventListener('DOMContentLoaded', initChart);
-</script>
 {% endblock %}
