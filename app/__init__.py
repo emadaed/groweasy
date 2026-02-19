@@ -49,8 +49,7 @@ def create_app():
     app.static_folder = str(app_root / "static")
 
     # --- Initialize Extensions ---
-    init_cache(app)
-    init_middleware(app)
+    init_cache(app)    
     app.before_request(block_automation)
     
     # Simple Session Setup (Logic is now in Config)
@@ -63,6 +62,7 @@ def create_app():
     compress.init_app(app)
     register_context_processors(app)
     #security_headers(app)
+    init_middleware(app)
 
     # --- Blueprints ---
     from app.routes.auth import auth_bp

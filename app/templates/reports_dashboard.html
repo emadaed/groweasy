@@ -1,18 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>📊 Business Intelligence Dashboard</h2>
-        <div>
-            <button id="sync-data-btn" class="btn btn-outline-secondary btn-sm me-2">
-                <i class="bi bi-arrow-clockwise"></i> Sync Live Data
-            </button>
-            <a href="{{ url_for('reports.download_csv') }}" class="btn btn-outline-success btn-sm">
-                <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
-            </a>
-        </div>
-    </div>
+<meta name="mobile-web-app-capable" content="yes">
 
+<div class="container mt-4">
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="card shadow-sm border-0 text-center p-3 border-bottom border-success border-4">
@@ -26,19 +16,7 @@
                 <h3 class="text-primary">{{ currency_symbol }}{{ "%.2f"|format(data.net_profit) }}</h3>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-warning border-4">
-                <small class="text-muted">Tax</small>
-                <h3 class="text-warning">{{ currency_symbol }}{{ "%.2f"|format(data.tax_liability) }}</h3>
-            </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3 border-bottom border-info border-4">
-                <small class="text-muted">Stock</small>
-                <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(data.inventory_value) }}</h3>
-            </div>
-        </div>
-    </div>
 
     <div class="row">
         <div class="col-md-7">
@@ -72,43 +50,61 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ g.nonce }}"></script>
 
 <script nonce="{{ g.nonce }}">
+    // 1. FIXED: Initialization of Finance Chart
+    const ctx = document.getElementById('financeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Revenue', 'Expenses', 'Profit', 'Tax'],
+            datasets: [{
+                label: 'Business Metrics ({{ currency_symbol }})',
+                data: [{{ data.revenue }}, {{ data.costs }}, {{ data.net_profit }}, {{ data.tax_liability }}],
+                backgroundColor: ['#198754', '#dc3545', '#0d6efd', '#ffc107']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 2. FIXED: AI Status Polling Logic
     const checkAIStatus = async () => {
         const responseArea = document.getElementById('ai-response-area');
-        const res = await fetch("{{ url_for('reports.get_ai_status') }}");
-        const data = await res.json();
-        
-        if (data.status === 'completed') {
-            responseArea.innerHTML = data.answer;
-            // Stop polling
-            return true;
-        } else if (data.status === 'failed') {
-            responseArea.innerHTML = "❌ AI Manager encountered an error. Retrying...";
-            return true;
-        }
+        try {
+            const res = await fetch("{{ url_for('reports.get_ai_status') }}");
+            const result = await res.json();
+            
+            if (result.status === 'completed') {
+                responseArea.innerHTML = result.answer;
+                document.getElementById('btn-text').innerText = "Consult Manager";
+                document.getElementById('btn-spinner').classList.add('d-none');
+                return true;
+            } else if (result.status === 'failed') {
+                responseArea.innerHTML = "❌ AI Analysis failed. Please try again.";
+                return true;
+            }
+        } catch (e) { console.error("Polling error", e); }
         return false;
     };
 
     document.getElementById('send-ai-btn').addEventListener('click', async () => {
         const promptInput = document.getElementById('user-ai-prompt');
         const responseArea = document.getElementById('ai-response-area');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('btn-spinner');
+
+        responseArea.innerHTML = "<i>Manager is analyzing your live data...</i>";
+        btnText.innerText = "Analyzing...";
+        spinner.classList.remove('d-none');
         
-        responseArea.innerHTML = "<i>Manager is thinking... (Background Task Started)</i>";
-        
-        // 1. Trigger the background task
         await fetch("{{ url_for('reports.ask_ai') }}", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt: promptInput.value })
         });
 
-        // 2. Start Polling the DB every 3 seconds
         const poll = setInterval(async () => {
             const finished = await checkAIStatus();
             if (finished) clearInterval(poll);
         }, 3000);
     });
 </script>
-<style>
-    .ai-response-area { font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
-</style>
 {% endblock %}

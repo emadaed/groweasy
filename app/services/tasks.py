@@ -1,14 +1,22 @@
 # app.services.tasks.py
-from celery import shared_task
+from celery import Celery, shared_task
+import qrcode
+import base64
+from pathlib import Path
+from app.services.qr_engine import generate_qr_base64
 from app.services.ai_service import get_gemini_insights
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
 import json
-from celery import Celery
+import os
+from config import Config
 from app.services.services import InvoiceService
 from flask import current_app
 
-celery = Celery('groweasy')
+# Initialize Celery using the Config class we just updated
+celery = Celery('groweasy', 
+                broker=Config.CELERY_BROKER_URL, 
+                backend=Config.CELERY_RESULT_BACKEND)
 
 @celery.task
 def generate_preview(user_id, data):
@@ -37,7 +45,6 @@ def process_ai_insight(self, user_id, data, custom_prompt=None):
             
         return {"status": "success"}
     except Exception as exc:
-        # If rate limited (429), retry in 60 seconds
         if "429" in str(exc):
             raise self.retry(exc=exc, countdown=60)
         

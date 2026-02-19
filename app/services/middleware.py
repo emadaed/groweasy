@@ -34,8 +34,8 @@ def init_middleware(app):
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
                 "img-src 'self' data: blob: https:",
                 "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-                # Specifically allowing jsdelivr here fixes your connect-src 'self' error
-                "connect-src 'self' https://cdn.jsdelivr.net",
+                # Specifically allowing jsdelivr here fixes  connect-src 'self' error
+                "connect-src 'self' https://cdn.jsdelivr.net https://*.jsdelivr.net",
                 "frame-ancestors 'none'",
                 "form-action 'self'",
                 "base-uri 'self'"

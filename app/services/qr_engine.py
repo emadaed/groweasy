@@ -1,4 +1,4 @@
-# core/qr_engine.py - Final Version (Compatible + Modern)
+# app/services/qr_engine.py - Final Version (Compatible + Modern)
 
 import qrcode
 from PIL import Image
