@@ -10,6 +10,7 @@ class Config:
     
     # Robust Redis Detection for Railway
     _redis_url = os.getenv('REDIS_URL', 'memory://')
+    print(f"REDIS_URL after processing: {_redis_url}")
     
     # If the URL is missing the protocol, build the internal Railway path
     if _redis_url and '://' not in _redis_url and _redis_url != 'memory://':
