@@ -47,17 +47,15 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" nonce="{{ g.nonce }}"></script>
-
 <script nonce="{{ g.nonce }}">
-    // 1. FIXED: Initialization of Finance Chart
+    // 1. Chart Initialization (Runs once)
     const ctx = document.getElementById('financeChart').getContext('2d');
-    new Chart(ctx, {
+    const myChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: ['Revenue', 'Expenses', 'Profit', 'Tax'],
             datasets: [{
-                label: 'Business Metrics ({{ currency_symbol }})',
+                label: 'Business Metrics',
                 data: [{{ data.revenue }}, {{ data.costs }}, {{ data.net_profit }}, {{ data.tax_liability }}],
                 backgroundColor: ['#198754', '#dc3545', '#0d6efd', '#ffc107']
             }]
@@ -65,46 +63,88 @@
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // 2. FIXED: AI Status Polling Logic
+    // 2. Polling Logic (Self-Cleaning)
+    let aiPollingInterval = null;
+
     const checkAIStatus = async () => {
         const responseArea = document.getElementById('ai-response-area');
         try {
             const res = await fetch("{{ url_for('reports.get_ai_status') }}");
+            if (!res.ok) return; // Wait for next tick if server wobbles
+            
             const result = await res.json();
             
             if (result.status === 'completed') {
-                responseArea.innerHTML = result.answer;
-                document.getElementById('btn-text').innerText = "Consult Manager";
-                document.getElementById('btn-spinner').classList.add('d-none');
-                return true;
+                responseArea.innerHTML = result.answer; // Replaces "Thinking..." 
+                stopPolling();
             } else if (result.status === 'failed') {
-                responseArea.innerHTML = "❌ AI Analysis failed. Please try again.";
-                return true;
+                responseArea.innerHTML = "❌ Manager is unavailable. Try again.";
+                stopPolling();
             }
-        } catch (e) { console.error("Polling error", e); }
-        return false;
+        } catch (e) {
+            console.error("Polling error:", e);
+        }
+    };
+
+    const stopPolling = () => {
+        clearInterval(aiPollingInterval);
+        document.getElementById('btn-text').innerText = "Consult Manager";
+        document.getElementById('btn-spinner').classList.add('d-none');
     };
 
     document.getElementById('send-ai-btn').addEventListener('click', async () => {
         const promptInput = document.getElementById('user-ai-prompt');
         const responseArea = document.getElementById('ai-response-area');
-        const btnText = document.getElementById('btn-text');
-        const spinner = document.getElementById('btn-spinner');
-
-        responseArea.innerHTML = "<i>Manager is analyzing your live data...</i>";
-        btnText.innerText = "Analyzing...";
-        spinner.classList.remove('d-none');
         
-        await fetch("{{ url_for('reports.ask_ai') }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: promptInput.value })
-        });
+        // UI Feedback
+        responseArea.innerHTML = "<i>Manager is analyzing...</i>";
+        document.getElementById('btn-text').innerText = "Analyzing...";
+        document.getElementById('btn-spinner').classList.remove('d-none');
+        
+        try {
+            const response = await fetch("{{ url_for('reports.ask_ai') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: promptInput.value })
+            });
 
-        const poll = setInterval(async () => {
-            const finished = await checkAIStatus();
-            if (finished) clearInterval(poll);
-        }, 3000);
+            if (response.ok) {
+                // Start polling every 3 seconds ONLY if the request was accepted
+                if (aiPollingInterval) clearInterval(aiPollingInterval);
+                aiPollingInterval = setInterval(checkAIStatus, 3000);
+            } else {
+                responseArea.innerHTML = "❌ Server Error. Check Redis connection.";
+                stopPolling();
+            }
+        } catch (e) {
+            responseArea.innerHTML = "❌ Connection failed.";
+            stopPolling();
+        }
     });
+</script>
+<script nonce="{{ g.nonce }}">
+    // Prevent chart doubling/growing bug
+    let financeChartInstance = null;
+    
+    function initChart() {
+        const ctx = document.getElementById('financeChart').getContext('2d');
+        if (financeChartInstance) financeChartInstance.destroy();
+        
+        financeChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Revenue', 'Profit', 'Tax', 'Stock'],
+                datasets: [{
+                    label: 'Live Performance ({{ currency_symbol }})',
+                    data: [{{ data.revenue }}, {{ data.net_profit }}, {{ data.tax_liability }}, {{ data.inventory_value }}],
+                    backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#0dcaf0']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // Call once on load
+    document.addEventListener('DOMContentLoaded', initChart);
 </script>
 {% endblock %}
