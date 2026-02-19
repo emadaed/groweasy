@@ -33,7 +33,7 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
                 "img-src 'self' data: blob: https:",
                 "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-                # ADDED: cloudflare and sentry to connect-src
+                # Updated connect-src to allow Chart.js maps and Sentry telemetry
                 "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io",
                 "frame-ancestors 'none'",
                 "form-action 'self'",
