@@ -20,24 +20,29 @@ def init_middleware(app):
 
     @app.after_request
     def add_security_headers(response):
-        if request.path.startswith('/static/'): return response
-        nonce = getattr(g, 'nonce', None)
+        if request.path.startswith('/static/'):
+            return response
 
-        # We must explicitly allow Cloudflare and jsdelivr for both scripts AND connections
-        csp = [
-            "default-src 'self'",
-            f"script-src 'self' 'nonce-{nonce}' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-            "img-src 'self' data: blob: https:",
-            "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-            # connect-src MUST include cloudflare because that's where you're loading Chart.js from now
-            "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io",
-            "frame-ancestors 'none'",
-            "form-action 'self'",
-            "base-uri 'self'"
-        ]
+        nonce = getattr(g, 'nonce', None)
         
-        response.headers['Content-Security-Policy'] = '; '.join(csp)
+        # CSP Dictionary to ensure no directives are dropped
+        csp = {
+            "default-src": ["'self'"],
+            "script-src": ["'self'", f"'nonce-{nonce}'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            "img-src": ["'self'", "data:", "blob:", "https:"],
+            "font-src": ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "fonts.gstatic.com"],
+            # CRITICAL: Added both CDNs to connect-src to allow .map files and data fetches
+            "connect-src": ["'self'", "https://*.jsdelivr.net", "https://*.cloudflare.com", "https://*.sentry.io"],
+            "frame-ancestors": ["'none'"],
+            "form-action": ["'self'"],
+            "base-uri": ["'self'"]
+        }
+
+        csp_string = "; ".join([f"{k} {' '.join(v)}" for k, v in csp.items()])
+        response.headers['Content-Security-Policy'] = csp_string
+        
+        # Security Armor (Restored and fully active)
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-XSS-Protection'] = '1; mode=block'
@@ -46,6 +51,7 @@ def init_middleware(app):
         
         if not request.host.startswith(('localhost', '127.0.0.1')):
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            
         return response
 
     @app.after_request

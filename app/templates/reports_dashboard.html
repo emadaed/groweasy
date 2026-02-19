@@ -51,16 +51,17 @@
 
 <script nonce="{{ g.nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    // A. Chart Alignment
-    const renderChart = () => {
+    // 1. Chart Initialization Logic
+    const initChart = () => {
         const ctx = document.getElementById('financeChart');
         if (!ctx || typeof Chart === 'undefined') return;
+        
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Revenue', 'Profit', 'Tax'],
                 datasets: [{
-                    label: 'Live Data',
+                    label: 'Business Performance',
                     data: [{{ data.revenue }}, {{ data.net_profit }}, {{ data.tax_liability }}],
                     backgroundColor: ['#198754', '#0d6efd', '#ffc107']
                 }]
@@ -68,35 +69,54 @@ document.addEventListener('DOMContentLoaded', function() {
             options: { responsive: true, maintainAspectRatio: false }
         });
     };
-    renderChart();
+    initChart();
 
-    // B. AI Button Alignment (No functionality removed)
-    const aiBtn = document.getElementById('send-ai-btn');
-    aiBtn.addEventListener('click', async () => {
-        const area = document.getElementById('ai-response-area');
-        area.innerHTML = "<i>Consulting Manager AI...</i>";
+    // 2. AI Polling Logic
+    let aiPollingInterval = null;
+    const btn = document.getElementById('send-ai-btn');
+    const area = document.getElementById('ai-response-area');
+    const spinner = document.getElementById('btn-spinner');
+    const btnText = document.getElementById('btn-text');
+
+    const stopPolling = (message) => {
+        if (aiPollingInterval) clearInterval(aiPollingInterval);
+        area.innerHTML = message;
+        spinner.classList.add('d-none');
+        btnText.innerText = "Consult Manager";
+    };
+
+    const checkStatus = async () => {
+        try {
+            const res = await fetch("{{ url_for('reports.get_ai_status') }}");
+            const result = await res.json();
+            if (result.status === 'completed') {
+                stopPolling(result.answer);
+            } else if (result.status === 'failed') {
+                stopPolling("❌ Analysis failed. Please try again.");
+            }
+        } catch (e) { console.error("Poll Error:", e); }
+    };
+
+    btn.addEventListener('click', async () => {
+        const prompt = document.getElementById('user-ai-prompt').value;
+        area.innerHTML = "<i>AI Manager is analyzing your live data...</i>";
+        spinner.classList.remove('d-none');
+        btnText.innerText = "Analyzing...";
         
         try {
-            const res = await fetch("{{ url_for('reports.ask_ai') }}", {
+            const response = await fetch("{{ url_for('reports.ask_ai') }}", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ prompt: document.getElementById('user-ai-prompt').value })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: prompt })
             });
-            
-            if (res.ok) {
-                // Poll for the background worker's result
-                const poll = setInterval(async () => {
-                    const statusRes = await fetch("{{ url_for('reports.get_ai_status') }}");
-                    const statusData = await statusRes.json();
-                    if (statusData.status === 'completed') {
-                        area.innerHTML = statusData.answer;
-                        clearInterval(poll);
-                    }
-                }, 3000);
+
+            if (response.ok) {
+                if (aiPollingInterval) clearInterval(aiPollingInterval);
+                aiPollingInterval = setInterval(checkStatus, 3000);
             } else {
-                area.innerHTML = "❌ Redis Connection Refused. Check Railway Environment Variables.";
+                stopPolling("❌ Connection Refused. Check Redis/Worker service.");
             }
-        } catch (e) { area.innerHTML = "❌ Request Failed."; }
+        } catch (e) { stopPolling("❌ Network Error."); }
     });
 });
 </script>
