@@ -1,5 +1,5 @@
 # app.services.tasks.py
-from celery import Celery, shared_task
+from celery import Celery
 import qrcode
 import base64
 from pathlib import Path
@@ -12,12 +12,13 @@ import os
 from config import Config
 from app.services.services import InvoiceService
 from flask import current_app
-print("Broker URL:", current_app.config.get('CELERY_BROKER_URL'))
 
 # Initialize Celery using the Config class we just updated
 celery = Celery('groweasy', 
                 broker=Config.CELERY_BROKER_URL, 
                 backend=Config.CELERY_RESULT_BACKEND)
+print(f"✅ Celery broker URL: {celery.conf.broker_url}")
+
 
 @celery.task
 def generate_preview(user_id, data):
@@ -29,7 +30,7 @@ def generate_preview(user_id, data):
     service.redis_client.setex(f"preview:{user_id}", 300, json.dumps(result))
     return result
 
-@shared_task(bind=True, max_retries=3)
+@celery.task(bind=True, max_retries=3)
 def process_ai_insight(self, user_id, data, custom_prompt=None):
     """Background task to call Gemini and save results to DB"""
     try:
