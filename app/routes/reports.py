@@ -63,12 +63,6 @@ def dashboard():
                            currency_symbol="د.إ",
                            nonce=getattr(g, 'nonce', ''))
 
-
-
-
-from flask import current_app
-print("🔍 Celery broker from Flask config:", current_app.config.get('CELERY_BROKER_URL'))
-
 @reports_bp.route('/reports/get_ai_status')
 def get_ai_status():
     """Polled by the frontend to see if the AI is done"""
