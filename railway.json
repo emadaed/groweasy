@@ -1,0 +1,14 @@
+{
+  "services": [
+    {
+      "name": "web",
+      "buildCommand": "docker build -t web .",
+      "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 2 --worker-class gevent --timeout 300 --access-logfile - --error-logfile - main:app"
+    },
+    {
+      "name": "worker",
+      "buildCommand": "docker build -t worker .",
+      "startCommand": "celery -A app.services.tasks.celery worker --loglevel=info"
+    }
+  ]
+}
