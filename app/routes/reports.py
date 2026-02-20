@@ -65,7 +65,7 @@ def dashboard():
                            nonce=getattr(g, 'nonce', ''))
 
 @reports_bp.route('/reports/get_ai_status')
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")
 def get_ai_status():
     """Polled by the frontend to see if the AI is done"""
     user_id = session.get('user_id')
@@ -81,7 +81,7 @@ def get_ai_status():
 
 
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")
 def ask_ai():
     user_id = session.get('user_id')
     user_prompt = request.json.get('prompt')
