@@ -50,7 +50,7 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
                 "frame-ancestors 'none'"
             ]
         if not nonce:
-        print(f"⚠️ No nonce for {request.path} – using fallback CSP")
+            print(f"⚠️ No nonce for {request.path} – using fallback CSP")
 
         response.headers['Content-Security-Policy'] = '; '.join(csp)
         response.headers['X-Frame-Options'] = 'DENY'
