@@ -7,6 +7,8 @@ from app.services.tasks import process_ai_insight
 import csv
 import io
 import json
+import time
+from app.extensions import redis_client
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -49,6 +51,23 @@ def get_live_business_data(user_id):
         "costs": float(total_expenses),
         "net_profit": total_revenue - float(total_expenses)
     }
+#helper per use limit
+def check_user_ai_limit(user_id, max_requests=5, period=3600):
+    """
+    Returns True if the user is allowed to make another request.
+    Uses Redis sorted set to track timestamps.
+    """
+    key = f"user_ai_requests:{user_id}"
+    now = time.time()
+    # Remove requests older than 'period'
+    redis_client.zremrangebyscore(key, 0, now - period)
+    # Count remaining
+    if redis_client.zcard(key) >= max_requests:
+        return False
+    # Add current request
+    redis_client.zadd(key, {str(now): now})
+    redis_client.expire(key, period)
+    return True
 
 @reports_bp.route('/reports/dashboard')
 def dashboard():
@@ -81,25 +100,40 @@ def get_ai_status():
 
 
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("10 per minute")   # IP‑based limit (still useful)
 def ask_ai():
     user_id = session.get('user_id')
-    user_prompt = request.json.get('prompt')
-    data = get_live_business_data(user_id) # Your existing data function
-    
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    # --- HONEYPOT CHECK ---
+    data = request.get_json()
+    if data.get('honeypot'):
+        current_app.logger.warning(f"Honeypot triggered for user {user_id}")
+        # Lie to the bot: return 200 but do NOT queue the task
+        return jsonify({"status": "queued", "message": "Your request is being processed."}), 200
+
+    # --- PER‑USER RATE LIMIT ---
+    if not check_user_ai_limit(user_id, max_requests=5, period=3600):
+        return jsonify({
+            "status": "limit",
+            "message": "You've reached your hourly AI request limit (5). Please try later."
+        }), 429
+
+    # --- PROCEED WITH NORMAL FLOW ---
+    user_prompt = data.get('prompt')
+    if not user_prompt:
+        return jsonify({"error": "Prompt is required"}), 400
+
+    business_data = get_live_business_data(user_id)
+
     with DB_ENGINE.begin() as conn:
-        # Clean up old pending requests
         conn.execute(text("DELETE FROM ai_insights WHERE user_id = :uid AND status = 'pending'"), {'uid': user_id})
-        # Insert new placeholder
-        conn.execute(text("""
-            INSERT INTO ai_insights (user_id, status) VALUES (:uid, 'pending')
-        """), {'uid': user_id})
+        conn.execute(text("INSERT INTO ai_insights (user_id, status) VALUES (:uid, 'pending')"), {'uid': user_id})
 
-    # Trigger background work (Celery)
-    process_ai_insight.delay(user_id, data, custom_prompt=user_prompt)
-    
+    process_ai_insight.delay(user_id, business_data, custom_prompt=user_prompt)
+
     return jsonify({"status": "queued", "message": "Manager is analyzing your data..."})
-
 
 
 @reports_bp.route('/reports/clear_ai', methods=['POST'])

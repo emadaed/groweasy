@@ -2,6 +2,8 @@
 Flask==3.0.3
 Werkzeug==3.0.3
 Jinja2==3.1.4
+#library for CSRF protection
+Flask-WTF
 
 # Database
 Flask-SQLAlchemy==3.1.1
@@ -47,3 +49,4 @@ flower==2.0.1
 
 #AI
 google-genai
+

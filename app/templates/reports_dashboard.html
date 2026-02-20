@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
 <div class="container mt-4">
     <div class="row mb-4">
@@ -33,6 +34,12 @@
                     <button class="btn btn-sm btn-outline-light border-0" id="clear-ai-btn"><i class="bi bi-trash"></i></button>
                 </div>
                 <div class="card-body bg-light">
+                    
+                    {# HONEYPOT FIELD - Invisible to humans #}
+                    <div style="display: none;">
+                        <input type="text" name="honeypot" id="honeypot" value="" autocomplete="off">
+                    </div>
+
                     <div id="ai-response-area" class="ai-response-area mb-3 p-3 bg-white rounded border" style="min-height: 200px;">
                         {{ ai_advice | safe if ai_advice else "Consult the manager..." }}
                     </div>
@@ -42,12 +49,11 @@
                         <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
                     </button>
                 </div>
-            </div>
+            </div> 
         </div>
     </div>
 </div>
-
-<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ g.nonce }}"></script>
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
 
 <script nonce="{{ g.nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
@@ -78,6 +84,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const spinner = document.getElementById('btn-spinner');
     const btnText = document.getElementById('btn-text');
 
+    // Helper function to get the CSRF token from the meta tag
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    }
+
     const stopPolling = (message) => {
         if (aiPollingInterval) clearInterval(aiPollingInterval);
         area.innerHTML = message;
@@ -98,6 +109,14 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     btn.addEventListener('click', async () => {
+        // HONEYPOT CHECK
+        const honeypot = document.getElementById('honeypot').value;
+        if (honeypot) {
+            console.log("Honeypot triggered. Blocking request.");
+            area.innerHTML = "🤖 Bot detected? Please try again.";
+            return;
+        }
+
         const prompt = document.getElementById('user-ai-prompt').value;
         area.innerHTML = "<i>AI Manager is analyzing your live data...</i>";
         spinner.classList.remove('d-none');
@@ -106,18 +125,28 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch("{{ url_for('reports.ask_ai') }}", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCsrfToken() // CSRF Token in Header
+                },
                 body: JSON.stringify({ prompt: prompt })
             });
 
             if (response.ok) {
                 if (aiPollingInterval) clearInterval(aiPollingInterval);
                 aiPollingInterval = setInterval(checkStatus, 3000);
+            } else if (response.status === 429) {
+                 const data = await response.json();
+                stopPolling("⏳ " + (data.message || "Rate limit hit. Please wait."));
             } else {
                 stopPolling("❌ Connection Refused. Check Redis/Worker service.");
             }
-        } catch (e) { stopPolling("❌ Network Error."); }
+        } catch (e) {
+            console.error("Request Error:", e);
+            stopPolling("❌ An error occurred. Please try again.");
+        }
     });
 });
 </script>
 {% endblock %}
+    

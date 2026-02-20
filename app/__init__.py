@@ -7,15 +7,14 @@ from flask_session import Session
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
+from flask_wtf.csrf import CSRFProtect
 
 # Local Imports
-from app.extensions import limiter, compress
+from app.extensions import limiter, compress, redis_client
 from app.context_processors import register_context_processors
 from app.services.cache import init_cache
 from app.services.middleware import init_middleware
 from config import Config
-
-
 from flask import request, abort
 
 # 1. Define the function FIRST
@@ -42,6 +41,10 @@ def create_app():
 
     app = Flask(__name__)
     app.config.from_object(Config)
+
+
+    # --- Security: Initialize CSRF Protection ---
+    csrf = CSRFProtect(app)
 
     # Path Config
     app_root = Path(__file__).parent
