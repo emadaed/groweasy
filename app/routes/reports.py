@@ -1,4 +1,5 @@
 #app.routes.reports
+from app.extensions import limiter
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, g, Response
 from app.services.db import DB_ENGINE  # Correct import from your db.py
 from sqlalchemy import text
@@ -64,6 +65,7 @@ def dashboard():
                            nonce=getattr(g, 'nonce', ''))
 
 @reports_bp.route('/reports/get_ai_status')
+@limiter.limit("5 per minute")
 def get_ai_status():
     """Polled by the frontend to see if the AI is done"""
     user_id = session.get('user_id')
@@ -79,6 +81,7 @@ def get_ai_status():
 
 
 @reports_bp.route('/reports/ask_ai', methods=['POST'])
+@limiter.limit("5 per minute")
 def ask_ai():
     user_id = session.get('user_id')
     user_prompt = request.json.get('prompt')
@@ -106,6 +109,7 @@ def clear_ai():
     return jsonify({"status": "cleared"})
 
 @reports_bp.route('/reports/download/csv')
+@limiter.limit("5 per minute")
 def download_csv():
     user_id = session.get('user_id')
     data = get_live_business_data(user_id)

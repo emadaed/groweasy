@@ -47,7 +47,7 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" nonce="{{ g.nonce }}"></script>
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ g.nonce }}"></script>
 
 <script nonce="{{ g.nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
