@@ -1,4 +1,4 @@
-# core/session_manager.py - PostgreSQL compatible
+#app/services/session_manager.py - PostgreSQL compatible
 import secrets
 from datetime import datetime, timedelta
 from app.services.db import DB_ENGINE

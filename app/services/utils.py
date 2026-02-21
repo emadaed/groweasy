@@ -1,4 +1,4 @@
-# core/utils.py - BULLETPROOF VERSION
+#app/services/utils.py - BULLETPROOF VERSION
 from PIL import Image
 import io
 import base64

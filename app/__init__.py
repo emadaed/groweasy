@@ -7,10 +7,10 @@ from flask_session import Session
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-from flask_wtf.csrf import CSRFProtect
+#from flask_wtf.csrf import CSRFProtect
 
 # Local Imports
-from app.extensions import limiter, compress, redis_client
+from app.extensions import limiter, compress
 from app.context_processors import register_context_processors
 from app.services.cache import init_cache
 from app.services.middleware import init_middleware
@@ -44,7 +44,7 @@ def create_app():
 
 
     # --- Security: Initialize CSRF Protection ---
-    csrf = CSRFProtect(app)
+    #csrf = CSRFProtect(app)
 
     # Path Config
     app_root = Path(__file__).parent
@@ -88,8 +88,8 @@ def create_app():
     app.register_blueprint(api_bp)
     from app.routes.suppliers import suppliers_bp
     app.register_blueprint(suppliers_bp)
-    from app.routes.reports import reports_bp
-    app.register_blueprint(reports_bp)
+##    from app.routes.reports import reports_bp
+##    app.register_blueprint(reports_bp)
 ##    from app.routes.common import common_bp
 ##    app.register_blueprint(common_bp)
 

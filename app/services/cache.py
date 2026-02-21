@@ -1,4 +1,4 @@
-# core/cache.py
+# app/services/cache.py
 from flask_caching import Cache
 
 cache = Cache()

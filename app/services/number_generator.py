@@ -1,4 +1,4 @@
-# core/number_generator.py
+#app/services/number_generator.py
 import time
 from sqlalchemy import text
 from app.services.db import DB_ENGINE

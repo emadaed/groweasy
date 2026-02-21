@@ -1,4 +1,4 @@
-# core/services.py
+#app/services/services.py
 from flask import current_app, render_template
 from celery import Celery
 import redis

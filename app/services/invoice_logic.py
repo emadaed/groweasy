@@ -1,4 +1,4 @@
-# invoice_logic.py
+#app/services/invoice_logic.py
 
 from app.services.utils import process_uploaded_logo  # ← NEW IMPORT
 

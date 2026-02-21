@@ -1,4 +1,4 @@
-# core/invoice_logic_po.py
+# app/services/invoice_logic_po.py
 def prepare_po_data(form_data, files=None):
     """Prepare PO data - supports item_id[], item_qty[], item_price[] format"""
     from datetime import datetime

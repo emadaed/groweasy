@@ -1,4 +1,4 @@
-# core/invoice_service.py - FINAL PROFESSIONAL VERSION
+# app/services/invoice_service.py - FINAL PROFESSIONAL VERSION
 
 import logging
 from app.services.db import DB_ENGINE
