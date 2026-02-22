@@ -127,5 +127,50 @@ def dashboard():
         nonce=g.nonce
     )
 
+# app/routes/dashboard.py
 
+def get_deadstock(user_id):
+    """Items with no sales in last 90 days"""
+    with DB_ENGINE.connect() as conn:
+        result = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items i
+            WHERE i.user_id = :uid AND i.id NOT IN (
+                SELECT DISTINCT product_id FROM invoice_items ii
+                JOIN user_invoices ui ON ii.invoice_id = ui.id
+                WHERE ui.user_id = :uid AND ui.invoice_date > NOW() - INTERVAL '90 days'
+            )
+        """), {"uid": user_id}).scalar()
+    return result or 0
+
+def get_reorder_items(user_id):
+    """Items where current stock <= min_stock_level"""
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT id, name, current_stock, min_stock_level
+            FROM inventory_items
+            WHERE user_id = :uid AND current_stock <= min_stock_level
+            ORDER BY current_stock ASC
+        """), {"uid": user_id}).fetchall()
+    return [{"id": r.id, "name": r.name, "current": r.current_stock, "min": r.min_stock_level} for r in rows]
+
+def get_market_basket(user_id, limit=5):
+    """Most frequently bought together product pairs"""
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
+            FROM invoice_items a
+            JOIN invoice_items b ON a.invoice_id = b.invoice_id AND a.product_id < b.product_id
+            JOIN user_invoices ui ON a.invoice_id = ui.id
+            WHERE ui.user_id = :uid
+            GROUP BY prod1, prod2
+            ORDER BY times DESC
+            LIMIT :limit
+        """), {"uid": user_id, "limit": limit}).fetchall()
+    # Fetch product names
+    results = []
+    for r in rows:
+        prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
+        prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
+        results.append({"pair": f"{prod1_name} & {prod2_name}", "times": r.times})
+    return results
     
