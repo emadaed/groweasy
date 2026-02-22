@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Login - GrowEasy Invoice{% endblock %}
 {% block content %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="container">
         <div class="row justify-content-center">
