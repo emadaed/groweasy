@@ -28,7 +28,7 @@ def index():
 @ai_bp.route('/ask', methods=['GET'])
 def ask_get():
     """Redirect accidental GET requests to the main AI page."""
-    return redirect(url_for('ai.ask'))
+    return redirect(url_for('ai.index'))
 
 @ai_bp.route('/ask', methods=['POST'])
 def ask():
