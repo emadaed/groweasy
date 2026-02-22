@@ -3,7 +3,7 @@ import os
 import logging
 from groq import Groq
 import requests
-import google.generativeai as genai
+import google.generativeai as genai  # Deprecated but works; update later if needed
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,8 @@ class GroqClient:
         if not api_key:
             raise ValueError("GROQ_API_KEY not set")
         self.client = Groq(api_key=api_key)
-        self.model = "llama3-70b-8192"
+        # Updated to a currently supported model
+        self.model = "llama-3.3-70b-versatile"  # or "mixtral-8x7b-32768"
 
     def generate(self, messages, temperature=0.7, max_tokens=1000):
         response = self.client.chat.completions.create(
@@ -53,10 +54,11 @@ class GeminiClient:
         if not api_key:
             raise ValueError("GEMINI_API_KEY not set")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        # Use the correct model name with prefix
+        self.model = genai.GenerativeModel('models/gemini-1.5-flash')
 
     def generate(self, messages, temperature=0.7, max_tokens=1000):
-        # Convert messages to Gemini format
+        # Convert messages to a single prompt
         prompt = ""
         for msg in messages:
             role = msg["role"]
@@ -78,11 +80,24 @@ class GeminiClient:
 
 class AIOrchestrator:
     def __init__(self):
-        self.providers = {
-            "groq": GroqClient(),
-            "github": GitHubModelsClient(),
-            "gemini": GeminiClient()
-        }
+        self.providers = {}
+        # Only include providers whose API keys are set
+        if os.getenv("GROQ_API_KEY"):
+            try:
+                self.providers["groq"] = GroqClient()
+            except Exception as e:
+                logger.warning(f"Failed to initialize Groq: {e}")
+        if os.getenv("GITHUB_TOKEN"):
+            try:
+                self.providers["github"] = GitHubModelsClient()
+            except Exception as e:
+                logger.warning(f"Failed to initialize GitHub: {e}")
+        if os.getenv("GEMINI_API_KEY"):
+            try:
+                self.providers["gemini"] = GeminiClient()
+            except Exception as e:
+                logger.warning(f"Failed to initialize Gemini: {e}")
+
         self.preferred_order = ["groq", "github", "gemini"]
 
     def generate_insights(self, system_prompt, user_prompt, use_deep_history=False):
@@ -95,10 +110,13 @@ class AIOrchestrator:
             {"role": "user", "content": user_prompt}
         ]
 
-        if use_deep_history:
-            provider_sequence = ["gemini"] + [p for p in self.preferred_order if p != "gemini"]
+        if use_deep_history and "gemini" in self.providers:
+            provider_sequence = ["gemini"] + [p for p in self.preferred_order if p != "gemini" and p in self.providers]
         else:
-            provider_sequence = self.preferred_order
+            provider_sequence = [p for p in self.preferred_order if p in self.providers]
+
+        if not provider_sequence:
+            raise Exception("No AI providers available (check API keys)")
 
         for provider_name in provider_sequence:
             try:
