@@ -25,6 +25,10 @@ def index():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     return render_template('ai/ask.html')
+@ai_bp.route('/ask', methods=['GET'])
+def ask_get():
+    """Redirect accidental GET requests to the main AI page."""
+    return redirect(url_for('ai.ask'))
 
 @ai_bp.route('/ask', methods=['POST'])
 def ask():
