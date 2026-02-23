@@ -22,6 +22,7 @@
             <form method="POST" action="{{ url_for('purchases.mark_po_received', po_number=po_number) }}">
                 <input type="hidden" name="confirm" value="yes">
                 <button type="submit" class="btn btn-success btn-lg">Yes, Receive Goods</button>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <a href="{{ url_for('purchases.purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
             </form>
         </div>
