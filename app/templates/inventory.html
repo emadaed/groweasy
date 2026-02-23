@@ -184,6 +184,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('inventory.add_product') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
@@ -284,6 +285,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('inventory.delete_product') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">                
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="deleteProductId">
                     <div class="alert alert-warning">
@@ -328,6 +330,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('inventory.adjust_stock_audit') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="editProductId">
 
