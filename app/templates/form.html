@@ -227,6 +227,7 @@
             <button type="submit" id="previewBtn" class="btn btn-success btn-lg px-5 py-3 rounded-pill shadow">
                 Preview Invoice
             </button>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </div>
     </form>
 </div>
