@@ -105,7 +105,6 @@ def dashboard():
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
 
-    # --- Compute all metrics using SQL (math engine) ---
     with DB_ENGINE.connect() as conn:
         # 1. Revenue from paid invoices
         revenue = conn.execute(text("""
@@ -125,9 +124,16 @@ def dashboard():
             WHERE user_id = :uid
         """), {"uid": user_id}).scalar() or 0
 
-        # 4. Tax liability (if you have a tax column, else 0)
+        # 4. Tax liability from JSON (field may be 'tax' or 'tax_amount')
         tax = conn.execute(text("""
-            SELECT COALESCE(SUM(tax_amount), 0) FROM user_invoices
+            SELECT COALESCE(SUM(
+                COALESCE(
+                    (invoice_data::jsonb->>'tax')::numeric,
+                    (invoice_data::jsonb->>'tax_amount')::numeric,
+                    0
+                )
+            ), 0)
+            FROM user_invoices
             WHERE user_id = :uid
         """), {"uid": user_id}).scalar() or 0
 
@@ -147,7 +153,7 @@ def dashboard():
             WHERE user_id = :uid AND current_stock = 0
         """), {"uid": user_id}).scalar() or 0
 
-        # 6. Deadstock (no sales in 90 days)
+        # 6. Deadstock
         deadstock = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items i
             WHERE i.user_id = :uid AND i.id NOT IN (
@@ -166,7 +172,7 @@ def dashboard():
         """), {"uid": user_id}).fetchall()
         reorder_items = [{"id": r.id, "name": r.name, "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
 
-        # 8. Market basket (top product pairs)
+        # 8. Market basket
         basket_rows = conn.execute(text("""
             SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
             FROM invoice_items a
@@ -191,7 +197,7 @@ def dashboard():
             LIMIT 1
         """), {"uid": user_id}).scalar()
 
-    # Build data dict for template (to match the modern template's expectations)
+    # Data dict for template
     data = {
         "revenue": revenue,
         "net_profit": revenue - expenses,
@@ -211,6 +217,6 @@ def dashboard():
         total_products=total_products,
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
-        currency_symbol="د.إ",  # adjust as needed
+        currency_symbol="د.إ",
         nonce=g.nonce
     )
