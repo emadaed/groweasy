@@ -101,98 +101,116 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
-    from app.services.auth import get_business_summary, get_client_analytics
-    # NEW: Import helper functions for new metrics
+    user_id = session['user_id']
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
 
-    user_id = session['user_id']
-
-    # Existing inventory stats
+    # --- Compute all metrics using SQL (math engine) ---
     with DB_ENGINE.connect() as conn:
+        # 1. Revenue from paid invoices
+        revenue = conn.execute(text("""
+            SELECT COALESCE(SUM(grand_total), 0) FROM user_invoices
+            WHERE user_id = :uid AND status = 'paid'
+        """), {"uid": user_id}).scalar() or 0
+
+        # 2. Total expenses
+        expenses = conn.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM expenses
+            WHERE user_id = :uid
+        """), {"uid": user_id}).scalar() or 0
+
+        # 3. Inventory value
+        inventory_value = conn.execute(text("""
+            SELECT COALESCE(SUM(current_stock * cost_price), 0) FROM inventory_items
+            WHERE user_id = :uid
+        """), {"uid": user_id}).scalar() or 0
+
+        # 4. Tax liability (if you have a tax column, else 0)
+        tax = conn.execute(text("""
+            SELECT COALESCE(SUM(tax_amount), 0) FROM user_invoices
+            WHERE user_id = :uid
+        """), {"uid": user_id}).scalar() or 0
+
+        # 5. Existing inventory stats
         total_products = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
-            WHERE user_id = :user_id AND is_active = TRUE
-        """), {"user_id": user_id}).scalar()
+            WHERE user_id = :uid AND is_active = TRUE
+        """), {"uid": user_id}).scalar() or 0
 
         low_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
-            WHERE user_id = :user_id AND current_stock <= min_stock_level AND current_stock > 0
-        """), {"user_id": user_id}).scalar()
+            WHERE user_id = :uid AND current_stock <= min_stock_level AND current_stock > 0
+        """), {"uid": user_id}).scalar() or 0
 
         out_of_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
-            WHERE user_id = :user_id AND current_stock = 0
-        """), {"user_id": user_id}).scalar()
+            WHERE user_id = :uid AND current_stock = 0
+        """), {"uid": user_id}).scalar() or 0
 
-    # NEW: Compute new SQL metrics
-    def get_deadstock(uid):
-        with DB_ENGINE.connect() as conn:
-            return conn.execute(text("""
-                SELECT COUNT(*) FROM inventory_items i
-                WHERE i.user_id = :uid AND i.id NOT IN (
-                    SELECT DISTINCT product_id FROM invoice_items ii
-                    JOIN user_invoices ui ON ii.invoice_id = ui.id
-                    WHERE ui.user_id = :uid AND ui.invoice_date > NOW() - INTERVAL '90 days'
-                )
-            """), {"uid": uid}).scalar() or 0
+        # 6. Deadstock (no sales in 90 days)
+        deadstock = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items i
+            WHERE i.user_id = :uid AND i.id NOT IN (
+                SELECT DISTINCT product_id FROM invoice_items ii
+                JOIN user_invoices ui ON ii.invoice_id = ui.id
+                WHERE ui.user_id = :uid AND ui.invoice_date > NOW() - INTERVAL '90 days'
+            )
+        """), {"uid": user_id}).scalar() or 0
 
-    def get_reorder_items(uid):
-        with DB_ENGINE.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT id, name, current_stock, min_stock_level
-                FROM inventory_items
-                WHERE user_id = :uid AND current_stock <= min_stock_level
-                ORDER BY current_stock ASC
-            """), {"uid": uid}).fetchall()
-        return [{"id": r.id, "name": r.name, "current": r.current_stock, "min": r.min_stock_level} for r in rows]
+        # 7. Reorder items
+        reorder_rows = conn.execute(text("""
+            SELECT id, name, current_stock, min_stock_level
+            FROM inventory_items
+            WHERE user_id = :uid AND current_stock <= min_stock_level
+            ORDER BY current_stock ASC
+        """), {"uid": user_id}).fetchall()
+        reorder_items = [{"id": r.id, "name": r.name, "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
 
-    def get_market_basket(uid, limit=5):
-        with DB_ENGINE.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
-                FROM invoice_items a
-                JOIN invoice_items b ON a.invoice_id = b.invoice_id AND a.product_id < b.product_id
-                JOIN user_invoices ui ON a.invoice_id = ui.id
-                WHERE ui.user_id = :uid
-                GROUP BY prod1, prod2
-                ORDER BY times DESC
-                LIMIT :limit
-            """), {"uid": uid, "limit": limit}).fetchall()
-            results = []
-            for r in rows:
-                prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
-                prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
-                results.append({"pair": f"{prod1_name} & {prod2_name}", "times": r.times})
-            return results
+        # 8. Market basket (top product pairs)
+        basket_rows = conn.execute(text("""
+            SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
+            FROM invoice_items a
+            JOIN invoice_items b ON a.invoice_id = b.invoice_id AND a.product_id < b.product_id
+            JOIN user_invoices ui ON a.invoice_id = ui.id
+            WHERE ui.user_id = :uid
+            GROUP BY prod1, prod2
+            ORDER BY times DESC
+            LIMIT 5
+        """), {"uid": user_id}).fetchall()
+        market_basket = []
+        for r in basket_rows:
+            prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
+            prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
+            market_basket.append({"pair": f"{prod1_name} & {prod2_name}", "times": r.times})
 
-    def get_cached_ai_tip(uid):
-        with DB_ENGINE.connect() as conn:
-            return conn.execute(text("""
-                SELECT content FROM ai_insights
-                WHERE user_id = :uid AND insight_type = 'cached_tips'
-                ORDER BY created_at DESC
-                LIMIT 1
-            """), {"uid": uid}).scalar()
+        # 9. Cached AI tip
+        ai_tip = conn.execute(text("""
+            SELECT content FROM ai_insights
+            WHERE user_id = :uid AND insight_type = 'cached_tips'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """), {"uid": user_id}).scalar()
 
-    deadstock = get_deadstock(user_id)
-    reorder_items = get_reorder_items(user_id)
-    market_basket = get_market_basket(user_id)
-    ai_tip = get_cached_ai_tip(user_id)
+    # Build data dict for template (to match the modern template's expectations)
+    data = {
+        "revenue": revenue,
+        "net_profit": revenue - expenses,
+        "inventory_value": inventory_value,
+        "tax_liability": tax,
+        "costs": expenses
+    }
 
     return render_template(
         "dashboard.html",
-        user_email=session['user_email'],
-        get_business_summary=get_business_summary,
-        get_client_analytics=get_client_analytics,
-        total_products=total_products,
-        low_stock_items=low_stock_items,
-        out_of_stock_items=out_of_stock_items,
-        # NEW: Pass new metrics to template
+        user_email=session.get('email', 'User'),
+        data=data,
         deadstock=deadstock,
         reorder_items=reorder_items,
         market_basket=market_basket,
         ai_tip=ai_tip,
-        currency_symbol="د.إ",  # adjust if needed
+        total_products=total_products,
+        low_stock_items=low_stock_items,
+        out_of_stock_items=out_of_stock_items,
+        currency_symbol="د.إ",  # adjust as needed
         nonce=g.nonce
     )
