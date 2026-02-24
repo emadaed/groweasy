@@ -153,16 +153,18 @@ def dashboard():
                 SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
                 FROM invoice_items a
                 JOIN invoice_items b ON a.invoice_id = b.invoice_id AND a.product_id < b.product_id
+                JOIN user_invoices ui ON a.invoice_id = ui.id
+                WHERE ui.user_id = :uid
                 GROUP BY prod1, prod2
                 ORDER BY times DESC
                 LIMIT :limit
             """), {"uid": uid, "limit": limit}).fetchall()
-        results = []
-        for r in rows:
-            prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
-            prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
-            results.append({"pair": f"{prod1_name} & {prod2_name}", "times": r.times})
-        return results
+            results = []
+            for r in rows:
+                prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
+                prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
+                results.append({"pair": f"{prod1_name} & {prod2_name}", "times": r.times})
+            return results
 
     def get_cached_ai_tip(uid):
         with DB_ENGINE.connect() as conn:
