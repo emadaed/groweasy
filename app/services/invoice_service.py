@@ -18,63 +18,63 @@ class InvoiceService:
         self.warnings = []
 
     def create_invoice(self, form_data, files=None):
-    try:
-        invoice_data = prepare_invoice_data(form_data, files=files)
+        try:
+            invoice_data = prepare_invoice_data(form_data, files=files)
 
-        # Generate number
-        invoice_data['invoice_number'] = NumberGenerator.generate_invoice_number(self.user_id)
+            # Generate number
+            invoice_data['invoice_number'] = NumberGenerator.generate_invoice_number(self.user_id)
 
-        # Save
-        save_user_invoice(self.user_id, invoice_data)
+            # Save
+            save_user_invoice(self.user_id, invoice_data)
 
-        # NEW: Insert items into invoice_items table
-        from app.services.db import DB_ENGINE
-        from sqlalchemy import text
-        with DB_ENGINE.begin() as conn:
-            # Get the newly created invoice ID
-            result = conn.execute(text("""
-                SELECT id FROM user_invoices
-                WHERE user_id = :uid AND invoice_number = :inv_num
-            """), {'uid': self.user_id, 'inv_num': invoice_data['invoice_number']}).fetchone()
+            # NEW: Insert items into invoice_items table
+            from app.services.db import DB_ENGINE
+            from sqlalchemy import text
+            with DB_ENGINE.begin() as conn:
+                # Get the newly created invoice ID
+                result = conn.execute(text("""
+                    SELECT id FROM user_invoices
+                    WHERE user_id = :uid AND invoice_number = :inv_num
+                """), {'uid': self.user_id, 'inv_num': invoice_data['invoice_number']}).fetchone()
 
-            if result:
-                invoice_id = result[0]
-                # Insert each item into invoice_items
-                for item in invoice_data.get('items', []):
-                    conn.execute(text("""
-                        INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, total)
-                        VALUES (:inv_id, :prod_id, :qty, :price, :total)
-                    """), {
-                        'inv_id': invoice_id,
-                        'prod_id': item['product_id'],
-                        'qty': item['qty'],
-                        'price': item['price'],
-                        'total': item['total']
-                    })
+                if result:
+                    invoice_id = result[0]
+                    # Insert each item into invoice_items
+                    for item in invoice_data.get('items', []):
+                        conn.execute(text("""
+                            INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, total)
+                            VALUES (:inv_id, :prod_id, :qty, :price, :total)
+                        """), {
+                            'inv_id': invoice_id,
+                            'prod_id': item['product_id'],
+                            'qty': item['qty'],
+                            'price': item['price'],
+                            'total': item['total']
+                        })
 
-        # Update stock - decrease for sales
-        movement_type = 'sale'
-        quantity_multiplier = -1
+            # Update stock - decrease for sales
+            movement_type = 'sale'
+            quantity_multiplier = -1
 
-        for item in invoice_data.get('items', []):
-            if item.get('product_id'):
-                success = InventoryManager.update_stock_delta(
-                    self.user_id,
-                    item['product_id'],
-                    quantity_multiplier * item['qty'],
-                    movement_type,
-                    invoice_data['invoice_number'],
-                    f"Sale via invoice {invoice_data['invoice_number']}"
-                )
-                if not success:
-                    self.warnings.append(f"Stock update failed for {item['name']}")
+            for item in invoice_data.get('items', []):
+                if item.get('product_id'):
+                    success = InventoryManager.update_stock_delta(
+                        self.user_id,
+                        item['product_id'],
+                        quantity_multiplier * item['qty'],
+                        movement_type,
+                        invoice_data['invoice_number'],
+                        f"Sale via invoice {invoice_data['invoice_number']}"
+                    )
+                    if not success:
+                        self.warnings.append(f"Stock update failed for {item['name']}")
 
-        return invoice_data, self.errors or self.warnings
+            return invoice_data, self.errors or self.warnings
 
-    except Exception as e:
-        logger.error(f"Invoice creation failed: {e}", exc_info=True)
-        self.errors.append("System error during invoice creation")
-        return None, self.errors
+        except Exception as e:
+            logger.error(f"Invoice creation failed: {e}", exc_info=True)
+            self.errors.append("System error during invoice creation")
+            return None, self.errors
 
     def create_purchase_order(self, form_data, files=None):
         try:
