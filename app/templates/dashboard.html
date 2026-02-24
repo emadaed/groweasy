@@ -1,186 +1,168 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - GrowEasy Invoice{% endblock %}
+{% block title %}Dashboard - GrowEasy ERP{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <div class="row">
+    <!-- Welcome Row -->
+    <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Welcome, {{ user_email }}! 👋</h2>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary">Logout</a>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>📊 Business Overview</h2>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm">Logout</a>
             </div>
-
-            <!-- Business Summary Cards -->
-            {% set summary = get_business_summary(session['user_id']) %}
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center border-primary">
-                        <div class="card-body">
-                            <h3 class="text-primary">💰</h3>
-                            <h5 class="card-title">Total Revenue</h5>
-                            <h3 class="text-success">{{ currency_symbol }}{{ "%.2f"|format(summary.total_revenue) }}</h3>
-                            <p class="text-muted small">{{ summary.total_invoices }} invoices</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center border-info">
-                        <div class="card-body">
-                            <h3 class="text-info">📊</h3>
-                            <h5 class="card-title">Average Invoice</h5>
-                            <h3 class="text-info">{{ currency_symbol }}{{ "%.2f"|format(summary.avg_invoice) }}</h3>
-                            <p class="text-muted small">Per invoice</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center border-warning">
-                        <div class="card-body">
-                            <h3 class="text-warning">📅</h3>
-                            <h5 class="card-title">Business Since</h5>
-                            <h4 class="text-warning">
-                                {% if summary.first_invoice %}
-                                    {{ summary.first_invoice[:7] }}
-                                {% else %}
-                                    Today!
-                                {% endif %}
-                            </h4>
-                            <p class="text-muted small">First invoice</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center border-success">
-                        <div class="card-body">
-                            <h3 class="text-success">🎯</h3>
-                            <h5 class="card-title">Active</h5>
-                            <h4 class="text-success">
-                                {% if summary.last_invoice %}
-                                    {{ summary.last_invoice[:10] }}
-                                {% else %}
-                                    Ready!
-                                {% endif %}
-                            </h4>
-                            <p class="text-muted small">Last invoice</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="row">
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5>📝 Create Invoice</h5>
-                            <p>Create a new professional invoice</p>
-                            <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success">Get Started</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5>💝 Support Us</h5>
-                            <p>Help us improve the service</p>
-                            <a href="{{ url_for('main.donate') }}" class="btn btn-primary">Donate</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5>⚙️ Settings</h5>
-                            <p>Manage your account</p>
-                            <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-primary">Manage Settings</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5>📋 Invoice History</h5>
-                            <p>View and manage all invoices</p>
-                            <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-info">View History</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-    <div class="card text-center">
-        <div class="card-body">
-            <h5>👥 Customers</h5>
-            <p>Manage your client database</p>
-            <a href="{{ url_for('crm.customers') }}" class="btn btn-outline-primary">View Customers</a>
         </div>
     </div>
-</div>
 
-<div class="col-md-3 mb-3">
-    <div class="card text-center">
-        <div class="card-body">
-            <h5>💰 Expenses</h5>
-            <p>Track business costs</p>
-            <a href="{{ url_for('finance.expenses') }}" class="btn btn-outline-warning">Track Expenses</a>
-        </div>
-    </div>
-</div>
-            <!-- Recent Activity & Top Clients -->
-            <div class="row mt-4">
-                <!-- Recent Invoices Placeholder -->
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">📈 Recent Activity</h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Business analytics dashboard coming soon!</p>
-                            <div class="text-center">
-                                <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-outline-primary">
-                                    View Detailed Analytics
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+    <!-- Key Metrics Cards (small, hover effects) -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card metric-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-primary mb-2">💰</div>
+                    <h6 class="text-muted mb-1">Revenue</h6>
+                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.revenue) }}</h4>
                 </div>
-
-                <!-- Top Clients -->
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">🏆 Top Clients</h5>
-                        </div>
-                        <div class="card-body">
-                            {% set top_clients = get_client_analytics(session['user_id']) %}
-                            {% if top_clients %}
-                                <div class="list-group list-group-flush">
-                                    {% for client in top_clients[:5] %}
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ client.client_name[:20] }}{% if client.client_name|length > 20 %}...{% endif %}</strong>
-                                            <br>
-                                            <small class="text-muted">{{ client.invoice_count }} invoices</small>
-                                        </div>
-                                        <span class="badge bg-success rounded-pill">
-                                            {{ currency_symbol }}{{ "%.0f"|format(client.total_spent) }}
-                                        </span>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <p class="text-muted text-center">No client data yet</p>
-                                <div class="text-center">
-                                    <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-sm btn-outline-success">
-                                        Create First Invoice
-                                    </a>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card metric-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-success mb-2">📈</div>
+                    <h6 class="text-muted mb-1">Profit</h6>
+                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.net_profit) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card metric-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-warning mb-2">🧾</div>
+                    <h6 class="text-muted mb-1">Tax Liability</h6>
+                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.tax_liability) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card metric-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-info mb-2">📦</div>
+                    <h6 class="text-muted mb-1">Inventory Value</h6>
+                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.inventory_value) }}</h4>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Second Row: Deadstock, Reorder Alerts, Market Basket -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0">📦 Deadstock (90 days no sale)</h6>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-warning">{{ deadstock }}</h3>
+                    <p class="small text-muted">Items with zero sales in last 90 days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-danger bg-opacity-10">
+                    <h6 class="mb-0">⚠️ Reorder Alerts</h6>
+                </div>
+                <div class="card-body">
+                    {% if reorder_items %}
+                        <ul class="list-unstyled mb-0">
+                        {% for item in reorder_items[:3] %}
+                            <li><strong>{{ item.name }}</strong> (stock: {{ item.current }}, min: {{ item.min }})</li>
+                        {% endfor %}
+                        {% if reorder_items|length > 3 %}
+                            <li class="text-muted">and {{ reorder_items|length - 3 }} more...</li>
+                        {% endif %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">All items above reorder level</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h6 class="mb-0">🛒 Frequently Bought Together</h6>
+                </div>
+                <div class="card-body">
+                    {% if market_basket %}
+                        <ul class="list-unstyled mb-0">
+                        {% for pair in market_basket[:3] %}
+                            <li>{{ pair.pair }} – {{ pair.times }}×</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Not enough data</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Tip Card -->
+    {% if ai_tip %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+                <div class="card-body">
+                    <h6 class="text-success">💡 AI Growth Tip</h6>
+                    <p class="mb-0">{{ ai_tip | safe }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions (compact) -->
+    <div class="row g-2">
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-outline-primary w-100 py-3">
+                <div>📝</div>
+                <small>New Invoice</small>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('inventory.inventory') }}" class="btn btn-outline-success w-100 py-3">
+                <div>📦</div>
+                <small>Inventory</small>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('crm.customers') }}" class="btn btn-outline-info w-100 py-3">
+                <div>👥</div>
+                <small>Customers</small>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-warning w-100 py-3">
+                <div>📊</div>
+                <small>Reports</small>
+            </a>
+        </div>
+    </div>
 </div>
+
+<!-- Hover effect CSS -->
+<style>
+.metric-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+.metric-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+</style>
 {% endblock %}
