@@ -1,49 +1,25 @@
 # app/services/ai_context.py
+import re
 from sqlalchemy import text
 from app.services.db import DB_ENGINE
-import re
 
-def fetch_context(user_id, user_question):
-    """
-    Inspect the question and return only relevant business data.
-    Returns a tuple: (system_prompt_extra, context_dict)
-    """
-    context = {}
-    extra_system = ""
-
-    # 1. Supplier detection
-    if re.search(r'\bsupplier\b', user_question, re.IGNORECASE):
-        # Try to extract supplier name (simple heuristic)
-        supplier_match = re.search(r'supplier\s+(\w+)', user_question, re.IGNORECASE)
-        supplier_name = supplier_match.group(1) if supplier_match else None
-        supplier_data = fetch_supplier_data(user_id, supplier_name)
-        context["supplier"] = supplier_data
-        extra_system = "The user is asking about a specific supplier. Focus on supplier performance."
-
-    # 2. Invoice / transaction detection
-    elif re.search(r'\binvoice\b|\btransaction\b|\bsales\b', user_question, re.IGNORECASE):
-        invoice_data = fetch_invoice_summary(user_id)
-        context["invoices"] = invoice_data
-        extra_system = "The user is asking about invoices/sales. Provide insights on revenue trends."
-
-    # 3. Inventory detection
-    elif re.search(r'\binventory\b|\bstock\b|\breorder\b', user_question, re.IGNORECASE):
-        inventory_data = fetch_inventory_summary(user_id)
-        context["inventory"] = inventory_data
-        extra_system = "The user is asking about inventory. Focus on stock levels, turnover, and reorder needs."
-
-    # 4. General (fallback) – fetch basic metrics
-    else:
-        general_data = fetch_general_metrics(user_id)
-        context["general"] = general_data
-        extra_system = "The user is asking a general business question. Use all available data."
-
-    return extra_system, context
+def fetch_top_products(user_id, limit=5):
+    """Get top-selling products by quantity sold."""
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT i.name, SUM(ii.quantity) as total_sold, SUM(ii.total) as revenue
+            FROM invoice_items ii
+            JOIN inventory_items i ON ii.product_id = i.id
+            WHERE i.user_id = :uid
+            GROUP BY i.id, i.name
+            ORDER BY total_sold DESC
+            LIMIT :limit
+        """), {"uid": user_id, "limit": limit}).fetchall()
+    return [{"name": r.name, "sold": r.total_sold, "revenue": float(r.revenue)} for r in rows]
 
 def fetch_supplier_data(user_id, supplier_name=None):
     with DB_ENGINE.connect() as conn:
         if supplier_name:
-            # Fuzzy match (ILIKE for case‑insensitive)
             rows = conn.execute(text("""
                 SELECT name, total_purchased, order_count
                 FROM suppliers
@@ -108,3 +84,44 @@ def fetch_general_metrics(user_id):
         "profit": float(revenue - expenses),
         "inventory_value": float(inventory)
     }
+
+def fetch_context(user_id, user_question):
+    """
+    Inspect the question and return only relevant business data.
+    Returns a tuple: (extra_system_prompt, context_dict)
+    """
+    context = {}
+    extra_system = ""
+
+    # 1. Supplier detection
+    if re.search(r'\bsupplier\b', user_question, re.IGNORECASE):
+        supplier_match = re.search(r'supplier\s+(\w+)', user_question, re.IGNORECASE)
+        supplier_name = supplier_match.group(1) if supplier_match else None
+        supplier_data = fetch_supplier_data(user_id, supplier_name)
+        context["supplier"] = supplier_data
+        extra_system = "The user is asking about a specific supplier. Focus on supplier performance."
+
+    # 2. Product / top-selling detection
+    elif re.search(r'\btop.?selling\b|\bbest.?seller\b|\bproduct\b|\bitem\b', user_question, re.IGNORECASE):
+        context["top_products"] = fetch_top_products(user_id)
+        extra_system = "The user is asking about product sales. Provide insights on best-selling items."
+
+    # 3. Invoice / transaction detection
+    elif re.search(r'\binvoice\b|\btransaction\b|\bsales\b', user_question, re.IGNORECASE):
+        invoice_data = fetch_invoice_summary(user_id)
+        context["invoices"] = invoice_data
+        extra_system = "The user is asking about invoices/sales. Provide insights on revenue trends."
+
+    # 4. Inventory detection
+    elif re.search(r'\binventory\b|\bstock\b|\breorder\b', user_question, re.IGNORECASE):
+        inventory_data = fetch_inventory_summary(user_id)
+        context["inventory"] = inventory_data
+        extra_system = "The user is asking about inventory. Focus on stock levels, turnover, and reorder needs."
+
+    # 5. General (fallback)
+    else:
+        general_data = fetch_general_metrics(user_id)
+        context["general"] = general_data
+        extra_system = "The user is asking a general business question. Use all available data."
+
+    return extra_system, context
