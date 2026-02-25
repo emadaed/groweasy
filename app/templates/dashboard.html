@@ -62,8 +62,15 @@
                     <h6 class="mb-0">📦 Deadstock (90 days no sale)</h6>
                 </div>
                 <div class="card-body">
-                    <h3 class="text-warning">{{ deadstock }}</h3>
-                    <p class="small text-muted">Items with zero sales in last 90 days</p>
+                    {% if deadstock %}
+                        <ul class="list-unstyled mb-0">
+                        {% for item in deadstock %}
+                            <li>{{ item.name }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">No deadstock items.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

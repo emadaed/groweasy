@@ -154,14 +154,16 @@ def dashboard():
         """), {"uid": user_id}).scalar() or 0
 
         # 6. Deadstock
-        deadstock = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items i
+        deadstock_items = conn.execute(text("""
+            SELECT i.id, i.name
+            FROM inventory_items i
             WHERE i.user_id = :uid AND i.id NOT IN (
                 SELECT DISTINCT product_id FROM invoice_items ii
                 JOIN user_invoices ui ON ii.invoice_id = ui.id
                 WHERE ui.user_id = :uid AND ui.invoice_date > NOW() - INTERVAL '90 days'
             )
-        """), {"uid": user_id}).scalar() or 0
+        """), {"uid": user_id}).fetchall()
+        deadstock = [{"id": r.id, "name": r.name} for r in deadstock_items]
 
         # 7. Reorder items
         reorder_rows = conn.execute(text("""
