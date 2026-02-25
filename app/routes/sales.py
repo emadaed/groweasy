@@ -1,3 +1,4 @@
+#app/routes/sales
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, g, current_app, jsonify, make_response, send_file
 from flask.views import MethodView
 from sqlalchemy import text
