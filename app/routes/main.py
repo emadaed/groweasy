@@ -209,6 +209,7 @@ def dashboard():
         "tax_liability": tax,
         "costs": expenses
     }
+    show_fbr = user_profile.get('show_fbr_fields', False)
 
     return render_template(
         "dashboard.html",
