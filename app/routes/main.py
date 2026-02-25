@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, jsonify, session, g, current_app, 
 from sqlalchemy import text
 from datetime import datetime
 from app.services.db import DB_ENGINE
+from app.services.cache import get_user_profile_cached
 
 main_bp = Blueprint('main', __name__)
 
