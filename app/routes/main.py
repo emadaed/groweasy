@@ -200,6 +200,7 @@ def dashboard():
         """), {"uid": user_id}).scalar()
 
     # Data dict for template
+    user_profile = get_user_profile_cached(user_id)
     data = {
         "revenue": revenue,
         "net_profit": revenue - expenses,
@@ -220,5 +221,6 @@ def dashboard():
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
         currency_symbol="د.إ",
+        show_fbr = user_profile.get('show_fbr_fields', False),
         nonce=g.nonce
     )

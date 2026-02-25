@@ -90,6 +90,10 @@
                                     </select>
                                     <small class="text-muted">Selected Currency will be used for display purposes</small>
                                 </div>
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" name="show_fbr_fields" class="form-check-input" id="showFbr" {% if user_profile.get('show_fbr_fields') %}checked{% endif %}>
+                                    <label class="form-check-label" for="showFbr">Show FBR tax fields on invoice creation form</label>
+                                </div>
                                 <button type="submit" class="btn btn-success">Update Profile</button>
                             </form>
                         </div>

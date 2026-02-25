@@ -16,6 +16,7 @@ def settings():
     if request.method == 'POST':
         # Handle profile update
         if 'update_profile' in request.form:
+            show_fbr = True if request.form.get('show_fbr_fields') == 'on' else False
             update_user_profile(
                 session['user_id'],
                 company_name=request.form.get('company_name'),
@@ -24,7 +25,8 @@ def settings():
                 company_tax_id=request.form.get('company_tax_id'),
                 seller_ntn=request.form.get('seller_ntn'),
                 seller_strn=request.form.get('seller_strn'),
-                preferred_currency=request.form.get('preferred_currency')
+                preferred_currency=request.form.get('preferred_currency'),
+                show_fbr_fields=show_fbr
             )
 
             flash('✅ Settings updated successfully!', 'success')

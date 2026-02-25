@@ -30,6 +30,7 @@ def create_invoice():
         return redirect(url_for('auth.login'))
 
     prefill_data = {}
+    show_fbr = False
     user_profile = get_user_profile_cached(session['user_id'])
 
     if user_profile:
@@ -42,11 +43,12 @@ def create_invoice():
             'seller_ntn': user_profile.get('seller_ntn', ''),
             'seller_strn': user_profile.get('seller_strn', ''),
         }
+        show_fbr = user_profile.get('show_fbr_fields', False)   # <-- get the flag
 
     return render_template('form.html',
                          prefill_data=prefill_data,
+                         show_fbr=show_fbr,                     # <-- pass to template
                          nonce=g.nonce)
-
 # 2 preview and download 2
 class InvoiceView(MethodView):
     """Handles invoice creation and preview - RESTful design"""
