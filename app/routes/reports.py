@@ -142,6 +142,6 @@ def stock_movements():
 
     return render_template('stock_movements.html',
                            movements=movements,
-                           products=products)
+                           product_id=product_id)
 
     
