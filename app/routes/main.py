@@ -210,7 +210,7 @@ def dashboard():
         "tax_liability": tax,
         "costs": expenses
     }
-    show_fbr = user_profile.get('show_fbr_fields', False)
+##    show_fbr = user_profile.get('show_fbr_fields', False)
 
     return render_template(
         "dashboard.html",
@@ -223,7 +223,7 @@ def dashboard():
         total_products=total_products,
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
-        currency_symbol="د.إ",
-        show_fbr = user_profile.get('show_fbr_fields', False),
+##        currency_symbol="د.إ",
+##        show_fbr = user_profile.get('show_fbr_fields', False),
         nonce=g.nonce
     )
