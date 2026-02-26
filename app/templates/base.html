@@ -100,7 +100,16 @@
                                 </li>
                             </ul>
                         </div>
-
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Reports
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('reports.stock_movements') }}">📦 Stock Movements</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('reports.tax_certificate') }}">📄 Tax Certificate</a></li>
+                                <!-- add other report links here -->
+                            </ul>
+                        </div>
                         <!-- All original links -->
                         <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
                             <i class="bi bi-receipt"></i> Invoices
@@ -118,10 +127,7 @@
                             <i class="bi bi-people"></i> Customers
                         </a>
                         <a href="{{ url_for('crm.suppliers') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
-                            <i class="bi bi-truck"></i> Suppliers
-                        </a>
-                        <a href="{{ url_for('reports.stock_movements') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
-                            <i class="bi bi-truck"></i> Stock Movements
+                            <i class="bi bi-truck"></i> Suppliers                        
                         </a>
                         <a href="{{ url_for('ai.ask') }}" class="btn btn-outline-light btn-sm me-1 mb-1">
                             <i class="bi bi-robot"></i> AI Assistant
