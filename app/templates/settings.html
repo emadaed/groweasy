@@ -24,7 +24,6 @@
 
             <div class="row">
                 <!-- Company Information -->
-                 
                 <div class="col-md-6">
                     <div class="card mb-4">
                         <div class="card-header">
@@ -33,7 +32,6 @@
                         <div class="card-body">
                             <form method="POST">
                                 <input type="hidden" name="update_profile" value="1">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                                 <div class="mb-3">
                                     <label class="form-label">Company Name</label>
@@ -91,10 +89,6 @@
                                         <option value="SAR" {% if user_profile.get('preferred_currency') == 'SAR' %}selected{% endif %}>🇸🇦 Saudi Riyal (﷼)</option>
                                     </select>
                                     <small class="text-muted">Selected Currency will be used for display purposes</small>
-                                </div>
-                                <div class="mb-3 form-check">
-                                    <input type="checkbox" name="show_fbr_fields" class="form-check-input" id="showFbr" {% if user_profile.get('show_fbr_fields') %}checked{% endif %}>
-                                    <label class="form-check-label" for="showFbr">Show FBR tax fields on invoice creation form</label>
                                 </div>
                                 <button type="submit" class="btn btn-success">Update Profile</button>
                             </form>

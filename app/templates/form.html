@@ -15,7 +15,45 @@
 
     <form method="POST" action="{{ url_for('sales.invoice_process') }}" enctype="multipart/form-data">
         <input type="hidden" name="action" value="preview">
-                
+
+        <!-- Business & Client Info (Side-by-side on desktop) -->
+        <div class="row g-5">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Your Business Information</h5>
+                        {% if prefill_data %}
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="useSavedInfoBtn">
+                            Use Saved Info</button>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Company Name *</label>
+                                <input type="text" name="company_name" class="form-control" value="{{ prefill_data.get('company_name', '') if prefill_data else 'Your Company Name' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tax ID (Optional)</label>
+                                <input type="text" name="company_tax_id" class="form-control" placeholder="Tax ID / VAT Number" value="{{ prefill_data.get('company_tax_id', '') if prefill_data else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Company Address</label>
+                                <input type="text" name="company_address" class="form-control" value="{{ prefill_data.get('company_address', '') if prefill_data else '123 Business Street, City, State 12345' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="text" name="company_phone" class="form-control" value="{{ prefill_data.get('company_phone', '') if prefill_data else '+1 (555) 123-4567' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="company_email" class="form-control" value="{{ prefill_data.get('company_email', '') if prefill_data else 'hello@company.com' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="col-lg-6">
                 <div class="card">
                     <div class="card-header">
@@ -53,8 +91,7 @@
             </div>
         </div>
 
-        <!-- FBR Tax Information - shown only if user enabled it -->
-        {% if show_fbr %}
+        <!-- FBR Tax Information - INVOICE ONLY -->
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">FBR Tax Information (Pakistan)</h5>
@@ -66,14 +103,14 @@
                         <div class="mb-3">
                             <label class="form-label">Seller NTN *</label>
                             <input type="text" name="seller_ntn" class="form-control"
-                                placeholder="1234567-8" pattern="[0-9]{7}-[0-9]{1}"
-                                value="{{ prefill_data.get('seller_ntn', '') }}" required>
+                                   placeholder="1234567-8" pattern="[0-9]{7}-[0-9]{1}"
+                                   value="{{ prefill_data.get('seller_ntn', '') }}" required>
                             <small class="text-muted">Your business NTN for tax compliance</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Seller STRN (Optional)</label>
                             <input type="text" name="seller_strn" class="form-control"
-                                value="{{ prefill_data.get('seller_strn', '') }}">
+                                   value="{{ prefill_data.get('seller_strn', '') }}">
                             <small class="text-muted">Sales Tax Registration Number</small>
                         </div>
                     </div>
@@ -82,7 +119,7 @@
                         <div class="mb-3">
                             <label class="form-label">Buyer NTN (If Registered)</label>
                             <input type="text" name="buyer_ntn" class="form-control"
-                                placeholder="1234567-8" pattern="[0-9]{7}-[0-9]{1}">
+                                   placeholder="1234567-8" pattern="[0-9]{7}-[0-9]{1}">
                             <small class="text-muted">Client's NTN for tax deduction</small>
                         </div>
                         <div class="mb-3">
@@ -96,7 +133,6 @@
                 </div>
             </div>
         </div>
-        {% endif %}
         <!-- Inventory Search & Add (Fallback for immediate visual add) -->
         <div class="card mb-5">
             <div class="card-header">
@@ -191,7 +227,6 @@
             <button type="submit" id="previewBtn" class="btn btn-success btn-lg px-5 py-3 rounded-pill shadow">
                 Preview Invoice
             </button>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </div>
     </form>
 </div>
