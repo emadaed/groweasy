@@ -11,7 +11,7 @@
         body {
             font-family: 'Courier New', monospace;
             font-size: 10px;
-            width: 72mm; /* leave some margin */
+            width: 72mm;
             margin: 0 auto;
             padding: 2mm;
         }
@@ -80,8 +80,8 @@
         <div class="company-name">{{ company.get('company_name', '') }}</div>
         <div>{{ company.get('company_address', '') }}</div>
         <div>Phone: {{ company.get('company_phone', '') }}</div>
-        <div>Invoice #: {{ data.invoice_number }}</div>
-        <div>Date: {{ data.invoice_date }}</div>
+        <div>Invoice #: {{ data['invoice_number'] }}</div>
+        <div>Date: {{ data['invoice_date'] }}</div>
     </div>
     <hr>
     <table>
@@ -94,12 +94,12 @@
             </tr>
         </thead>
         <tbody>
-            {% for item in data.items %}
+            {% for item in data['items'] %}
             <tr>
-                <td>{{ item.name }}</td>
-                <td class="item-qty">{{ item.qty }}</td>
-                <td class="item-price">{{ currency_symbol }}{{ "%.2f"|format(item.price) }}</td>
-                <td class="item-total">{{ currency_symbol }}{{ "%.2f"|format(item.qty * item.price) }}</td>
+                <td>{{ item['name'] }}</td>
+                <td class="item-qty">{{ item['qty'] }}</td>
+                <td class="item-price">{{ currency_symbol }}{{ "%.2f"|format(item['price']) }}</td>
+                <td class="item-total">{{ currency_symbol }}{{ "%.2f"|format(item['qty'] * item['price']) }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -108,23 +108,23 @@
     <div class="totals">
         <div class="total-line">
             <span>Subtotal:</span>
-            <span>{{ currency_symbol }}{{ "%.2f"|format(data.subtotal) }}</span>
+            <span>{{ currency_symbol }}{{ "%.2f"|format(data['subtotal']|default(0)) }}</span>
         </div>
-        {% if data.discount > 0 %}
+        {% if data.get('discount', 0) > 0 %}
         <div class="total-line">
-            <span>Discount ({{ data.discount_rate }}%):</span>
-            <span>-{{ currency_symbol }}{{ "%.2f"|format(data.discount) }}</span>
+            <span>Discount ({{ data.get('discount_rate', 0) }}%):</span>
+            <span>-{{ currency_symbol }}{{ "%.2f"|format(data['discount']) }}</span>
         </div>
         {% endif %}
-        {% if data.tax > 0 %}
+        {% if data.get('tax', 0) > 0 %}
         <div class="total-line">
-            <span>Tax ({{ data.tax_rate }}%):</span>
-            <span>{{ currency_symbol }}{{ "%.2f"|format(data.tax) }}</span>
+            <span>Tax ({{ data.get('tax_rate', 0) }}%):</span>
+            <span>{{ currency_symbol }}{{ "%.2f"|format(data['tax']) }}</span>
         </div>
         {% endif %}
         <div class="total-line" style="font-weight: bold; border-top: 1px dashed #000; margin-top: 5px; padding-top: 5px;">
             <span>TOTAL:</span>
-            <span>{{ currency_symbol }}{{ "%.2f"|format(data.grand_total) }}</span>
+            <span>{{ currency_symbol }}{{ "%.2f"|format(data['grand_total']) }}</span>
         </div>
     </div>
     {% if custom_qr_b64 %}
@@ -136,7 +136,18 @@
         Thank you for your business!
     </div>
     <div class="no-print" style="text-align: center; margin-top: 10px;">
-        <button onclick="window.print()">Print Receipt</button>
+        <button id="printReceiptBtn" class="print-btn">Print Receipt</button>
     </div>
+
+    <script nonce="{{ nonce }}">
+        document.addEventListener('DOMContentLoaded', function() {
+            const printBtn = document.getElementById('printReceiptBtn');
+            if (printBtn) {
+                printBtn.addEventListener('click', function() {
+                    window.print();
+                });
+            }
+        });
+    </script>
 </body>
 </html>

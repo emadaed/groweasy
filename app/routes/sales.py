@@ -427,7 +427,6 @@ def receipt(invoice_number):
         return redirect(url_for('auth.login'))
     user_id = session['user_id']
 
-    # Fetch invoice data (reused existing function)
     from app.services.invoice_service import InvoiceService
     service = InvoiceService(user_id)
     invoice_data = service.get_invoice_by_number(invoice_number)
@@ -435,10 +434,8 @@ def receipt(invoice_number):
         flash('Invoice not found', 'error')
         return redirect(url_for('sales.invoice_history'))
 
-    # Get user profile for company info and currency
     user_profile = get_user_profile_cached(user_id)
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
-    # Generate QR code (small)
     qr_b64 = generate_simple_qr(invoice_data)
 
     return render_template('receipt.html',
