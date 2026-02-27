@@ -9,133 +9,51 @@
 {% block content %}
 <div class="container py-5">
     <div class="text-center mb-5">
-        <h2 class="fw-bold">Create Invoice</h2>
-        <p class="text-muted fs-5">Professional, & Fast</p>
+        <h2 class="fw-bold">Create Sales Invoice</h2>
+        <p class="text-muted fs-5">Professional & Fast</p>
     </div>
 
     <form method="POST" action="{{ url_for('sales.invoice_process') }}" enctype="multipart/form-data">
         <input type="hidden" name="action" value="preview">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="invoice_type" value="S">
 
-        <!-- Business & Client Info (Side-by-side on desktop) -->
-        <div class="row g-5">
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Your Business Information</h5>
-                        {% if prefill_data %}
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="useSavedInfoBtn">
-                            Use Saved Info</button>
-                        {% endif %}
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Company Name *</label>
-                                <input type="text" name="company_name" class="form-control" value="{{ prefill_data.get('company_name', '') if prefill_data else 'Your Company Name' }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Tax ID (Optional)</label>
-                                <input type="text" name="company_tax_id" class="form-control" placeholder="Tax ID / VAT Number" value="{{ prefill_data.get('company_tax_id', '') if prefill_data else '' }}">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Company Address</label>
-                                <input type="text" name="company_address" class="form-control" value="{{ prefill_data.get('company_address', '') if prefill_data else '123 Business Street, City, State 12345' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="text" name="company_phone" class="form-control" value="{{ prefill_data.get('company_phone', '') if prefill_data else '+1 (555) 123-4567' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="company_email" class="form-control" value="{{ prefill_data.get('company_email', '') if prefill_data else 'hello@company.com' }}">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Client Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Client Name *</label>
-                                <input type="text" name="client_name" class="form-control" placeholder="Client or Company Name" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Client Email</label>
-                                <input type="email" name="client_email" class="form-control" placeholder="client@email.com">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Client Phone</label>
-                                <input type="text" name="client_phone" class="form-control" placeholder="+1 (555) 123-4567">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Invoice Date *</label>
-                                <input type="date" name="invoice_date" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Due Date</label>
-                                <input type="date" name="due_date" class="form-control">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Client Address</label>
-                                <textarea name="client_address" class="form-control" rows="2" placeholder="Street, City, State, ZIP Code"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- FBR Tax Information - INVOICE ONLY -->
+        <!-- Client Information -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">FBR Tax Information (Pakistan)</h5>
+                <h5 class="mb-0">Client Information</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <h6>Your Business Tax Details</h6>
-                        <div class="mb-3">
-                            <label class="form-label">Seller NTN *</label>
-                            <input type="text" name="seller_ntn" class="form-control"
-                                   placeholder="1234567-8" pattern="[0-9]{7}-[0-9]{1}"
-                                   value="{{ prefill_data.get('seller_ntn', '') }}" required>
-                            <small class="text-muted">Your business NTN for tax compliance</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Seller STRN (Optional)</label>
-                            <input type="text" name="seller_strn" class="form-control"
-                                   value="{{ prefill_data.get('seller_strn', '') }}">
-                            <small class="text-muted">Sales Tax Registration Number</small>
-                        </div>
+                        <label class="form-label">Client Name *</label>
+                        <input type="text" name="client_name" class="form-control" placeholder="Client or Company Name" required>
                     </div>
                     <div class="col-md-6">
-                        <h6>Client Tax Details</h6>
-                        <div class="mb-3">
-                            <label class="form-label">Buyer NTN (If Registered)</label>
-                            <input type="text" name="buyer_ntn" class="form-control"
-                                   placeholder="1234567-8" pattern="[0-9]{7}-[0-9]{1}">
-                            <small class="text-muted">Client's NTN for tax deduction</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Buyer STRN (Optional)</label>
-                            <input type="text" name="buyer_strn" class="form-control">
-                            <small class="text-muted">Client's STRN if registered</small>
-                        </div>
+                        <label class="form-label">Client Email</label>
+                        <input type="email" name="client_email" class="form-control" placeholder="client@email.com">
                     </div>
-                    <!-- REMOVED Invoice Type selector - This is INVOICE ONLY page -->
-                    <input type="hidden" name="invoice_type" value="S">
+                    <div class="col-md-6">
+                        <label class="form-label">Client Phone</label>
+                        <input type="text" name="client_phone" class="form-control" placeholder="+1 (555) 123-4567">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Invoice Date *</label>
+                        <input type="date" name="invoice_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" name="due_date" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Client Address</label>
+                        <textarea name="client_address" class="form-control" rows="2" placeholder="Street, City, State, ZIP Code"></textarea>
+                    </div>
                 </div>
             </div>
         </div>
-        <!-- Inventory Search & Add (Fallback for immediate visual add) -->
-        <div class="card mb-5">
+
+        <!-- Inventory Search & Add -->
+        <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Add from Inventory</h5>
             </div>
@@ -156,7 +74,7 @@
         </div>
 
         <!-- Line Items -->
-        <div class="card mb-5">
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Line Items</h5>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
@@ -169,7 +87,7 @@
                     No items added yet — click "+ Add Item" to start
                 </div>
                 <div class="text-end mt-4">
-                    <h4>Total: {{ currency_symbol }} <span id="grandTotal">0.00</span></h4>
+                    <h4>Total: <span id="grandTotal">0.00</span></h4>
                 </div>
             </div>
         </div>
@@ -228,11 +146,12 @@
             <button type="submit" id="previewBtn" class="btn btn-success btn-lg px-5 py-3 rounded-pill shadow">
                 Preview Invoice
             </button>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </div>
     </form>
 </div>
 
-<!-- Add Item Modal -->
+<!-- Add Item Modal (unchanged) -->
 <div class="modal fade" id="addItemModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4">
@@ -247,6 +166,7 @@
         </div>
     </div>
 </div>
+
 <script nonce="{{ nonce }}">
     window.userCurrencySymbol = "{{ currency_symbol | default('Rs.') }}";
 </script>
@@ -254,13 +174,20 @@
 
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto date
+    // Auto-fill dates
     const dateInput = document.querySelector('input[name="invoice_date"]');
-    if (dateInput && !dateInput.value.trim()) {
+    if (dateInput && !dateInput.value) {
         dateInput.value = new Date().toISOString().split('T')[0];
     }
 
-    // Double-submit
+    const dueDate = document.querySelector('input[name="due_date"]');
+    if (dueDate && !dueDate.value) {
+        const nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        dueDate.value = nextMonth.toISOString().split('T')[0];
+    }
+
+    // Prevent double-submit
     const form = document.querySelector('form');
     const submitBtn = document.getElementById('previewBtn');
     if (form && submitBtn) {
@@ -270,59 +197,6 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = '⏳ Generating Preview...';
         });
     }
-
-    // Use Saved Info
-    const useSavedBtn = document.getElementById('useSavedInfoBtn');
-    if (useSavedBtn) {
-        useSavedBtn.addEventListener('click', autoFillCompanyInfo);
-    }
 });
 </script>
-
-<script nonce="{{ nonce }}">
-function autoFillCompanyInfo() {
-    {% if prefill_data %}
-    document.querySelector('input[name="company_name"]').value = "{{ prefill_data.get('company_name', '') or '' | escapejs }}";
-    document.querySelector('input[name="company_address"]').value = "{{ prefill_data.get('company_address', '') or '' | escapejs }}";
-    document.querySelector('input[name="company_phone"]').value = "{{ prefill_data.get('company_phone', '') or '' | escapejs }}";
-    document.querySelector('input[name="company_email"]').value = "{{ prefill_data.get('company_email', '') or '' | escapejs }}";
-    document.querySelector('input[name="company_tax_id"]').value = "{{ prefill_data.get('company_tax_id', '') or '' | escapejs }}";
-
-    if (typeof showToast !== 'undefined') showToast('Company info auto-filled!', 'success');
-    {% else %}
-    if (typeof showToast !== 'undefined') showToast('No saved info found.', 'warning');
-    {% endif %}
-}
-</script>
-
-<script nonce="{{ nonce }}">
-document.addEventListener('DOMContentLoaded', function() {
-    // Update page title to be clear this is for invoices only
-    const pageTitle = document.querySelector('h2.fw-bold');
-    if (pageTitle) {
-        pageTitle.textContent = 'Create Sales Invoice';
-    }
-
-    const pageSubtitle = document.querySelector('p.text-muted.fs-5');
-    if (pageSubtitle) {
-        pageSubtitle.textContent = 'For billing customers and clients';
-        pageSubtitle.innerHTML += '<br><small class="text-info"><i class="bi bi-info-circle"></i> For supplier orders, use <a href="{{ url_for("purchases.create_purchase_order") }}" class="text-decoration-underline">Purchase Orders</a></small>';
-    }
-
-    // Auto-fill dates
-    const today = new Date().toISOString().split('T')[0];
-    const invoiceDate = document.querySelector('input[name="invoice_date"]');
-    if (invoiceDate && !invoiceDate.value) {
-        invoiceDate.value = today;
-    }
-
-    const dueDate = document.querySelector('input[name="due_date"]');
-    if (dueDate && !dueDate.value) {
-        const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        dueDate.value = nextMonth.toISOString().split('T')[0];
-    }
-});
-</script>
-
 {% endblock %}
