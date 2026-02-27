@@ -3,7 +3,7 @@ from celery import Celery
 import qrcode
 import base64
 from pathlib import Path
-from app import generate_simple_qr  # move to app/utils/qr.py
+from app import logger, generate_simple_qr  # move to app/utils/qr.py
 from app.services.qr_engine import generate_qr_base64
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
