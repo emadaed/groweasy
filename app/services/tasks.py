@@ -73,7 +73,7 @@ def generate_daily_tips():
 celery.conf.beat_schedule = {
     'generate-daily-tips': {
         'task': 'app.services.tasks.generate_daily_tips',
-        'schedule': crontab(minute=0, hour='*/12'),  # every 12 hours
+        'schedule': crontab(minute='*/5'),  # every 12 hours
     },
 }
 
