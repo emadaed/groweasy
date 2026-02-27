@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt</title>
+    <style>
+        @page {
+            size: 80mm auto;
+            margin: 2mm;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            width: 72mm; /* leave some margin */
+            margin: 0 auto;
+            padding: 2mm;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .logo {
+            max-width: 30mm;
+            max-height: 10mm;
+        }
+        .company-name {
+            font-weight: bold;
+            font-size: 12px;
+        }
+        hr {
+            border: 1px dashed #000;
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 2px 0;
+            text-align: left;
+        }
+        .item-qty {
+            text-align: center;
+        }
+        .item-price, .item-total {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 5px;
+            border-top: 1px dashed #000;
+            padding-top: 5px;
+        }
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+        }
+        .qr {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .qr img {
+            width: 30mm;
+            height: 30mm;
+        }
+        .footer {
+            text-align: center;
+            font-size: 8px;
+            margin-top: 10px;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if company.get('logo') %}
+            <img src="{{ company['logo'] }}" class="logo" alt="Logo">
+        {% endif %}
+        <div class="company-name">{{ company.get('company_name', '') }}</div>
+        <div>{{ company.get('company_address', '') }}</div>
+        <div>Phone: {{ company.get('company_phone', '') }}</div>
+        <div>Invoice #: {{ data.invoice_number }}</div>
+        <div>Date: {{ data.invoice_date }}</div>
+    </div>
+    <hr>
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="item-qty">Qty</th>
+                <th class="item-price">Price</th>
+                <th class="item-total">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data.items %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td class="item-qty">{{ item.qty }}</td>
+                <td class="item-price">{{ currency_symbol }}{{ "%.2f"|format(item.price) }}</td>
+                <td class="item-total">{{ currency_symbol }}{{ "%.2f"|format(item.qty * item.price) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <hr>
+    <div class="totals">
+        <div class="total-line">
+            <span>Subtotal:</span>
+            <span>{{ currency_symbol }}{{ "%.2f"|format(data.subtotal) }}</span>
+        </div>
+        {% if data.discount > 0 %}
+        <div class="total-line">
+            <span>Discount ({{ data.discount_rate }}%):</span>
+            <span>-{{ currency_symbol }}{{ "%.2f"|format(data.discount) }}</span>
+        </div>
+        {% endif %}
+        {% if data.tax > 0 %}
+        <div class="total-line">
+            <span>Tax ({{ data.tax_rate }}%):</span>
+            <span>{{ currency_symbol }}{{ "%.2f"|format(data.tax) }}</span>
+        </div>
+        {% endif %}
+        <div class="total-line" style="font-weight: bold; border-top: 1px dashed #000; margin-top: 5px; padding-top: 5px;">
+            <span>TOTAL:</span>
+            <span>{{ currency_symbol }}{{ "%.2f"|format(data.grand_total) }}</span>
+        </div>
+    </div>
+    {% if custom_qr_b64 %}
+    <div class="qr">
+        <img src="data:image/png;base64,{{ custom_qr_b64 }}" alt="QR Code">
+    </div>
+    {% endif %}
+    <div class="footer">
+        Thank you for your business!
+    </div>
+    <div class="no-print" style="text-align: center; margin-top: 10px;">
+        <button onclick="window.print()">Print Receipt</button>
+    </div>
+</body>
+</html>

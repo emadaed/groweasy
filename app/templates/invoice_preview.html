@@ -12,6 +12,7 @@
         .actions { text-align: center; margin: 40px 0; }
         .print-btn { background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
         .download-btn { background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+        .receipt-btn { background: #17a2b8; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px; }
         @media print { .actions { display: none; } }
     </style>
 </head>
@@ -23,12 +24,16 @@
     <div class="actions">
         <button id="printBtn" class="print-btn">🖨️ Print</button>
         <button id="downloadBtn" class="download-btn">📥 Download PDF</button>
+        <button id="receiptBtn" class="receipt-btn">🧾 Nano Print (80mm)</button>
     </div>
 
     <script nonce="{{ nonce }}">
     document.getElementById('printBtn').addEventListener('click', () => window.print());
     document.getElementById('downloadBtn').addEventListener('click', () => {
         window.location.href = "/invoice/download/{{ data.get('invoice_number', '') }}";
+    });
+    document.getElementById('receiptBtn').addEventListener('click', () => {
+        window.open("/invoice/receipt/{{ data.get('invoice_number', '') }}", "_blank");
     });
     </script>
 </body>
