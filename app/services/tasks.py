@@ -3,7 +3,7 @@ from celery import Celery
 import qrcode
 import base64
 from pathlib import Path
-from app import logger, generate_simple_qr  # move to app/utils/qr.py
+from app import generate_simple_qr  # move to app/utils/qr.py
 from app.services.qr_engine import generate_qr_base64
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
@@ -12,6 +12,8 @@ import os
 from io import BytesIO
 from config import Config
 from app.services.services import InvoiceService
+import logging
+logger = logging.getLogger(__name__)
 
 # Initialize Celery using the Config class
 celery = Celery('groweasy',
@@ -30,12 +32,9 @@ def generate_preview(user_id, data):
     return result
 
 
-# app/services/tasks.py (append at the end)
 from app.services.ai_orchestrator import AIOrchestrator
 from app.services.ai_context import fetch_general_metrics
 from celery.schedules import crontab
-
-# ... existing code ...
 
 @celery.task
 def generate_daily_tips():
@@ -78,7 +77,7 @@ celery.conf.beat_schedule = {
     },
 }
 
-# app/services/tasks.py (append)
+# app/services/tasks.py
 from app.services.ai_orchestrator import AIOrchestrator
 from app.services.ai_context import fetch_context
 import json
