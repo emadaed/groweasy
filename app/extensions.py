@@ -5,6 +5,10 @@ from flask_compress import Compress
 import redis
 from config import Config
 
+from flask_wtf.csrf import CSRFProtect
+
+csrf = CSRFProtect()
+
 # Global instances initialized without the 'app' context
 limiter = Limiter(key_func=get_remote_address)
 compress = Compress()
@@ -19,3 +23,7 @@ _redis_pool = redis.ConnectionPool.from_url(
 
 def get_redis():
     return redis.Redis(connection_pool=_redis_pool)
+
+
+
+

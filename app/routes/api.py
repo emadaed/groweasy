@@ -7,8 +7,7 @@ import datetime as dt_module
 from datetime import datetime, date, timedelta
 from app.services.db import DB_ENGINE
 from app import limiter
-from flask_wtf.csrf import CSRFProtect
-from app import csrf
+from app.extensions import csrf
 
 api_bp = Blueprint('api', __name__)
 

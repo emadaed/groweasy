@@ -7,7 +7,7 @@ from flask_session import Session
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-from flask_wtf.csrf import CSRFProtect
+from app.extensions import csrf
 
 # Local Imports
 from app.extensions import limiter, compress
@@ -44,7 +44,7 @@ def create_app():
 
 
     # --- Security: Initialize CSRF Protection ---
-    csrf = CSRFProtect(app)
+    csrf.init_app(app)
 
     # Path Config
     app_root = Path(__file__).parent
