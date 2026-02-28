@@ -1,4 +1,5 @@
 # app/services/inventory.py - FINAL COMPLETE & TESTED VERSION
+# (with soft delete and validation helper)
 
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
@@ -180,6 +181,47 @@ class InventoryManager:
             logger.error(f"Stock delta update failed: {e}")
             return False
 
+    @staticmethod
+    def delete_product(user_id, product_id, reason=None):
+        """
+        Soft delete a product (set is_active = FALSE) with audit trail.
+        Logs a negative stock movement for the remaining quantity.
+        """
+        try:
+            with DB_ENGINE.begin() as conn:
+                # Check if product exists and is active
+                result = conn.execute(text("""
+                    SELECT name, current_stock FROM inventory_items
+                    WHERE id = :product_id AND user_id = :user_id AND is_active = TRUE
+                """), {"product_id": product_id, "user_id": user_id}).fetchone()
+                if not result:
+                    return False
+
+                product_name, current_stock = result
+
+                # Soft delete
+                conn.execute(text("""
+                    UPDATE inventory_items SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :product_id AND user_id = :user_id
+                """), {"product_id": product_id, "user_id": user_id})
+
+                # Log the removal as a stock movement (optional but recommended)
+                if current_stock > 0:
+                    conn.execute(text("""
+                        INSERT INTO stock_movements (user_id, product_id, movement_type, quantity, notes)
+                        VALUES (:user_id, :product_id, 'deletion', :quantity, :notes)
+                    """), {
+                        "user_id": user_id,
+                        "product_id": product_id,
+                        "quantity": -current_stock,  # negative to reflect removal
+                        "notes": reason or "Product deleted"
+                    })
+
+                logger.info(f"Product {product_name} (ID: {product_id}) soft deleted by user {user_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error deleting product: {e}")
+            return False
 
     @staticmethod
     def get_low_stock_alerts(user_id, threshold=None):

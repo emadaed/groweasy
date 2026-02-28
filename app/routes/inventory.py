@@ -36,7 +36,7 @@ def inventory():
                          low_stock_alerts=low_stock_alerts,
                          nonce=g.nonce)
 
-# inventory reports - SIMPLIFIED TO AVOID ERRORS =2
+# inventory reports - SIMPLIFIED TO AVOID ERRORS =2 currently unused.
 @inventory_bp.route("/inventory_reports")
 def inventory_reports():
     """Inventory analytics and reports dashboard - SIMPLIFIED"""
@@ -82,11 +82,10 @@ def inventory_reports():
         flash("Reports temporarily unavailable", "info")
         return redirect(url_for('inventory.inventory'))
 
-#add products = 3
 # add products = 3
 @inventory_bp.route("/add_product", methods=['POST'])
 def add_product():
-    """Add new product to inventory"""
+    """Add new product to inventory with validation"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
@@ -101,6 +100,14 @@ def add_product():
         except (ValueError, TypeError):
             return default
 
+    cost_price = safe_num(request.form.get('cost_price'), float, 0.0)
+    selling_price = safe_num(request.form.get('selling_price'), float, 0.0)
+
+    # NEW: Validate selling price >= cost price
+    if selling_price < cost_price:
+        flash('❌ Selling price cannot be less than cost price.', 'error')
+        return redirect(url_for('inventory.inventory'))
+
     product_data = {
         'name': request.form.get('name'),
         'sku': request.form.get('sku'),
@@ -108,8 +115,8 @@ def add_product():
         'description': request.form.get('description'),
         'current_stock': safe_num(request.form.get('current_stock'), int, 0),
         'min_stock_level': safe_num(request.form.get('min_stock_level'), int, 5),
-        'cost_price': safe_num(request.form.get('cost_price'), float, 0.0),
-        'selling_price': safe_num(request.form.get('selling_price'), float, 0.0),
+        'cost_price': cost_price,
+        'selling_price': selling_price,
         'supplier': request.form.get('supplier'),
         'location': request.form.get('location')
     }
@@ -132,10 +139,12 @@ def add_product():
         flash('Error adding product. SKU might already exist.', 'error')
 
     return redirect(url_for('inventory.inventory'))
+
+
 #delete 4
 @inventory_bp.route("/delete_product", methods=['POST'])
 def delete_product():
-    """Remove product from inventory with audit trail"""
+    """Soft delete a product (mark inactive) with audit trail"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
@@ -152,7 +161,7 @@ def delete_product():
     if success:
         flash('✅ Product removed successfully', 'success')
     else:
-        flash('❌ Error removing product', 'error')
+        flash('❌ Error removing product – it may already be deleted.', 'error')
 
     return redirect(url_for('inventory.inventory'))
 
