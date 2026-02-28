@@ -24,6 +24,7 @@ def complete_purchase_order(po_number):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @api_bp.route('/api/purchase_order/<po_number>/cancel', methods=['POST'])
 def cancel_purchase_order(po_number):
     if 'user_id' not in session:
@@ -49,12 +50,37 @@ def get_purchase_order_details(po_number):
         return jsonify({'error': 'Unauthorized'}), 401
     try:
         with DB_ENGINE.connect() as conn:
-            result = conn.execute(text("""SELECT order_data, status, created_at FROM purchase_orders WHERE user_id = :user_id AND po_number = :po_number ORDER BY created_at DESC LIMIT 1"""), {"user_id": session['user_id'], "po_number": po_number}).fetchone()
+            result = conn.execute(text("""
+                SELECT order_data, status, created_at FROM purchase_orders
+                WHERE user_id = :user_id AND po_number = :po_number
+                ORDER BY created_at DESC LIMIT 1
+            """), {"user_id": session['user_id'], "po_number": po_number}).fetchone()
+
         if not result:
             return jsonify({'error': 'Purchase order not found'}), 404
+
         order_data = json.loads(result[0])
         order_data['status'] = result[1]
         order_data['created_at'] = result[2].isoformat() if result[2] else None
+
+        # Enrich items with product names
+        if 'items' in order_data:
+            product_ids = [item.get('product_id') for item in order_data['items'] if item.get('product_id')]
+            if product_ids:
+                with DB_ENGINE.connect() as conn:
+                    product_names = conn.execute(text("""
+                        SELECT id, name FROM inventory_items
+                        WHERE id = ANY(:ids) AND user_id = :user_id
+                    """), {"ids": product_ids, "user_id": session['user_id']}).fetchall()
+                    name_map = {row.id: row.name for row in product_names}
+                for item in order_data['items']:
+                    pid = item.get('product_id')
+                    if pid in name_map:
+                        item['name'] = name_map[pid]
+                    else:
+                        item['name'] = f"Product {pid}"  # fallback
+
         return jsonify(order_data), 200
     except Exception as e:
+        current_app.logger.error(f"Error fetching PO details: {e}")
         return jsonify({'error': 'Internal server error'}), 500

@@ -146,13 +146,7 @@
                                                    href="{{ url_for('sales.download_document', document_number=order.po_number, type='purchase_order') }}">
                                                     <i class="bi bi-file-pdf"></i> Download PDF
                                                 </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item"
-                                                   href="{{ url_for('sales.invoice_process') }}?invoice_number={{ order.po_number }}&invoice_type=P&action=preview">
-                                                    <i class="bi bi-printer"></i> Print Preview
-                                                </a>
-                                            </li>
+                                            </li>                                         
                                             <li><hr class="dropdown-divider"></li>
                                             {% if order.status == 'pending' %}
                                             <li>
@@ -340,24 +334,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Cancel PO (needs API endpoint)
+    // Cancel PO
     document.querySelectorAll('.cancel-po').forEach(button => {
         button.addEventListener('click', function() {
             const poNumber = this.dataset.poNumber;
             const reason = prompt('Please provide a reason for cancellation:');
             if (reason) {
-                alert('Cancel PO functionality requires API endpoint implementation');
-                // TODO: Implement cancel PO endpoint
-                // fetch(`/api/purchase_order/${poNumber}/cancel`, {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({ reason: reason })
-                // })
-                // .then(response => {
-                //     if (response.ok) {
-                //         location.reload();
-                //     }
-                // });
+                fetch(`/api/purchase_order/${poNumber}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Purchase order cancelled successfully.');
+                        location.reload();
+                    } else {
+                        alert('Error cancelling PO: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    alert('Network error: ' + error.message);
+                });
             }
         });
     });
