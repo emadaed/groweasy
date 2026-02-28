@@ -7,6 +7,8 @@ import datetime as dt_module
 from datetime import datetime, date, timedelta
 from app.services.db import DB_ENGINE
 from app import limiter
+from flask_wtf.csrf import CSRFProtect
+from app import csrf
 
 api_bp = Blueprint('api', __name__)
 
@@ -24,24 +26,6 @@ def complete_purchase_order(po_number):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-@api_bp.route('/api/purchase_order/<po_number>/cancel', methods=['POST'])
-def cancel_purchase_order(po_number):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    try:
-        data = request.get_json()
-        reason = data.get('reason', 'No reason provided')
-        with DB_ENGINE.begin() as conn:
-            result = conn.execute(text("""SELECT order_data FROM purchase_orders WHERE user_id = :user_id AND po_number = :po_number"""), {"user_id": session['user_id'], "po_number": po_number}).fetchone()
-            if result:
-                order_data = json.loads(result[0])
-                order_data['cancellation_reason'] = reason
-                order_data['cancelled_at'] = datetime.now().isoformat()
-                conn.execute(text("""UPDATE purchase_orders SET status = 'cancelled', order_data = :order_data WHERE user_id = :user_id AND po_number = :po_number"""), {"user_id": session['user_id'], "po_number": po_number, "order_data": json.dumps(order_data)})
-        return jsonify({'success': True, 'message': f'PO {po_number} cancelled'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @api_bp.route("/api/purchase_order/<po_number>")
 @limiter.limit("30 per minute")
@@ -67,6 +51,8 @@ def get_purchase_order_details(po_number):
         if 'items' in order_data:
             product_ids = [item.get('product_id') for item in order_data['items'] if item.get('product_id')]
             if product_ids:
+                # Convert strings to integers
+                product_ids = [int(pid) for pid in product_ids if pid is not None]
                 with DB_ENGINE.connect() as conn:
                     product_names = conn.execute(text("""
                         SELECT id, name FROM inventory_items
@@ -78,9 +64,41 @@ def get_purchase_order_details(po_number):
                     if pid in name_map:
                         item['name'] = name_map[pid]
                     else:
-                        item['name'] = f"Product {pid}"  # fallback
+                        item['name'] = f"Product {pid}"
 
         return jsonify(order_data), 200
     except Exception as e:
         current_app.logger.error(f"Error fetching PO details: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+
+@api_bp.route('/api/purchase_order/<po_number>/cancel', methods=['POST'])
+@csrf.exempt  # Exempt from CSRF protection (API endpoint)
+def cancel_purchase_order(po_number):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        data = request.get_json()
+        reason = data.get('reason', 'No reason provided')
+        with DB_ENGINE.begin() as conn:
+            result = conn.execute(text("""
+                SELECT order_data FROM purchase_orders
+                WHERE user_id = :user_id AND po_number = :po_number
+            """), {"user_id": session['user_id'], "po_number": po_number}).fetchone()
+
+            if result:
+                order_data = json.loads(result[0])
+                order_data['cancellation_reason'] = reason
+                order_data['cancelled_at'] = datetime.now().isoformat()
+                conn.execute(text("""
+                    UPDATE purchase_orders
+                    SET status = 'cancelled', order_data = :order_data
+                    WHERE user_id = :user_id AND po_number = :po_number
+                """), {
+                    "user_id": session['user_id'],
+                    "po_number": po_number,
+                    "order_data": json.dumps(order_data)
+                })
+        return jsonify({'success': True, 'message': f'PO {po_number} cancelled'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

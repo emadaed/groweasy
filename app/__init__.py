@@ -148,45 +148,6 @@ def validate_stock_availability(user_id, invoice_items, invoice_type='S'):
         print(f"Stock validation error: {e}")
         return {'success': False, 'message': 'Stock validation failed'}
 
-# update stock
-##def update_stock_on_invoice(user_id, invoice_items, invoice_type='S', invoice_number=None):
-##    """Update stock with invoice reference number"""
-##    try:
-##        for item in invoice_items:
-##            if item.get('product_id'):
-##                product_id = item['product_id']
-##                quantity = int(item.get('qty', 1))
-##
-##                with DB_ENGINE.connect() as conn:  # Changed to connect for read-only
-##                    result = conn.execute(text("""
-##                        SELECT current_stock FROM inventory_items
-##                        WHERE id = :product_id AND user_id = :user_id
-##                    """), {"product_id": product_id, "user_id": user_id}).fetchone()
-##
-##                if result:
-##                    current_stock = result[0]
-##
-##                    if invoice_type == 'P':
-##                        new_stock = current_stock + quantity
-##                        movement_type = 'purchase'
-##                        notes = f"Purchased {quantity} units via PO: {invoice_number}" if invoice_number else f"Purchased {quantity} units"
-##                    else:
-##                        new_stock = current_stock - quantity
-##                        movement_type = 'sale'
-##                        notes = f"Sold {quantity} units via Invoice: {invoice_number}" if invoice_number else f"Sold {quantity} units"
-##
-##                    success = InventoryManager.update_stock_delta(
-##                        user_id, product_id, new_stock, movement_type, invoice_number, notes
-##                    )
-##
-##                    if success:
-##                        print(f"✅ Stock updated: {item.get('name')} ({movement_type})")
-##                    else:
-##                        print(f"⚠️ Stock update failed for {item.get('name')}")
-##
-##    except Exception as e:
-##        print(f"Stock update error: {e}")
-##
 
 # --- Helper functions (Outside the create_app function) ---move it app/utils/qr.py
 
