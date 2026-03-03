@@ -13,6 +13,9 @@ from io import BytesIO
 from config import Config
 from app.services.services import InvoiceService
 import logging
+import hashlib
+from datetime import datetime, timedelta
+
 logger = logging.getLogger(__name__)
 
 # Initialize Celery using the Config class
@@ -33,38 +36,59 @@ def generate_preview(user_id, data):
 
 
 from app.services.ai_orchestrator import AIOrchestrator
-from app.services.ai_context import fetch_general_metrics
+from app.services.ai_context import fetch_general_metrics, fetch_context
 from celery.schedules import crontab
+
+def get_active_user_ids(days=7):
+    """Return user_ids with session activity in the last `days`."""
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT DISTINCT user_id
+            FROM user_sessions
+            WHERE last_active > NOW() - INTERVAL ':days days'
+        """), {"days": days}).fetchall()
+    return [r[0] for r in rows]
 
 @celery.task
 def generate_daily_tips():
     """
-    Runs every 12 hours to generate business tips for all users.
+    Runs every 12 hours to generate business tips for active users.
+    Skips users who already have a tip younger than 12 hours.
     """
-    from app.services.db import DB_ENGINE
-    from sqlalchemy import text
+    active_users = get_active_user_ids(days=7)
+    if not active_users:
+        logger.info("No active users for daily tips.")
+        return
 
-    with DB_ENGINE.connect() as conn:
-        user_ids = conn.execute(text("SELECT id FROM users")).fetchall()
-
-    for (user_id,) in user_ids:
+    for user_id in active_users:
         try:
+            # Check if a fresh tip already exists (< 12 hours old)
+            with DB_ENGINE.connect() as conn:
+                existing = conn.execute(text("""
+                    SELECT 1 FROM ai_insights
+                    WHERE user_id = :uid AND insight_type = 'cached_tips'
+                    AND updated_at > NOW() - INTERVAL '12 hours'
+                """), {"uid": user_id}).fetchone()
+                if existing:
+                    continue   # skip this user
+
             # Get general metrics
             metrics = fetch_general_metrics(user_id)
-            # Build prompts
             system = "You are an expert business advisor. Based on the user's current metrics, give 3 actionable tips to improve business performance."
             user = f"Metrics: Revenue {metrics['revenue']}, Expenses {metrics['expenses']}, Profit {metrics['profit']}, Inventory Value {metrics['inventory_value']}. Provide 3 concise tips."
-            # Use orchestrator (start with groq, fallback)
+
             orchestrator = AIOrchestrator()
             tips = orchestrator.generate_insights(system, user, use_deep_history=False)
 
-            # Store in DB
+            # Store with upsert
             with DB_ENGINE.begin() as conn:
                 conn.execute(text("""
-                    INSERT INTO ai_insights (user_id, insight_type, content, status)
-                    VALUES (:uid, 'cached_tips', :content, 'completed')
+                    INSERT INTO ai_insights (user_id, insight_type, content, status, updated_at)
+                    VALUES (:uid, 'cached_tips', :content, 'completed', NOW())
                     ON CONFLICT (user_id, insight_type) DO UPDATE
-                    SET content = EXCLUDED.content, updated_at = NOW()
+                    SET content = EXCLUDED.content,
+                        status = 'completed',
+                        updated_at = NOW();
                 """), {"uid": user_id, "content": tips})
         except Exception as e:
             logger.error(f"Failed to generate tips for user {user_id}: {e}")
@@ -73,14 +97,16 @@ def generate_daily_tips():
 celery.conf.beat_schedule = {
     'generate-daily-tips': {
         'task': 'app.services.tasks.generate_daily_tips',
-        'schedule':crontab(minute=0, hour='*/12'),  # every 12 hours
+        'schedule': crontab(minute=0, hour='*/12'),  # every 12 hours
     },
 }
 
-# app/services/tasks.py
-from app.services.ai_orchestrator import AIOrchestrator
-from app.services.ai_context import fetch_context
-import json
+# Helper for prompt caching
+def generate_prompt_hash(user_question, context):
+    """Create a stable hash of the question and relevant context."""
+    import json
+    content = user_question + json.dumps(context, sort_keys=True)
+    return hashlib.sha256(content.encode()).hexdigest()
 
 @celery.task(bind=True, max_retries=3)
 def process_ai_query(self, user_id, user_question, use_deep=False):
@@ -91,47 +117,93 @@ def process_ai_query(self, user_id, user_question, use_deep=False):
         # 1. Fetch context based on question
         extra_system, context = fetch_context(user_id, user_question)
 
-        # 2. Build system prompt
+        # 2. (Optional) Check cache for identical question
+        prompt_hash = generate_prompt_hash(user_question, context)
+        with DB_ENGINE.connect() as conn:
+            cached = conn.execute(text("""
+                SELECT content FROM ai_insights
+                WHERE user_id = :uid AND insight_type = 'query_cache'
+                  AND prompt_hash = :hash
+                  AND status = 'completed'
+                  AND updated_at > NOW() - INTERVAL '24 hours'
+                ORDER BY updated_at DESC LIMIT 1
+            """), {"uid": user_id, "hash": prompt_hash}).fetchone()
+        if cached:
+            answer = cached[0]
+            # Still store a 'query' record for this task (but with cached content)
+            with DB_ENGINE.begin() as conn:
+                conn.execute(text("""
+                    INSERT INTO ai_insights (user_id, task_id, insight_type, content, status, updated_at)
+                    VALUES (:uid, :task_id, 'query', :content, 'completed', NOW())
+                    ON CONFLICT (user_id, insight_type) DO UPDATE
+                    SET task_id = EXCLUDED.task_id,
+                        content = EXCLUDED.content,
+                        status = 'completed',
+                        updated_at = NOW();
+                """), {'uid': user_id, 'task_id': self.request.id, 'content': answer})
+            return {"status": "success", "answer": answer}
+
+        # 3. Build system prompt
         system_prompt = (
             "You are an expert ERP business analyst. Provide concise, actionable insights "
             "based on the provided data. Answer the user's question directly. "
             + extra_system
         )
 
-        # 3. Build user prompt with context
+        # 4. Build user prompt with context
         context_str = json.dumps(context, indent=2)
         user_prompt = f"User question: {user_question}\n\nRelevant business data:\n{context_str}"
 
-        # 4. Call orchestrator
+        # 5. Call orchestrator
         orchestrator = AIOrchestrator()
         answer = orchestrator.generate_insights(system_prompt, user_prompt, use_deep_history=use_deep)
 
-        # 5. Store result
+        # 6. Store result with upsert
         with DB_ENGINE.begin() as conn:
             conn.execute(text("""
-                INSERT INTO ai_insights (user_id, task_id, insight_type, content, status)
-                VALUES (:uid, :task_id, 'query', :content, 'completed')
+                INSERT INTO ai_insights (user_id, task_id, insight_type, content, status, updated_at)
+                VALUES (:uid, :task_id, 'query', :content, 'completed', NOW())
+                ON CONFLICT (user_id, insight_type) DO UPDATE
+                SET task_id = EXCLUDED.task_id,
+                    content = EXCLUDED.content,
+                    status = 'completed',
+                    updated_at = NOW();
             """), {
                 'uid': user_id,
                 'task_id': self.request.id,
                 'content': answer
             })
+
+        # 7. Also store cache entry (if desired)
+        with DB_ENGINE.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO ai_insights (user_id, insight_type, prompt_hash, content, status, updated_at)
+                VALUES (:uid, 'query_cache', :hash, :content, 'completed', NOW())
+                ON CONFLICT (user_id, insight_type, prompt_hash) DO UPDATE
+                SET content = EXCLUDED.content,
+                    updated_at = NOW();
+            """), {
+                'uid': user_id,
+                'hash': prompt_hash,
+                'content': answer
+            })
+
         return {"status": "success", "answer": answer}
 
     except Exception as exc:
-        # Log failure
+        # Log failure with upsert
         with DB_ENGINE.begin() as conn:
             conn.execute(text("""
-                INSERT INTO ai_insights (user_id, task_id, insight_type, status)
-                VALUES (:uid, :task_id, 'query', 'failed')
+                INSERT INTO ai_insights (user_id, task_id, insight_type, status, updated_at)
+                VALUES (:uid, :task_id, 'query', 'failed', NOW())
+                ON CONFLICT (user_id, insight_type) DO UPDATE
+                SET task_id = EXCLUDED.task_id,
+                    status = 'failed',
+                    updated_at = NOW();
             """), {
                 'uid': user_id,
                 'task_id': self.request.id
             })
-        # Retry on rate limit (429)
         if "429" in str(exc):
             raise self.retry(exc=exc, countdown=60)
         raise exc
-
-
-
