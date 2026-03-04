@@ -39,7 +39,7 @@ from app.services.ai_orchestrator import AIOrchestrator
 from app.services.ai_context import fetch_general_metrics, fetch_context
 from celery.schedules import crontab
 
-def get_active_user_ids(days=7):
+def get_active_user_ids(days=1):
     """Return user_ids with session activity in the last `days`."""
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text("""
@@ -97,7 +97,7 @@ def generate_daily_tips():
 celery.conf.beat_schedule = {
     'generate-daily-tips': {
         'task': 'app.services.tasks.generate_daily_tips',
-        'schedule': crontab(minute=0, hour='*/12'),  # every 12 hours
+        'schedule': crontab(minute=0, hour=0),  # every 24 hours
     },
 }
 
