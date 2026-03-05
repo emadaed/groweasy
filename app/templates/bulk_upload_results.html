@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0"><i class="bi bi-list-check"></i> Bulk Import Results</h4>
+        </div>
+        <div class="card-body">
+            {% if errors %}
+                <h5 class="text-warning">⚠️ Some rows had errors:</h5>
+                <ul class="list-group">
+                {% for err in errors %}
+                    <li class="list-group-item list-group-item-danger small">{{ err }}</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-success"><i class="bi bi-check-circle"></i> All products imported successfully!</p>
+            {% endif %}
+            <a href="{{ url_for('inventory.inventory') }}" class="btn btn-primary mt-3">
+                <i class="bi bi-boxes"></i> View Inventory
+            </a>
+            <a href="{{ url_for('inventory.bulk_upload') }}" class="btn btn-outline-secondary mt-3">
+                <i class="bi bi-upload"></i> Upload Another File
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

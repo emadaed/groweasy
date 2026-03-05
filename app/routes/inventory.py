@@ -1,5 +1,7 @@
 #app/routes/inventory.py
 import time
+import csv
+import io
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify, Response, current_app
 from sqlalchemy import text
 from app.services.inventory import InventoryManager
@@ -312,3 +314,124 @@ def download_inventory_report():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment;filename=inventory_report.csv"}
     )
+
+
+# new function bulk upload
+
+@inventory_bp.route('/bulk_upload', methods=['GET', 'POST'])
+@limiter.limit("5 per hour")
+def bulk_upload():
+    """Bulk import products from a CSV file."""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'GET':
+        return render_template('bulk_upload.html', nonce=g.nonce)
+
+    # Handle POST
+    if 'file' not in request.files:
+        flash('❌ No file selected.', 'error')
+        return redirect(request.url)
+
+    file = request.files['file']
+    if file.filename == '':
+        flash('❌ Empty file name.', 'error')
+        return redirect(request.url)
+
+    if not file.filename.lower().endswith('.csv'):
+        flash('❌ Only CSV files are allowed.', 'error')
+        return redirect(request.url)
+
+    # Optional: size limit (2 MB)
+    if file.content_length and file.content_length > 2 * 1024 * 1024:
+        flash('❌ File too large (max 2 MB).', 'error')
+        return redirect(request.url)
+
+    # Read and process CSV
+    stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
+    reader = csv.DictReader(stream)
+
+    # Validate headers
+    required_headers = {'name', 'sku'}
+    if not required_headers.issubset(reader.fieldnames or []):
+        flash('❌ CSV must contain at least "name" and "sku" columns.', 'error')
+        return redirect(request.url)
+
+    results = {'success': 0, 'failure': 0, 'errors': []}
+    user_id = session['user_id']
+
+    for row_num, row in enumerate(reader, start=2):  # row 1 is header
+        product_data = {
+            'name': row.get('name', '').strip(),
+            'sku': row.get('sku', '').strip(),
+            'category': row.get('category', '').strip() or None,
+            'description': row.get('description', '').strip() or None,
+            'current_stock': _safe_int(row.get('current_stock'), 0),
+            'min_stock_level': _safe_int(row.get('min_stock_level'), 5),
+            'cost_price': _safe_float(row.get('cost_price'), 0.0),
+            'selling_price': _safe_float(row.get('selling_price'), 0.0),
+            'supplier': row.get('supplier', '').strip() or None,
+            'location': row.get('location', '').strip() or None,
+        }
+
+        if not product_data['name'] or not product_data['sku']:
+            results['failure'] += 1
+            results['errors'].append(f"Row {row_num}: Missing name or SKU")
+            continue
+
+        product_id = InventoryManager.add_product(user_id, product_data)
+        if product_id:
+            results['success'] += 1
+        else:
+            results['failure'] += 1
+            results['errors'].append(f"Row {row_num}: SKU '{product_data['sku']}' may already exist or invalid data")
+
+    if results['success'] > 0:
+        flash(f"✅ Successfully imported {results['success']} product(s).", 'success')
+    if results['failure'] > 0:
+        flash(f"⚠️ {results['failure']} product(s) failed. See details below.", 'warning')
+
+    if results['errors']:
+        session['bulk_upload_errors'] = results['errors']
+
+    return redirect(url_for('inventory.bulk_upload_results'))
+
+@inventory_bp.route('/bulk_upload_results')
+def bulk_upload_results():
+    """Show detailed results after bulk upload."""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    errors = session.pop('bulk_upload_errors', [])
+    return render_template('bulk_upload_results.html', errors=errors, nonce=g.nonce)
+
+@inventory_bp.route('/sample_products.csv')
+def download_sample_csv():
+    """Provide a sample CSV template for users."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['name', 'sku', 'category', 'description', 'current_stock',
+                     'min_stock_level', 'cost_price', 'selling_price', 'supplier', 'location'])
+    writer.writerow(['Example Product', 'EX-123', 'Electronics', 'High-quality item', '50',
+                     '10', '25.00', '39.99', 'Acme Inc.', 'Warehouse A'])
+    writer.writerow(['Another Product', 'AN-456', 'Office Supplies', '', '100',
+                     '20', '5.50', '12.00', '', 'Shelf B'])
+
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=sample_products.csv'}
+    )
+
+# Helper conversion functions (place at bottom of the file)
+def _safe_int(val, default):
+    try:
+        return int(float(val)) if val not in (None, '') else default
+    except (ValueError, TypeError):
+        return default
+
+def _safe_float(val, default):
+    try:
+        return float(val) if val not in (None, '') else default
+    except (ValueError, TypeError):
+        return default
