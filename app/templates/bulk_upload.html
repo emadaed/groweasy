@@ -20,6 +20,7 @@
             </p>
 
             <form method="POST" enctype="multipart/form-data" class="mt-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <label for="file" class="form-label">Select CSV file (max 2 MB)</label>
                     <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
