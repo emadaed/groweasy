@@ -13,6 +13,7 @@ from io import BytesIO
 from config import Config
 from app.services.services import InvoiceService
 import hashlib
+import logging
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
