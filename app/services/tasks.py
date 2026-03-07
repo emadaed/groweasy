@@ -18,14 +18,14 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-### Initialize Celery using the Config class
-##celery = Celery('groweasy',
-##                broker=Config.CELERY_BROKER_URL,
-##                backend=Config.CELERY_RESULT_BACKEND)
-##celery.conf.broker_connection_retry_on_startup = True
-##print(f"✅ Celery broker URL: {celery.conf.broker_url}")
+# Initialize Celery using the Config class
+celery = Celery('groweasy',
+                broker=Config.CELERY_BROKER_URL,
+                backend=Config.CELERY_RESULT_BACKEND)
+celery.conf.broker_connection_retry_on_startup = True
+print(f"✅ Celery broker URL: {celery.conf.broker_url}")
 
-##@celery.task
+@celery.task
 def generate_preview(user_id, data):
     service = InvoiceService(user_id)
     service.data = data
