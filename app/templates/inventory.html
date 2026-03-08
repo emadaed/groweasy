@@ -31,9 +31,11 @@
                 <div class="row">
                     {% for alert in low_stock_alerts %}
                     <div class="col-md-6 mb-2">
-                        <strong>{{ alert.product_name }}</strong>:
-                        {{ alert.current_stock }} units (Min: {{ alert.min_stock }})
-                        <small class="text-muted">- {{ alert.created_at }}</small>
+                        <strong>{{ alert.name }}</strong>:
+                        {{ alert.current_stock }} units (Min: {{ alert.reorder_level }})
+                        {% if alert.sku and alert.sku != 'N/A' %}
+                            <small class="text-muted">(SKU: {{ alert.sku }})</small>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
