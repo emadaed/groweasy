@@ -131,6 +131,12 @@
                 {% endif %}
                 {% if data.get('tax_amount', 0)|float > 0 %}
                 <tr><td>Tax:</td><td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('tax_amount', 0)) }}</td></tr>
+                {% endif %}        
+                {% if data.get('delivery_charge', 0)|float > 0 %}
+                <tr>
+                    <td>Delivery Charge:</td>
+                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('delivery_charge', 0)) }}</td>
+                </tr>
                 {% endif %}
                 <tr class="grand-total">
                     <td><strong>TOTAL DUE:</strong></td>

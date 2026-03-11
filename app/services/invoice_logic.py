@@ -43,11 +43,12 @@ def prepare_invoice_data(form_data, files=None):
     subtotal = sum(item['total'] for item in items)
     tax_rate = float(form_data.get('tax_rate', 0))
     discount_rate = float(form_data.get('discount_rate', 0))
+    delivery_charge = float(form_data.get('delivery_charge', 0))
 
     discount_amount = subtotal * (discount_rate / 100)
     taxable_amount = subtotal - discount_amount
     tax_amount = taxable_amount * (tax_rate / 100)
-    grand_total = subtotal - discount_amount + tax_amount
+    grand_total = subtotal - discount_amount + tax_amount + delivery_charge
 
     # 🆕 LOGO HANDLING - CLEAN, SAFE, RESIZED
     logo_b64 = None
@@ -74,6 +75,7 @@ def prepare_invoice_data(form_data, files=None):
         'tax_amount': tax_amount,
         'discount_rate': discount_rate,
         'discount_amount': discount_amount,
+        'delivery_charge': delivery_charge,
         'grand_total': grand_total,
         'invoice_number': form_data.get('invoice_number', 'INV-00001'),
         'invoice_date': form_data.get('invoice_date', ''),
@@ -108,7 +110,7 @@ def prepare_invoice_data(form_data, files=None):
             raise ValueError("Exporter NTN is required for export invoices")
         invoice_data['tax_rate'] = 0
         invoice_data['tax_amount'] = 0
-        invoice_data['grand_total'] = subtotal - discount_amount
+        invoice_data['grand_total'] = subtotal - discount_amount  + delivery_charge
 
     return invoice_data
 
