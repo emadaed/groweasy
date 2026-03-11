@@ -259,7 +259,7 @@ def create_missing_tables():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            '''),
             ('po_receipts', '''
                 CREATE TABLE IF NOT EXISTS po_receipts (
                     id SERIAL PRIMARY KEY,
