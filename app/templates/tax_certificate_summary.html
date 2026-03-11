@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Tax Collection Certificate</title>
+    <style>
+        /* professional styles as before */
+        body { font-family: Arial, sans-serif; }
+        .certificate { width: 80%; margin: auto; border: 2px solid #333; padding: 30px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 20px; text-transform: uppercase; }
+        .details { margin: 20px 0; }
+        .row { display: flex; margin: 10px 0; }
+        .label { font-weight: bold; width: 200px; }
+        .value { flex: 1; }
+        .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; }
+        .footer { margin-top: 40px; border-top: 1px solid #333; padding-top: 20px; font-size: 12px; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="certificate">
+    <div class="header">
+        <h1>TAX COLLECTION CERTIFICATE</h1>
+        <p>{{ company_name }} - {{ company_address }}</p>
+        <p>Tax ID: {{ company_tax_id }} | NTN: {{ company_ntn }}</p>
+    </div>
+
+    <div class="details">
+        <div class="row">
+            <div class="label">Certificate No.:</div>
+            <div class="value">{{ certificate_number }}</div>
+        </div>
+        <div class="row">
+            <div class="label">Date of Issue:</div>
+            <div class="value">{{ issue_date }}</div>
+        </div>
+        <div class="row">
+            <div class="label">Period:</div>
+            <div class="value">{{ from_date }} to {{ to_date }}</div>
+        </div>
+        <div class="row">
+            <div class="label">Tax Collected Under:</div>
+            <div class="value">{{ tax_law_reference | default("Applicable Tax Laws") }}</div>
+        </div>
+    </div>
+
+    <p><strong>Certified that the total tax collected from customers during the above period is as follows:</strong></p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Amount ({{ currency_symbol }})</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Total Taxable Sales</td>
+                <td>{{ "%.2f"|format(total_sales) }}</td>
+            </tr>
+            <tr>
+                <td>Total Tax Collected</td>
+                <td>{{ "%.2f"|format(total_tax) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>This tax has been collected in accordance with the applicable laws and will be remitted to the tax authorities.</p>
+
+    <div style="margin-top: 40px;">
+        <p>For {{ company_name }}</p>
+        <p>Authorized Signatory</p>
+        <p>_________________________</p>
+    </div>
+
+    <div class="footer">
+        This is a computer-generated certificate and does not require a signature.
+    </div>
+</div>
+</body>
+</html>

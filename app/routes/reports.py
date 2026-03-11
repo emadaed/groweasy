@@ -1,4 +1,8 @@
-from flask import Blueprint, render_template, session, request, jsonify, make_response
+from flask import send_file, make_response
+from app.services.pdf_engine import generate_pdf  # if not already imported
+from app.context_processors import CURRENCY_SYMBOLS
+from app.services.cache import get_user_profile_cached
+from flask import Blueprint, render_template, session, request, jsonify
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
 from weasyprint import HTML
@@ -12,41 +16,64 @@ def tax_certificate():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user_id = session['user_id']
-
+    
     if request.method == 'POST':
         from_date = request.form.get('from_date')
         to_date = request.form.get('to_date')
-        # Calculate tax sum within range
+        # Validate dates
+        
+        # Query invoices in range
         with DB_ENGINE.connect() as conn:
             result = conn.execute(text("""
-                SELECT COALESCE(SUM(
-                    COALESCE(
-                        (invoice_data::jsonb->>'tax')::numeric,
-                        (invoice_data::jsonb->>'tax_amount')::numeric,
-                        0
-                    )
-                ), 0)
+                SELECT SUM(grand_total) as total_sales, SUM(tax_amount) as total_tax
                 FROM user_invoices
-                WHERE user_id = :uid
-                  AND invoice_date BETWEEN :from AND :to
-            """), {"uid": user_id, "from": from_date, "to": to_date}).scalar()
-        tax_total = float(result)
-
-        # Generate PDF certificate
-        html = render_template('tax_certificate.html',
-                               user_id=user_id,
+                WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
+            total_sales = result[0] or 0.0
+            total_tax = result[1] or 0.0
+        
+        # Get user profile for company details
+        user_profile = get_user_profile_cached(user_id)
+        company_name = user_profile.get('company_name', 'Your Company')
+        company_address = user_profile.get('company_address', '')
+        company_tax_id = user_profile.get('company_tax_id', '')
+        company_ntn = user_profile.get('seller_ntn', '')
+        currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+        
+        # Generate a certificate number (e.g., based on timestamp)
+        certificate_number = f"TAX-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        issue_date = datetime.now().strftime('%d-%b-%Y')
+        
+        # Render the template
+        html = render_template('tax_certificate_summary.html',
+                               company_name=company_name,
+                               company_address=company_address,
+                               company_tax_id=company_tax_id,
+                               company_ntn=company_ntn,
+                               certificate_number=certificate_number,
+                               issue_date=issue_date,
                                from_date=from_date,
                                to_date=to_date,
-                               tax_total=tax_total,
-                               generated_at=datetime.now().strftime('%Y-%m-%d %H:%M'))
-        pdf = HTML(string=html).write_pdf()
-        response = make_response(pdf)
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=tax_certificate_{from_date}_to_{to_date}.pdf'
+                               total_sales=total_sales,
+                               total_tax=total_tax,
+                               currency_symbol=currency_symbol,
+                               tax_law_reference="Income Tax Ordinance, 2001")  # Make this configurable
+        
+        # Generate PDF (using WeasyPrint)
+        from app.services.pdf_engine import generate_pdf
+        pdf_bytes = generate_pdf(html)
+        
+        # Return as download
+        response = make_response(send_file(
+            io.BytesIO(pdf_bytes),
+            as_attachment=True,
+            download_name=f"Tax_Certificate_{from_date}_to_{to_date}.pdf",
+            mimetype='application/pdf'
+        ))
         return response
-
+    
     # GET: show form
-    return render_template('tax_certificate_form.html')
+    return render_template('tax_certificate_form.html', nonce=g.nonce)
 
 @reports_bp.route('/sales/csv', methods=['GET'])
 def sales_csv():
