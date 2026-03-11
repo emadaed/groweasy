@@ -259,18 +259,6 @@ def create_missing_tables():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            '''),
-            ('po_receipts', '''
-                CREATE TABLE IF NOT EXISTS po_receipts (
-                    id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    po_number TEXT NOT NULL,
-                    product_id INTEGER NOT NULL,
-                    received_qty INTEGER NOT NULL,
-                    received_date DATE NOT NULL,
-                    notes TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
             ''')
         ]
 
@@ -280,6 +268,34 @@ def create_missing_tables():
                 print(f"✅ Verified/Created table: {table_name}")
             except Exception as e:
                 print(f"⚠️ Table {table_name} error: {e}")
+
+        # Special handling for po_receipts to avoid concurrency issues
+        try:
+            # Check if table already exists
+            result = conn.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'po_receipts'
+                )
+            """)).scalar()
+            if not result:
+                conn.execute(text("""
+                    CREATE TABLE po_receipts (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        po_number TEXT NOT NULL,
+                        product_id INTEGER NOT NULL,
+                        received_qty INTEGER NOT NULL,
+                        received_date DATE NOT NULL,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+                print("✅ Created table: po_receipts")
+            else:
+                print("✅ Table po_receipts already exists")
+        except Exception as e:
+            print(f"⚠️ Table po_receipts error: {e}")
 
 def apply_inventory_constraints():
     """Apply inventory constraints"""
