@@ -21,7 +21,7 @@
             <div class="card bg-primary text-white">
                 <div class="card-body">
                     <h6 class="card-title">Total POs</h6>
-                    <h4>{{ orders|length }}</h4>
+                    <h4>{{ total_count }}</h4>          <!-- was orders|length -->
                 </div>
             </div>
         </div>
@@ -29,7 +29,7 @@
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <h6 class="card-title">Total Value</h6>
-                    <h4>{{ currency_symbol }}{{ "%.2f"|format(orders|sum(attribute='grand_total')) }}</h4>
+                    <h4>{{ currency_symbol }}{{ "%.2f"|format(total_sum) }}</h4>   <!-- was sum of page -->
                 </div>
             </div>
         </div>
@@ -37,7 +37,7 @@
             <div class="card bg-info text-white">
                 <div class="card-body">
                     <h6 class="card-title">Pending</h6>
-                    <h4>{{ orders|selectattr('status', 'equalto', 'pending')|list|length }}</h4>
+                    <h4>{{ pending_count }}</h4>         <!-- was page pending count -->
                 </div>
             </div>
         </div>
@@ -45,16 +45,7 @@
             <div class="card bg-warning text-white">
                 <div class="card-body">
                     <h6 class="card-title">This Month</h6>
-                    <h4 id="thisMonthCount">
-                        {% set month = now().month %}
-                        {% set count = 0 %}
-                        {% for order in orders %}
-                            {% if order.order_date and order.order_date.month == month %}
-                                {% set count = count + 1 %}
-                            {% endif %}
-                        {% endfor %}
-                        {{ count }}
-                    </h4>
+                    <h4>{{ month_count }}</h4>           <!-- was page month count -->
                 </div>
             </div>
         </div>

@@ -289,32 +289,62 @@ def print_po_preview(po_number):
     """Print preview for PO"""
     return redirect(url_for('purchases.po_preview', po_number=po_number))
 
-#History 7
 @purchases_bp.route("/purchase_orders")
 def purchase_orders():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     try:
         from app.services.purchases import get_purchase_orders
+        user_id = session['user_id']
         page = request.args.get('page', 1, type=int)
         limit = 10
         offset = (page - 1) * limit
-        orders = []
-        try:
-            orders = get_purchase_orders(session['user_id'], limit=limit, offset=offset)
-            for order in orders:
-                if 'order_date' in order and order['order_date']:
-                    if isinstance(order['order_date'], str):
-                        try:
-                            order['order_date'] = datetime.strptime(order['order_date'], '%Y-%m-%d')
-                        except: pass
-        except Exception as e:
-            current_app.logger.error(f"Error loading purchase orders: {e}")
-            flash("Could not load purchase orders", "warning")
+
+        # Get paginated orders
+        orders = get_purchase_orders(user_id, limit=limit, offset=offset)
+
+        # ---- NEW: Fetch overall stats ----
+        with DB_ENGINE.connect() as conn:
+            # Total count of POs
+            total_count = conn.execute(text("""
+                SELECT COUNT(*) FROM purchase_orders WHERE user_id = :user_id
+            """), {"user_id": user_id}).scalar() or 0
+
+            # Total sum of grand_total
+            total_sum = conn.execute(text("""
+                SELECT COALESCE(SUM(grand_total), 0) FROM purchase_orders WHERE user_id = :user_id
+            """), {"user_id": user_id}).scalar() or 0.0
+
+            # Count of pending POs
+            pending_count = conn.execute(text("""
+                SELECT COUNT(*) FROM purchase_orders 
+                WHERE user_id = :user_id AND status = 'pending'
+            """), {"user_id": user_id}).scalar() or 0
+
+            # Count of POs this month
+            current_month = datetime.now().month
+            current_year = datetime.now().year
+            month_count = conn.execute(text("""
+                SELECT COUNT(*) FROM purchase_orders 
+                WHERE user_id = :user_id 
+                  AND EXTRACT(MONTH FROM order_date) = :month
+                  AND EXTRACT(YEAR FROM order_date) = :year
+            """), {"user_id": user_id, "month": current_month, "year": current_year}).scalar() or 0
+
         user_profile = get_user_profile_cached(session['user_id'])
         user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
         user_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
-        return render_template("purchase_orders.html", orders=orders, current_page=page, currency_symbol=user_symbol, nonce=g.nonce)
+
+        return render_template("purchase_orders.html",
+                               orders=orders,
+                               current_page=page,
+                               limit=limit,
+                               total_count=total_count,       # NEW
+                               total_sum=total_sum,           # NEW
+                               pending_count=pending_count,    # NEW
+                               month_count=month_count,        # NEW
+                               currency_symbol=user_symbol,
+                               nonce=g.nonce)
     except Exception as e:
         current_app.logger.error(f"Purchase orders route error: {e}")
         flash("Error loading purchase orders", "error")
