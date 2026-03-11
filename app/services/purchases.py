@@ -90,7 +90,7 @@ def save_purchase_order(user_id, order_data):
         return False
 
 def get_purchase_orders(user_id, limit=50, offset=0):
-    """Get purchase orders for user"""
+    """Get purchase orders for user with item count from JSON"""
     with DB_ENGINE.connect() as conn:
         orders = conn.execute(text('''
             SELECT id, po_number, supplier_name, order_date, delivery_date,
@@ -103,6 +103,16 @@ def get_purchase_orders(user_id, limit=50, offset=0):
 
     result = []
     for order in orders:
+        # Parse the JSON data
+        try:
+            order_data = json.loads(order[8])
+        except (json.JSONDecodeError, TypeError):
+            order_data = {}
+
+        # Count items (default to 0 if 'items' missing or empty)
+        items = order_data.get('items', [])
+        item_count = len(items) if isinstance(items, list) else 0
+
         result.append({
             'id': order[0],
             'po_number': order[1],
@@ -112,7 +122,8 @@ def get_purchase_orders(user_id, limit=50, offset=0):
             'grand_total': float(order[5]),
             'status': order[6],
             'created_at': order[7],
-            'data': json.loads(order[8])
+            'data': order_data,
+            'item_count': item_count  # 🔥 NEW FIELD
         })
     return result
 
