@@ -288,7 +288,7 @@ def download_document(document_number):
 # 4 invoice history 4
 @sales_bp.route('/invoice_history')
 def invoice_history():
-    """Invoice history and management page"""
+    """Invoice history and management page with pagination and stats"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
@@ -301,7 +301,7 @@ def invoice_history():
     user_id = session['user_id']
 
     with DB_ENGINE.connect() as conn:
-        # Base query
+        # Base query for counting and filtering
         base_sql = '''
             SELECT id, invoice_number, client_name, invoice_date, due_date, grand_total, status, created_at
             FROM user_invoices
@@ -314,9 +314,31 @@ def invoice_history():
             base_sql += ' AND (invoice_number ILIKE :search OR client_name ILIKE :search)'
             params["search"] = f"%{search}%"
 
-        # Get total count for pagination
+        # ----- STATS: Total count (already have) -----
         count_sql = f"SELECT COUNT(*) FROM ({base_sql}) AS count_query"
-        total_invoices = conn.execute(text(count_sql), params).scalar()
+        total_invoices = conn.execute(text(count_sql), params).scalar() or 0
+
+        # ----- STATS: Total sum of grand_total -----
+        sum_sql = f"SELECT COALESCE(SUM(grand_total), 0) FROM ({base_sql}) AS sum_query"
+        total_sum = conn.execute(text(sum_sql), params).scalar() or 0.0
+
+        # ----- STATS: Pending count (status = 'pending') -----
+        # Adjust if your status values are different (e.g., 'unpaid')
+        pending_sql = f"SELECT COUNT(*) FROM ({base_sql} AND status = 'pending') AS pending_query"
+        pending_count = conn.execute(text(pending_sql), params).scalar() or 0
+
+        # ----- STATS: This month's invoices -----
+        from datetime import datetime
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        month_sql = f"""
+            SELECT COUNT(*) FROM ({base_sql} 
+                AND EXTRACT(MONTH FROM invoice_date) = :month
+                AND EXTRACT(YEAR FROM invoice_date) = :year
+            ) AS month_query
+        """
+        month_params = {**params, "month": current_month, "year": current_year}
+        month_count = conn.execute(text(month_sql), month_params).scalar() or 0
 
         # Get paginated invoices
         invoices_sql = base_sql + '''
@@ -342,6 +364,11 @@ def invoice_history():
 
     total_pages = (total_invoices + limit - 1) // limit  # Ceiling division
 
+    # Get user's currency symbol
+    user_profile = get_user_profile_cached(user_id)
+    user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
+    currency_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
+
     return render_template(
         "invoice_history.html",
         invoices=invoices,
@@ -349,6 +376,10 @@ def invoice_history():
         total_pages=total_pages,
         search_query=search,
         total_invoices=total_invoices,
+        total_sum=total_sum,               # NEW
+        pending_count=pending_count,        # NEW
+        month_count=month_count,            # NEW
+        currency_symbol=currency_symbol,    # NEW
         nonce=g.nonce
     )
 
