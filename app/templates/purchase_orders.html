@@ -105,14 +105,16 @@
                                 <strong>{{ currency_symbol }}{{ "%.2f"|format(order.grand_total) }}</strong>
                             </td>
                             <td>
-                                {% if order.status == 'completed' %}
+                                {% if order.status == 'completed' or order.status == 'Received' %}
                                 <span class="badge bg-success">{{ order.status }}</span>
                                 {% elif order.status == 'pending' %}
                                 <span class="badge bg-warning">{{ order.status }}</span>
+                                {% elif order.status == 'Partial' %}
+                                <span class="badge bg-info">{{ order.status }}</span>
                                 {% elif order.status == 'cancelled' %}
                                 <span class="badge bg-danger">{{ order.status }}</span>
                                 {% else %}
-                                <span class="badge bg-info">{{ order.status }}</span>
+                                <span class="badge bg-secondary">{{ order.status }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -148,7 +150,7 @@
                                                 </a>
                                             </li>                                         
                                             <li><hr class="dropdown-divider"></li>
-                                            {% if order.status == 'pending' %}
+                                            {% if order.status == 'pending' or order.status == 'Partial' %}
                                             <li>
                                                 <a href="{{ url_for('purchases.mark_po_received', po_number=order.po_number) }}" class="btn btn-success">
                                                     <i class="bi bi-truck"></i> Receive Goods

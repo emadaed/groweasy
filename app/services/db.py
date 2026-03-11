@@ -260,6 +260,18 @@ def create_missing_tables():
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            ('po_receipts', '''
+                CREATE TABLE IF NOT EXISTS po_receipts (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    po_number TEXT NOT NULL,
+                    product_id INTEGER NOT NULL,
+                    received_qty INTEGER NOT NULL,
+                    received_date DATE NOT NULL,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
         ]
 
         for table_name, create_sql in tables:

@@ -140,37 +140,126 @@ def mark_po_received(po_number):
         return redirect(url_for('auth.login'))
     user_id = session['user_id']
     try:
+        # Fetch the PO data (JSON)
         po_data = get_purchase_order(user_id, po_number)
         if not po_data:
             flash("❌ Purchase Order not found", "error")
             return redirect(url_for('purchases.purchase_orders'))
+
+        # Prevent receiving if already fully received
         if po_data.get('status', '').lower() == 'received':
-            flash("⚠️ This Purchase Order has already been received", "warning")
+            flash("⚠️ This Purchase Order has already been fully received", "warning")
             return redirect(url_for('purchases.purchase_orders'))
+
+        # Fetch already received quantities for this PO
+        with DB_ENGINE.connect() as conn:
+            receipts = conn.execute(text("""
+                SELECT product_id, SUM(received_qty) as total_received
+                FROM po_receipts
+                WHERE user_id = :user_id AND po_number = :po_number
+                GROUP BY product_id
+            """), {"user_id": user_id, "po_number": po_number}).fetchall()
+        received_map = {r[0]: r[1] for r in receipts}
+
+        # Prepare items with ordered qty and already received
+        items = po_data.get('items', [])
+        for item in items:
+            product_id = item['product_id']
+            item['ordered_qty'] = item.get('qty', 0)
+            item['received_so_far'] = received_map.get(product_id, 0)
+            item['remaining'] = item['ordered_qty'] - item['received_so_far']
+
         if request.method == 'GET':
-            return render_template("po_receive_confirm.html", po_data=po_data, po_number=po_number, nonce=g.nonce)
-        if request.method == 'POST':
-            added_units = 0
-            for item in po_data.get('items', []):
-                if item.get('product_id'):
-                    qty = int(item.get('qty', 0))
-                    if qty > 0:
-                        if InventoryManager.update_stock_delta(user_id, item['product_id'], qty, 'purchase_receive', po_number, f"Goods received via PO {po_number}"):
-                            added_units += qty
-            try:
-                with DB_ENGINE.begin() as conn:
+            # Show the partial receipt form
+            return render_template("po_receive_partial.html",
+                                   po_data=po_data,
+                                   po_number=po_number,
+                                   items=items,
+                                   nonce=g.nonce)
+
+        # POST: process the receipt
+        added_units = 0
+        receipts_to_insert = []
+        today = datetime.now().date()
+
+        for item in items:
+            product_id = item['product_id']
+            form_key = f'receive_qty_{product_id}'
+            qty_to_receive = int(request.form.get(form_key, 0))
+
+            if qty_to_receive < 0 or qty_to_receive > item['remaining']:
+                flash(f"❌ Invalid quantity for {item.get('name', 'product')}. Max remaining: {item['remaining']}", "error")
+                return redirect(url_for('purchases.mark_po_received', po_number=po_number))
+
+            if qty_to_receive > 0:
+                receipts_to_insert.append({
+                    'product_id': product_id,
+                    'qty': qty_to_receive
+                })
+                # Update stock (positive delta)
+                if InventoryManager.update_stock_delta(
+                    user_id,
+                    product_id,
+                    qty_to_receive,
+                    'purchase_receive',
+                    po_number,
+                    f"Partial receipt for PO {po_number}"
+                ):
+                    added_units += qty_to_receive
+                else:
+                    flash(f"⚠️ Stock update failed for {item.get('name', 'product')}.", "warning")
+
+        # Insert all receipts into po_receipts in a transaction
+        if receipts_to_insert:
+            with DB_ENGINE.begin() as conn:
+                for rec in receipts_to_insert:
                     conn.execute(text("""
-                        UPDATE purchase_orders SET status = 'Received'
-                        WHERE user_id = :user_id AND po_number = :po_number
-                    """), {"user_id": user_id, "po_number": po_number})
-                flash(f"✅ PO {po_number} successfully marked as Received! {added_units} units added to stock.", "success")
-            except Exception as e:
-                current_app.logger.error(f"Error updating PO status: {e}")
-                flash("⚠️ Stock added, but status update failed.", "warning")
-            return redirect(url_for('purchases.purchase_orders'))
+                        INSERT INTO po_receipts (user_id, po_number, product_id, received_qty, received_date, notes)
+                        VALUES (:user_id, :po_number, :product_id, :qty, :date, :notes)
+                    """), {
+                        "user_id": user_id,
+                        "po_number": po_number,
+                        "product_id": rec['product_id'],
+                        "qty": rec['qty'],
+                        "date": today,
+                        "notes": f"Received via PO {po_number}"
+                    })
+
+        # Determine new PO status
+        # Re-fetch receipts to get updated totals
+        with DB_ENGINE.connect() as conn:
+            new_receipts = conn.execute(text("""
+                SELECT product_id, SUM(received_qty) as total_received
+                FROM po_receipts
+                WHERE user_id = :user_id AND po_number = :po_number
+                GROUP BY product_id
+            """), {"user_id": user_id, "po_number": po_number}).fetchall()
+        new_received_map = {r[0]: r[1] for r in new_receipts}
+
+        all_fully_received = True
+        for item in items:
+            total_received = new_received_map.get(item['product_id'], 0)
+            if total_received < item['ordered_qty']:
+                all_fully_received = False
+                break
+
+        new_status = 'Received' if all_fully_received else 'Partial'
+        with DB_ENGINE.begin() as conn:
+            conn.execute(text("""
+                UPDATE purchase_orders SET status = :status
+                WHERE user_id = :user_id AND po_number = :po_number
+            """), {"user_id": user_id, "po_number": po_number, "status": new_status})
+
+        if all_fully_received:
+            flash(f"✅ PO {po_number} fully received! {added_units} units added to stock.", "success")
+        else:
+            flash(f"📦 PO {po_number} partially received. {added_units} units added to stock.", "info")
+
+        return redirect(url_for('purchases.purchase_orders'))
+
     except Exception as e:
         current_app.logger.error(f"Error receiving PO {po_number}: {e}", exc_info=True)
-        flash("❌ An error occurred while receiving goods.", "error")
+        flash("❌ An error occurred while processing receipt.", "error")
         return redirect(url_for('purchases.purchase_orders'))
 
 # Email to supplier 5

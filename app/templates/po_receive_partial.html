@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Receive PO {{ po_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card border-primary">
+        <div class="card-header bg-primary text-white">
+            <h4>📦 Receive Purchase Order #{{ po_number }}</h4>
+        </div>
+        <div class="card-body">
+            <p>Supplier: <strong>{{ po_data.supplier_name }}</strong></p>
+            <p>PO Date: {{ po_data.po_date }}</p>
+            <p>Enter the quantities you are receiving now. You can receive partially.</p>
+
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Ordered Qty</th>
+                            <th>Already Received</th>
+                            <th>Remaining</th>
+                            <th>Receive Now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.ordered_qty }}</td>
+                            <td>{{ item.received_so_far }}</td>
+                            <td>{{ item.remaining }}</td>
+                            <td>
+                                <input type="number" name="receive_qty_{{ item.product_id }}"
+                                       class="form-control" min="0" max="{{ item.remaining }}"
+                                       value="0" step="1">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-success btn-lg">Submit Receipt</button>
+                <a href="{{ url_for('purchases.purchase_orders') }}" class="btn btn-secondary btn-lg ms-3">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
