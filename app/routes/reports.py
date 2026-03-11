@@ -25,7 +25,9 @@ def tax_certificate():
         # Query invoices in range
         with DB_ENGINE.connect() as conn:
             result = conn.execute(text("""
-                SELECT SUM(grand_total) as total_sales, SUM(tax_amount) as total_tax
+                SELECT 
+                    SUM(grand_total) as total_sales,
+                    SUM(COALESCE((invoice_data::json->>'tax_amount')::numeric, 0)) as total_tax
                 FROM user_invoices
                 WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
