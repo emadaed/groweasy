@@ -20,10 +20,13 @@ def tax_certificate():
     if request.method == 'POST':
         from_date = request.form.get('from_date')
         to_date = request.form.get('to_date')
-        # Validate dates
+        include_details = request.form.get('include_details') == 'yes'
         
-        # Query invoices in range
+        # Validate dates (optional)
+        
+        # Query totals and optionally invoice details
         with DB_ENGINE.connect() as conn:
+            # Get totals
             result = conn.execute(text("""
                 SELECT 
                     SUM(grand_total) as total_sales,
@@ -33,6 +36,30 @@ def tax_certificate():
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
             total_sales = result[0] or 0.0
             total_tax = result[1] or 0.0
+            
+            # If detailed list requested, fetch invoices
+            invoices = []
+            if include_details:
+                inv_result = conn.execute(text("""
+                    SELECT 
+                        invoice_number,
+                        invoice_date,
+                        client_name,
+                        grand_total,
+                        COALESCE((invoice_data::json->>'tax_amount')::numeric, 0) as tax_amount
+                    FROM user_invoices
+                    WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
+                    ORDER BY invoice_date DESC
+                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
+                
+                for row in inv_result:
+                    invoices.append({
+                        'number': row[0],
+                        'date': row[1].strftime('%Y-%m-%d') if row[1] else '',
+                        'client': row[2],
+                        'total': float(row[3]),
+                        'tax': float(row[4])
+                    })
         
         # Get user profile for company details
         user_profile = get_user_profile_cached(user_id)
@@ -42,7 +69,7 @@ def tax_certificate():
         company_ntn = user_profile.get('seller_ntn', '')
         currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
         
-        # Generate a certificate number (e.g., based on timestamp)
+        # Generate a certificate number
         certificate_number = f"TAX-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         issue_date = datetime.now().strftime('%d-%b-%Y')
         
@@ -59,9 +86,11 @@ def tax_certificate():
                                total_sales=total_sales,
                                total_tax=total_tax,
                                currency_symbol=currency_symbol,
-                               tax_law_reference="Income Tax Ordinance, 2001")  # Make this configurable
+                               tax_law_reference="Income Tax Ordinance, 2001",  # Make configurable later
+                               include_details=include_details,
+                               invoices=invoices)
         
-        # Generate PDF (using WeasyPrint)
+        # Generate PDF
         from app.services.pdf_engine import generate_pdf
         pdf_bytes = generate_pdf(html)
         

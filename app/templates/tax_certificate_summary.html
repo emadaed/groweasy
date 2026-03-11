@@ -13,10 +13,14 @@
         .row { display: flex; margin: 10px 0; }
         .label { font-weight: bold; width: 200px; }
         .value { flex: 1; }
-        .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .table th { background-color: #f2f2f2; }
+        .summary-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .summary-table th { background-color: #f2f2f2; }
+        .invoice-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px; }
+        .invoice-table th, .invoice-table td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        .invoice-table th { background-color: #e9e9e9; }
         .footer { margin-top: 40px; border-top: 1px solid #333; padding-top: 20px; font-size: 12px; text-align: center; }
+        .page-break { page-break-before: always; }
     </style>
 </head>
 <body>
@@ -48,7 +52,7 @@
 
     <p><strong>Certified that the total tax collected from customers during the above period is as follows:</strong></p>
 
-    <table class="table">
+    <table class="summary-table">
         <thead>
             <tr>
                 <th>Description</th>
@@ -66,6 +70,35 @@
             </tr>
         </tbody>
     </table>
+
+    <!-- NEW: Detailed invoice list if requested -->
+    {% if include_details and invoices %}
+    <div style="margin-top: 30px;">
+        <h3>Detailed Invoice List</h3>
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Total ({{ currency_symbol }})</th>
+                    <th>Tax ({{ currency_symbol }})</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                <tr>
+                    <td>{{ inv.number }}</td>
+                    <td>{{ inv.date }}</td>
+                    <td>{{ inv.client }}</td>
+                    <td>{{ "%.2f"|format(inv.total) }}</td>
+                    <td>{{ "%.2f"|format(inv.tax) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 
     <p>This tax has been collected in accordance with the applicable laws and will be remitted to the tax authorities.</p>
 
