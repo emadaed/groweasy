@@ -1,4 +1,4 @@
-from flask import send_file, make_response
+from flask import send_file, make_response, g
 from app.services.pdf_engine import generate_pdf  # if not already imported
 from app.context_processors import CURRENCY_SYMBOLS
 from app.services.cache import get_user_profile_cached
