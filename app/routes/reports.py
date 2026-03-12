@@ -226,10 +226,10 @@ def profit_loss():
                 FROM user_invoices
                 WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
-            
+
             invoice_count = sales_result[0] or 0
-            total_sales = sales_result[1] or 0.0
-            total_tax_collected = sales_result[2] or 0.0
+            total_sales = float(sales_result[1] or 0.0)
+            total_tax_collected = float(sales_result[2] or 0.0)
             
             # --- EXPENSE TOTALS ---
             expense_result = conn.execute(text("""
@@ -242,8 +242,8 @@ def profit_loss():
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
 
             expense_count = expense_result[0] or 0
-            total_net_expenses = expense_result[1] or 0.0
-            total_input_tax = expense_result[2] or 0.0
+            total_net_expenses = float(expense_result[1] or 0.0)
+            total_input_tax = float(expense_result[2] or 0.0)
             total_expenses_including_tax = total_net_expenses + total_input_tax
             
             # --- DETAILS (if requested) ---
