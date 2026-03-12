@@ -2,25 +2,25 @@ import os
 import cssmin
 import jsmin
 
-# Define input files (same as your Flask-Assets bundles)
+# Define input files – now with 'app/' prefix
 CSS_FILES = [
-    'static/css/bootstrap.min.css',
-    'static/css/custom.css',
-    'static/css/invoice.css',
-    'static/css/theme.css',
-    'static/css/base.css'
+    'app/static/css/bootstrap.min.css',
+    'app/static/css/custom.css',
+    'app/static/css/invoice.css',
+    'app/static/css/theme.css',
+    'app/static/css/base.css'
 ]
 
 JS_FILES = [
-    'static/js/bootstrap.bundle.min.js',
-    'static/js/form.js',
-    'static/js/form_items.js',
-    'static/js/groweasy_toast.js',
-    'static/js/invoice.js'
+    'app/static/js/bootstrap.bundle.min.js',
+    'app/static/js/form.js',
+    'app/static/js/form_items.js',
+    'app/static/js/groweasy_toast.js',
+    'app/static/js/invoice.js'
 ]
 
-OUTPUT_CSS = 'static/dist/css/all.min.css'
-OUTPUT_JS = 'static/dist/js/all.min.js'
+OUTPUT_CSS = 'app/static/dist/css/all.min.css'
+OUTPUT_JS = 'app/static/dist/js/all.min.js'
 
 def ensure_dir(path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
