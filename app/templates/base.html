@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>{% block title %}GrowEasy Invoice{% endblock %}</title>
 
     <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
     <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
 
-    <!-- PWA Meta Tags -->
+    <!-- PWA Meta Tags (no service worker) -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#28a745">
     <meta name="mobile-web-app-capable" content="yes">
@@ -17,19 +17,14 @@
     <meta name="apple-mobile-web-app-title" content="GrowEasy Invoice">
     <meta name="description" content="GrowEasy Invoice - Smarter Ops. Faster Growth. Create and manage your invoices with ease.">
 
-    <!-- Bootstrap Icons (still needed for icons) -->
+    <!-- Bootstrap CSS -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Bootstrap Icons (for sidebar icons) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom Invoice CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/invoice.min.css') }}?v=8">
 
-    <!-- Critical CSS (inlined) -->
-    <style nonce="{{ nonce }}">
-        {% include 'css/critical.css' %}
-    </style>
-
-    <!-- Full CSS loaded asynchronously (bundled) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/css/all.min.css') }}" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="{{ url_for('static', filename='dist/css/all.min.css') }}"></noscript>
-
-    <!-- CSP meta (already in headers, but kept for redundancy) -->
+    <!-- Correct CSP - frame-ancestors removed (it's ignored in meta anyway) -->
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self';
                    script-src 'self' 'nonce-{{ nonce }}' https://cdn.jsdelivr.net;
@@ -37,6 +32,209 @@
                    img-src 'self' data: blob:;
                    font-src 'self' https://cdn.jsdelivr.net;
                    connect-src 'self';">
+
+    <style nonce="{{ nonce }}">
+        /* Original styles (keep as is) */
+        .container-main {
+            max-width: 980px;
+            margin: 30px auto;
+            background: #fff;
+            padding: 30px 36px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem 0;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        footer a {
+            color: #6c757d;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        footer a:hover {
+            color: #28a745;
+        }
+
+        /* Sidebar styles */
+        body {
+            overflow-x: hidden;
+            background-color: #f8f9fa;
+        }
+        .wrapper {
+            display: flex;
+            width: 100%;
+            align-items: stretch;
+        }
+        #sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: #fff;
+            transition: all 0.3s;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            min-height: 100vh;
+            position: sticky;
+            top: 0;
+        }
+        #sidebar.active {
+            min-width: 70px;
+            max-width: 70px;
+            text-align: center;
+        }
+        #sidebar.active .sidebar-header h3,
+        #sidebar.active .sidebar-header small,
+        #sidebar.active .nav-item span {
+            display: none;
+        }
+        #sidebar.active .nav-item i {
+            font-size: 1.5rem;
+            margin-right: 0;
+        }
+        #sidebar.active .nav-item {
+            justify-content: center;
+        }
+        #sidebar.active .dropdown-menu {
+            left: 70px !important;
+            top: 0;
+            min-width: 180px;
+        }
+        #sidebar .sidebar-header {
+            padding: 20px;
+            background: rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        #sidebar .sidebar-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        #sidebar .sidebar-header small {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        #sidebar ul.components {
+            padding: 20px 0;
+        }
+        #sidebar ul li {
+            list-style: none;
+        }
+        #sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        #sidebar .nav-item:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+        #sidebar .nav-item i {
+            font-size: 1.3rem;
+            min-width: 30px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        #sidebar .nav-item span {
+            font-size: 0.95rem;
+        }
+        #sidebar .dropdown-toggle::after {
+            display: none;
+        }
+        #sidebar .dropdown-menu {
+            background: white;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-top: 0;
+            margin-left: 5px;
+        }
+        #sidebar .dropdown-menu a {
+            color: #333;
+            padding: 8px 15px;
+        }
+        #sidebar .dropdown-menu a:hover {
+            background: #f1f1f1;
+        }
+        #sidebar .nav-item.dropdown {
+            position: relative;
+        }
+        #sidebar .nav-item.dropdown .dropdown-menu {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            display: none;
+        }
+        #sidebar .nav-item.dropdown:hover .dropdown-menu {
+            display: block;
+        }
+        #sidebar.active .nav-item.dropdown .dropdown-menu {
+            left: 70px !important;
+        }
+        #content {
+            width: 100%;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .toggle-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toggle-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .user-info-bar {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            #sidebar {
+                min-width: 70px;
+                max-width: 70px;
+                text-align: center;
+            }
+            #sidebar .sidebar-header h3,
+            #sidebar .sidebar-header small,
+            #sidebar .nav-item span {
+                display: none;
+            }
+            #sidebar .nav-item i {
+                font-size: 1.5rem;
+                margin-right: 0;
+            }
+            #sidebar .nav-item {
+                justify-content: center;
+            }
+            #sidebar .dropdown-menu {
+                left: 70px !important;
+            }
+            #content {
+                padding: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="wrapper">
@@ -47,7 +245,7 @@
                     <h3>GrowEasy</h3>
                     <small>Invoice</small>
                 </div>
-                <button class="toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+                <button class="toggle-btn" id="sidebarToggle">
                     <i class="bi bi-chevron-left"></i>
                 </button>
             </div>
@@ -144,7 +342,7 @@
 
         <!-- Page Content -->
         <div id="content">
-            <!-- Top user info bar -->
+            <!-- Top user info bar (replaces the old nav) -->
             <div class="user-info-bar">
                 <div>
                     {% if session.get('user_id') %}
@@ -164,7 +362,7 @@
                 </div>
             </div>
 
-            <!-- Main content area -->
+            <!-- Main content area (original container) -->
             <main class="container-main">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
@@ -179,7 +377,7 @@
                 {% block content %}{% endblock %}
             </main>
 
-            <!-- Footer -->
+            <!-- Footer (original) -->
             <footer class="text-center">
                 <div class="container">
                     <div class="row">
@@ -200,7 +398,7 @@
         </div>
     </div>
 
-    <!-- Cookie Consent Banner -->
+    <!-- Cookie Consent (original) -->
     <div id="cookieConsent" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #2c3e50; color: white; padding: 15px; z-index: 9999;">
         <div class="container">
             <div class="row align-items-center">
@@ -216,10 +414,10 @@
         </div>
     </div>
 
-    <!-- Bundled JavaScript (deferred) -->
-    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='dist/js/all.min.js') }}" defer></script>
+    <!-- Bootstrap JS -->
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
-    <!-- Cookie Consent Script (inline, with nonce) -->
+    <!-- Cookie Consent Script (original) -->
     <script nonce="{{ nonce }}">
     (function() {
         var CONSENT_KEY = 'groweasy_cookie_consent';
@@ -258,7 +456,7 @@
     })();
     </script>
 
-    <!-- Sidebar toggle script (inline, with nonce) -->
+    <!-- Sidebar toggle script -->
     <script nonce="{{ nonce }}">
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar');
@@ -266,6 +464,7 @@
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function() {
                     sidebar.classList.toggle('active');
+                    // Change icon direction
                     const icon = toggleBtn.querySelector('i');
                     if (sidebar.classList.contains('active')) {
                         icon.classList.remove('bi-chevron-left');
@@ -276,6 +475,10 @@
                     }
                 });
             }
+
+            // For dropdowns in collapsed mode (hover works via CSS, but Bootstrap might interfere)
+            // We can rely on Bootstrap's dropdown toggles – they will work when clicked.
+            // The CSS hover effect for dropdowns is still there for collapsed mode.
         });
     </script>
 </body>
