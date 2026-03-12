@@ -256,23 +256,30 @@ def get_customers(user_id):
     return result
 
 def save_expense(user_id, expense_data):
-    """Save business expense"""
+    """Save business expense with tax details"""
     with DB_ENGINE.begin() as conn:
         conn.execute(text('''
-            INSERT INTO expenses (user_id, description, amount, category, expense_date, notes)
-            VALUES (:user_id, :description, :amount, :category, :expense_date, :notes)
+            INSERT INTO expenses 
+                (user_id, description, amount, tax_amount, tax_rate, category, expense_date, notes)
+            VALUES 
+                (:user_id, :description, :amount, :tax_amount, :tax_rate, :category, :expense_date, :notes)
         '''), {
-            "user_id": user_id, "description": expense_data['description'], "amount": expense_data['amount'],
-            "category": expense_data['category'], "expense_date": expense_data['expense_date'],
+            "user_id": user_id,
+            "description": expense_data['description'],
+            "amount": expense_data['amount'],
+            "tax_amount": expense_data.get('tax_amount', 0),
+            "tax_rate": expense_data.get('tax_rate', 0),
+            "category": expense_data['category'],
+            "expense_date": expense_data['expense_date'],
             "notes": expense_data.get('notes', '')
         })
     return True
 
 def get_expenses(user_id, limit=50):
-    """Get expenses for a user"""
+    """Get expenses for a user including tax details"""
     with DB_ENGINE.connect() as conn:
         expenses = conn.execute(text('''
-            SELECT id, description, amount, category, expense_date, notes, created_at
+            SELECT id, description, amount, tax_amount, tax_rate, category, expense_date, notes, created_at
             FROM expenses WHERE user_id = :user_id
             ORDER BY expense_date DESC, created_at DESC
             LIMIT :limit
@@ -284,10 +291,12 @@ def get_expenses(user_id, limit=50):
             'id': expense[0],
             'description': expense[1],
             'amount': float(expense[2]),
-            'category': expense[3],
-            'expense_date': expense[4],
-            'notes': expense[5],
-            'created_at': expense[6]
+            'tax_amount': float(expense[3]) if expense[3] else 0.0,
+            'tax_rate': float(expense[4]) if expense[4] else 0.0,
+            'category': expense[5],
+            'expense_date': expense[6],
+            'notes': expense[7],
+            'created_at': expense[8]
         })
     return result
 
