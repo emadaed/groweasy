@@ -23,6 +23,11 @@ gunicorn==21.2.0
 gevent==24.2.1
 greenlet==3.0.3
 
+#Flask-Assets bundles
+##Flask-Assets==2.0
+cssmin==0.2.0
+jsmin==3.0.1
+
 # PDF Generation – WeasyPrint (critical for preview-matching PDFs)
 weasyprint==66.0
 Pillow==11.3.0  # Required by WeasyPrint and qrcode

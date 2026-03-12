@@ -1,0 +1,198 @@
+/* critical.css - Essential styles for above-the-fold content */
+.container-main {
+    max-width: 980px;
+    margin: 30px auto;
+    background: #fff;
+    padding: 30px 36px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+}
+footer {
+    margin-top: 4rem;
+    padding: 2rem 0;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+footer a {
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+footer a:hover {
+    color: #28a745;
+}
+body {
+    overflow-x: hidden;
+    background-color: #f8f9fa;
+}
+.wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: #fff;
+    transition: all 0.3s;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+}
+#sidebar.active {
+    min-width: 70px;
+    max-width: 70px;
+    text-align: center;
+}
+#sidebar.active .sidebar-header h3,
+#sidebar.active .sidebar-header small,
+#sidebar.active .nav-item span {
+    display: none;
+}
+#sidebar.active .nav-item i {
+    font-size: 1.5rem;
+    margin-right: 0;
+}
+#sidebar.active .nav-item {
+    justify-content: center;
+}
+#sidebar.active .dropdown-menu {
+    left: 70px !important;
+    top: 0;
+    min-width: 180px;
+}
+#sidebar .sidebar-header {
+    padding: 20px;
+    background: rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+#sidebar .sidebar-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+#sidebar .sidebar-header small {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+#sidebar ul.components {
+    padding: 20px 0;
+}
+#sidebar ul li {
+    list-style: none;
+}
+#sidebar .nav-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.9);
+    text-decoration: none;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+#sidebar .nav-item:hover {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+#sidebar .nav-item i {
+    font-size: 1.3rem;
+    min-width: 30px;
+    text-align: center;
+    margin-right: 10px;
+}
+#sidebar .nav-item span {
+    font-size: 0.95rem;
+}
+#sidebar .dropdown-toggle::after {
+    display: none;
+}
+#sidebar .dropdown-menu {
+    background: white;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    margin-top: 0;
+    margin-left: 5px;
+}
+#sidebar .dropdown-menu a {
+    color: #333;
+    padding: 8px 15px;
+}
+#sidebar .dropdown-menu a:hover {
+    background: #f1f1f1;
+}
+#sidebar .nav-item.dropdown {
+    position: relative;
+}
+#sidebar .nav-item.dropdown .dropdown-menu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    display: none;
+}
+#sidebar .nav-item.dropdown:hover .dropdown-menu {
+    display: block;
+}
+#sidebar.active .nav-item.dropdown .dropdown-menu {
+    left: 70px !important;
+}
+#content {
+    width: 100%;
+    padding: 20px;
+    transition: all 0.3s;
+}
+.toggle-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.toggle-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+.user-info-bar {
+    background: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+@media (max-width: 768px) {
+    #sidebar {
+        min-width: 70px;
+        max-width: 70px;
+        text-align: center;
+    }
+    #sidebar .sidebar-header h3,
+    #sidebar .sidebar-header small,
+    #sidebar .nav-item span {
+        display: none;
+    }
+    #sidebar .nav-item i {
+        font-size: 1.5rem;
+        margin-right: 0;
+    }
+    #sidebar .nav-item {
+        justify-content: center;
+    }
+    #sidebar .dropdown-menu {
+        left: 70px !important;
+    }
+    #content {
+        padding: 10px;
+    }
+}

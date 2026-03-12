@@ -10,6 +10,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from app.extensions import csrf
 
 # Local Imports
+#from app.assets import init_assets
 from app.extensions import limiter, compress
 from app.context_processors import register_context_processors
 from app.services.cache import init_cache
@@ -64,8 +65,8 @@ def create_app():
     limiter.init_app(app)
     compress.init_app(app)
     register_context_processors(app)
-    #security_headers(app)
     init_middleware(app)
+    ##init_assets(app)
 
     # --- Blueprints ---
     from app.routes.auth import auth_bp
