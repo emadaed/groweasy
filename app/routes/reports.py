@@ -203,3 +203,134 @@ def stock_movements():
                            product_id=product_id)
 
     
+@reports_bp.route('/profit_loss', methods=['GET', 'POST'])
+def profit_loss():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    user_id = session['user_id']
+    
+    if request.method == 'POST':
+        from_date = request.form.get('from_date')
+        to_date = request.form.get('to_date')
+        include_details = request.form.get('include_details') == 'yes'
+        
+        # Validate dates (optional)
+        
+        with DB_ENGINE.connect() as conn:
+            # --- SALES TOTALS ---
+            sales_result = conn.execute(text("""
+                SELECT 
+                    COUNT(*) as invoice_count,
+                    SUM(grand_total) as total_sales,
+                    SUM(COALESCE((invoice_data::json->>'tax_amount')::numeric, 0)) as total_tax_collected
+                FROM user_invoices
+                WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
+            
+            invoice_count = sales_result[0] or 0
+            total_sales = sales_result[1] or 0.0
+            total_tax_collected = sales_result[2] or 0.0
+            
+            # --- EXPENSE TOTALS ---
+            expense_result = conn.execute(text("""
+                SELECT 
+                    COUNT(*) as expense_count,
+                    SUM(amount) as total_expenses
+                FROM expenses
+                WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
+            
+            expense_count = expense_result[0] or 0
+            total_expenses = expense_result[1] or 0.0
+            
+            # --- DETAILS (if requested) ---
+            invoices = []
+            expenses = []
+            
+            if include_details:
+                # Invoice details
+                inv_rows = conn.execute(text("""
+                    SELECT 
+                        invoice_number,
+                        invoice_date,
+                        client_name,
+                        grand_total,
+                        COALESCE((invoice_data::json->>'tax_amount')::numeric, 0) as tax_amount
+                    FROM user_invoices
+                    WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
+                    ORDER BY invoice_date DESC
+                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
+                
+                for row in inv_rows:
+                    invoices.append({
+                        'number': row[0],
+                        'date': row[1].strftime('%Y-%m-%d') if row[1] else '',
+                        'client': row[2],
+                        'total': float(row[3]),
+                        'tax': float(row[4])
+                    })
+                
+                # Expense details
+                exp_rows = conn.execute(text("""
+                    SELECT 
+                        expense_date,
+                        description,
+                        category,
+                        amount,
+                        notes
+                    FROM expenses
+                    WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
+                    ORDER BY expense_date DESC
+                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
+                
+                for row in exp_rows:
+                    expenses.append({
+                        'date': row[0].strftime('%Y-%m-%d') if row[0] else '',
+                        'description': row[1],
+                        'category': row[2],
+                        'amount': float(row[3]),
+                        'notes': row[4]
+                    })
+        
+        # Get user profile for company details
+        user_profile = get_user_profile_cached(user_id)
+        company_name = user_profile.get('company_name', 'Your Company')
+        currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+        
+        # Generate report number
+        report_number = f"PL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        issue_date = datetime.now().strftime('%d-%b-%Y')
+        
+        # Render the template
+        html = render_template('profit_loss_report.html',
+                               company_name=company_name,
+                               currency_symbol=currency_symbol,
+                               report_number=report_number,
+                               issue_date=issue_date,
+                               from_date=from_date,
+                               to_date=to_date,
+                               invoice_count=invoice_count,
+                               total_sales=total_sales,
+                               total_tax_collected=total_tax_collected,
+                               expense_count=expense_count,
+                               total_expenses=total_expenses,
+                               net_profit=total_sales - total_expenses,
+                               include_details=include_details,
+                               invoices=invoices,
+                               expenses=expenses)
+        
+        # Generate PDF
+        from app.services.pdf_engine import generate_pdf
+        pdf_bytes = generate_pdf(html)
+        
+        # Return as download
+        response = make_response(send_file(
+            io.BytesIO(pdf_bytes),
+            as_attachment=True,
+            download_name=f"Profit_Loss_{from_date}_to_{to_date}.pdf",
+            mimetype='application/pdf'
+        ))
+        return response
+    
+    # GET: show form
+    return render_template('profit_loss_form.html', nonce=g.nonce)

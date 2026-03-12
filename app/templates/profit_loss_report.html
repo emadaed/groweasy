@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Profit & Loss Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .report { width: 80%; margin: auto; border: 2px solid #333; padding: 30px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 24px; text-transform: uppercase; color: #2c3e50; }
+        .company { font-size: 16px; color: #7f8c8d; }
+        .details { margin: 20px 0; }
+        .row { display: flex; margin: 10px 0; }
+        .label { font-weight: bold; width: 200px; }
+        .value { flex: 1; }
+        .summary-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .summary-table th { background-color: #3498db; color: white; }
+        .summary-table tr:nth-child(even) { background-color: #f2f2f2; }
+        .net-profit { font-size: 18px; font-weight: bold; color: #27ae60; }
+        .net-loss { font-size: 18px; font-weight: bold; color: #e74c3c; }
+        .detail-section { margin-top: 40px; }
+        .detail-section h2 { background-color: #34495e; color: white; padding: 10px; }
+        .invoice-table, .expense-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+        .invoice-table th, .expense-table th { background-color: #95a5a6; color: white; padding: 8px; }
+        .invoice-table td, .expense-table td { border: 1px solid #bdc3c7; padding: 6px; }
+        .footer { margin-top: 50px; border-top: 1px solid #333; padding-top: 20px; font-size: 12px; text-align: center; }
+        .page-break { page-break-before: always; }
+    </style>
+</head>
+<body>
+<div class="report">
+    <div class="header">
+        <h1>PROFIT & LOSS STATEMENT</h1>
+        <div class="company">{{ company_name }}</div>
+    </div>
+
+    <div class="details">
+        <div class="row">
+            <div class="label">Report No.:</div>
+            <div class="value">{{ report_number }}</div>
+        </div>
+        <div class="row">
+            <div class="label">Date of Issue:</div>
+            <div class="value">{{ issue_date }}</div>
+        </div>
+        <div class="row">
+            <div class="label">Period:</div>
+            <div class="value">{{ from_date }} to {{ to_date }}</div>
+        </div>
+    </div>
+
+    <h2>Summary</h2>
+    <table class="summary-table">
+        <tr>
+            <th>Description</th>
+            <th>Count</th>
+            <th>Amount ({{ currency_symbol }})</th>
+        </tr>
+        <tr>
+            <td>Total Sales (Invoices)</td>
+            <td>{{ invoice_count }}</td>
+            <td>{{ "%.2f"|format(total_sales) }}</td>
+        </tr>
+        <tr>
+            <td>Total Expenses</td>
+            <td>{{ expense_count }}</td>
+            <td>{{ "%.2f"|format(total_expenses) }}</td>
+        </tr>
+        <tr>
+            <td colspan="2" style="text-align: right;"><strong>Net Profit / Loss</strong></td>
+            <td class="{% if net_profit >= 0 %}net-profit{% else %}net-loss{% endif %}">
+                {{ "%.2f"|format(net_profit) }}
+            </td>
+        </tr>
+    </table>
+
+    {% if include_details %}
+        <!-- Invoice Details -->
+        {% if invoices %}
+        <div class="detail-section">
+            <h2>Invoice Details</h2>
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th>Total</th>
+                        <th>Tax</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in invoices %}
+                    <tr>
+                        <td>{{ inv.number }}</td>
+                        <td>{{ inv.date }}</td>
+                        <td>{{ inv.client }}</td>
+                        <td>{{ "%.2f"|format(inv.total) }}</td>
+                        <td>{{ "%.2f"|format(inv.tax) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Expense Details -->
+        {% if expenses %}
+        <div class="detail-section">
+            <h2>Expense Details</h2>
+            <table class="expense-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in expenses %}
+                    <tr>
+                        <td>{{ exp.date }}</td>
+                        <td>{{ exp.description }}</td>
+                        <td>{{ exp.category }}</td>
+                        <td>{{ "%.2f"|format(exp.amount) }}</td>
+                        <td>{{ exp.notes | truncate(30) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    {% endif %}
+
+    <div class="footer">
+        This report is computer-generated and does not require a signature.
+    </div>
+</div>
+</body>
+</html>
