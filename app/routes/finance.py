@@ -27,6 +27,8 @@ def add_expense():
     expense_data = {
         'description': request.form.get('description'),
         'amount': float(request.form.get('amount', 0)),
+        'tax_amount': float(request.form.get('tax_amount', 0)),
+        'tax_rate': float(request.form.get('tax_rate', 0)),
         'category': request.form.get('category'),
         'expense_date': request.form.get('expense_date'),
         'notes': request.form.get('notes', '')

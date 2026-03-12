@@ -235,7 +235,9 @@ def profit_loss():
             expense_result = conn.execute(text("""
                 SELECT 
                     COUNT(*) as expense_count,
-                    SUM(amount) as total_expenses
+                    SUM(amount) as total_net_expenses,
+                    SUM(tax_amount) as total_input_tax,
+                    SUM(amount + tax_amount) as total_expenses_inclusive
                 FROM expenses
                 WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()

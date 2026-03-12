@@ -74,6 +74,21 @@
             </td>
         </tr>
     </table>
+    <h3>Tax Summary</h3>
+    <table class="summary-table">
+        <tr>
+            <td>Output Tax (collected on sales)</td>
+            <td>{{ "%.2f"|format(total_tax_collected) }}</td>
+        </tr>
+        <tr>
+            <td>Input Tax (paid on expenses)</td>
+            <td>{{ "%.2f"|format(total_input_tax) }}</td>
+        </tr>
+        <tr>
+            <td><strong>Net Tax Payable / (Refundable)</strong></td>
+            <td><strong>{{ "%.2f"|format(total_tax_collected - total_input_tax) }}</strong></td>
+        </tr>
+    </table>
 
     {% if include_details %}
         <!-- Invoice Details -->
