@@ -45,6 +45,9 @@ RUN pip install --upgrade pip setuptools wheel && \
 # Copy application code
 COPY . .
 
+# Generate bundled assets (requires cssmin/jsmin from requirements)
+RUN python build_assets.py
+
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
