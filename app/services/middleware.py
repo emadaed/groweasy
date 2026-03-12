@@ -17,52 +17,52 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
         else:
             g.nonce = None
 
-    @app.after_request
-    def add_security_headers(response):
-        """Add security headers to response"""
-
-        if request.path.startswith('/static/'):
-            return response
-
-        nonce = getattr(g, 'nonce', None)
-
-        if nonce:
-            csp = [
-                "default-src 'self'",
-                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-                "img-src 'self' data: blob: https:",
-                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-                # Updated connect-src to allow Chart.js maps and Sentry telemetry
-                "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io",
-                "frame-ancestors 'none'",
-                "form-action 'self'",
-                "base-uri 'self'"
-            ]
-        else:
-            csp = [
-                "default-src 'self'",
-                "script-src 'self'",
-                "style-src 'self' 'unsafe-inline'",
-                "img-src 'self' data: blob: https:",
-                "font-src 'self'",
-                "connect-src 'self'",
-                "frame-ancestors 'none'"
-            ]
-        if not nonce:
-            print(f"⚠️ No nonce for {request.path} – using fallback CSP")
-
-        response.headers['Content-Security-Policy'] = '; '.join(csp)
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=()'
-
-        if not request.host.startswith('localhost') and not request.host.startswith('127.0.0.1'):
-            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-
-        return response
+##    @app.after_request
+##    def add_security_headers(response):
+##        """Add security headers to response"""
+##
+##        if request.path.startswith('/static/'):
+##            return response
+##
+##        nonce = getattr(g, 'nonce', None)
+##
+####        if nonce:
+####            csp = [
+####                "default-src 'self'",
+####                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+####                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+####                "img-src 'self' data: blob: https:",
+####                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
+####                # Updated connect-src to allow Chart.js maps and Sentry telemetry
+####                "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io",
+####                "frame-ancestors 'none'",
+####                "form-action 'self'",
+####                "base-uri 'self'"
+####            ]
+####        else:
+####            csp = [
+####                "default-src 'self'",
+####                "script-src 'self'",
+####                "style-src 'self' 'unsafe-inline'",
+####                "img-src 'self' data: blob: https:",
+####                "font-src 'self'",
+####                "connect-src 'self'",
+####                "frame-ancestors 'none'"
+####            ]
+####        if not nonce:
+####            print(f"⚠️ No nonce for {request.path} – using fallback CSP")
+####
+####        response.headers['Content-Security-Policy'] = '; '.join(csp)
+####        response.headers['X-Frame-Options'] = 'DENY'
+####        response.headers['X-Content-Type-Options'] = 'nosniff'
+####        response.headers['X-XSS-Protection'] = '1; mode=block'
+####        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+####        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=()'
+####
+####        if not request.host.startswith('localhost') and not request.host.startswith('127.0.0.1'):
+####            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+####
+##        return response
 
     @app.after_request
     def add_cache_headers(response):
