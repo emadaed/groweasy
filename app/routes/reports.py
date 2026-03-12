@@ -236,14 +236,15 @@ def profit_loss():
                 SELECT 
                     COUNT(*) as expense_count,
                     SUM(amount) as total_net_expenses,
-                    SUM(tax_amount) as total_input_tax,
-                    SUM(amount + tax_amount) as total_expenses_inclusive
+                    COALESCE(SUM(tax_amount), 0) as total_input_tax
                 FROM expenses
                 WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
-            
+
             expense_count = expense_result[0] or 0
-            total_expenses = expense_result[1] or 0.0
+            total_net_expenses = expense_result[1] or 0.0
+            total_input_tax = expense_result[2] or 0.0
+            total_expenses_including_tax = total_net_expenses + total_input_tax
             
             # --- DETAILS (if requested) ---
             invoices = []
@@ -305,21 +306,23 @@ def profit_loss():
         
         # Render the template
         html = render_template('profit_loss_report.html',
-                               company_name=company_name,
-                               currency_symbol=currency_symbol,
-                               report_number=report_number,
-                               issue_date=issue_date,
-                               from_date=from_date,
-                               to_date=to_date,
-                               invoice_count=invoice_count,
-                               total_sales=total_sales,
-                               total_tax_collected=total_tax_collected,
-                               expense_count=expense_count,
-                               total_expenses=total_expenses,
-                               net_profit=total_sales - total_expenses,
-                               include_details=include_details,
-                               invoices=invoices,
-                               expenses=expenses)
+                       company_name=company_name,
+                       currency_symbol=currency_symbol,
+                       report_number=report_number,
+                       issue_date=issue_date,
+                       from_date=from_date,
+                       to_date=to_date,
+                       invoice_count=invoice_count,
+                       total_sales=total_sales,
+                       total_tax_collected=total_tax_collected,
+                       expense_count=expense_count,
+                       total_expenses=total_net_expenses,          # net expenses (amount)
+                       total_expenses_including_tax=total_expenses_including_tax,  # optional
+                       total_input_tax=total_input_tax,            # <-- NEW
+                       net_profit=total_sales - total_net_expenses,
+                       include_details=include_details,
+                       invoices=invoices,
+                       expenses=expenses)
         
         # Generate PDF
         from app.services.pdf_engine import generate_pdf
