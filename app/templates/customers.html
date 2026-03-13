@@ -14,43 +14,43 @@
             </div>
 
             <!-- Customer Stats -->
-            <div class="row mb-4">
+            <div class="row g-2 mb-4">
                 <div class="col-md-3">
-                    <div class="card text-center border-primary">
-                        <div class="card-body">
-                            <h3 class="text-primary">{{ customers|length }}</h3>
-                            <p class="mb-0">Total Customers</p>
+                    <div class="card text-center border-primary h-100">
+                        <div class="card-body p-2">
+                            <h5 class="text-primary mb-0">{{ customers|length }}</h5>
+                            <small>Total Customers</small>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card text-center border-success">
-                        <div class="card-body">
-                            <h3 class="text-success">
+                    <div class="card text-center border-success h-100">
+                        <div class="card-body p-2">
+                            <h5 class="text-success mb-0">
                                 {{ customers|selectattr("invoice_count", "gt", 1)|list|length }}
-                            </h3>
-                            <p class="mb-0">Repeat Customers</p>
+                            </h5>
+                            <small>Repeat Customers</small>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card text-center border-info">
-                        <div class="card-body">
-                            <h3 class="text-info">
+                    <div class="card text-center border-info h-100">
+                        <div class="card-body p-2">
+                            <h5 class="text-info mb-0">
                                 {{ customers|selectattr("total_spent", "gt", 1000)|list|length }}
-                            </h3>
-                            <p class="mb-0">VIP Clients ({{ currency_symbol }}1k+)</p>
+                            </h5>
+                            <small>VIP Clients ({{ currency_symbol }}1k+)</small>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card text-center border-warning">
-                        <div class="card-body">
-                            <h3 class="text-warning">
+                    <div class="card text-center border-warning h-100">
+                        <div class="card-body p-2">
+                            <h5 class="text-warning mb-0">
                                 {% set total_revenue = customers|sum(attribute="total_spent") %}
                                 {{ currency_symbol }}{{ "%.0f"|format(total_revenue) }}
-                            </h3>
-                            <p class="mb-0">Total Customer Revenue</p>
+                            </h5>
+                            <small>Total Customer Revenue</small>
                         </div>
                     </div>
                 </div>
@@ -64,7 +64,7 @@
                 <div class="card-body p-0">
                     {% if customers %}
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 table-sm">
                             <thead class="table-light">
                                 <tr>
                                     <th>Customer Name</th>

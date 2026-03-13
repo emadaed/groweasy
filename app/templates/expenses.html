@@ -18,21 +18,21 @@
             </div>
             
             <!-- Expense Summary -->
-            <div class="row mb-4">
+            <div class="row g-2 mb-4">
                 {% for category in expense_summary %}
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5>{{ category.category }}</h5>
-                            <h3 class="text-danger">{{ currency_symbol }}{{ "%.2f"|format(category.total) }}</h3>
+                <div class="col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <h6 class="mb-0">{{ category.category }}</h6>
+                            <h5 class="text-danger mb-0">{{ currency_symbol }}{{ "%.0f"|format(category.total) }}</h5>
                             <small class="text-muted">{{ category.count }} expenses</small>
                         </div>
                     </div>
                 </div>
                 {% else %}
                 <div class="col-12">
-                    <div class="alert alert-info">
-                        <strong>💡 Tip:</strong> Track your business expenses to understand your profitability.
+                    <div class="alert alert-info py-2">
+                        <small><strong>💡 Tip:</strong> Track your business expenses to understand your profitability.</small>
                     </div>
                 </div>
                 {% endfor %}
@@ -46,7 +46,7 @@
                 <div class="card-body p-0">
                     {% if expenses %}
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 table-sm">
                             <thead class="table-light">
                                 <tr>
                                     <th>Date</th>
