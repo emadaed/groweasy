@@ -16,36 +16,36 @@
             </div>
 
     <!-- Stats Cards -->
-    <div class="row mb-4">
+    <div class="row g-2 mb-4">
         <div class="col-md-3">
             <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total POs</h6>
-                    <h4>{{ total_count }}</h4>          <!-- was orders|length -->
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">Total POs</h6>
+                    <h5 class="mb-0">{{ total_count }}</h5>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Value</h6>
-                    <h4>{{ currency_symbol }}{{ "%.2f"|format(total_sum) }}</h4>   <!-- was sum of page -->
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">Total Value</h6>
+                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(total_sum) }}</h5>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Pending</h6>
-                    <h4>{{ pending_count }}</h4>         <!-- was page pending count -->
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">Pending</h6>
+                    <h5 class="mb-0">{{ pending_count }}</h5>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <h6 class="card-title">This Month</h6>
-                    <h4>{{ month_count }}</h4>           <!-- was page month count -->
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">This Month</h6>
+                    <h5 class="mb-0">{{ month_count }}</h5>
                 </div>
             </div>
         </div>
@@ -64,7 +64,7 @@
         <div class="card-body">
             {% if orders %}
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover table-sm">
                     <thead class="table-light">
                         <tr>
                             <th>PO Number</th>

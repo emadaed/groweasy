@@ -15,63 +15,62 @@
             </div>
 
             <!-- Stats Cards -->
-            <div class="row mb-4">
+            <div class="row g-2 mb-4">
                 <div class="col-md-3">
                     <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h6 class="card-title">Total Invoices</h6>
-                            <h4>{{ total_invoices }}</h4>
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">Total Invoices</h6>
+                            <h5 class="mb-0">{{ total_invoices }}</h5>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h6 class="card-title">Total Value</h6>
-                            <h4>{{ currency_symbol }}{{ "%.2f"|format(total_sum) }}</h4>
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">Total Value</h6>
+                            <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(total_sum) }}</h5>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card bg-info text-white">
-                        <div class="card-body">
-                            <h6 class="card-title">Pending</h6>
-                            <h4>{{ pending_count }}</h4>
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">Pending</h6>
+                            <h5 class="mb-0">{{ pending_count }}</h5>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card bg-warning text-white">
-                        <div class="card-body">
-                            <h6 class="card-title">This Month</h6>
-                            <h4>{{ month_count }}</h4>
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">This Month</h6>
+                            <h5 class="mb-0">{{ month_count }}</h5>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="card mb-4">
-                <div class="card-body">
-                    <form method="GET" class="row g-3">
+                <div class="card-body p-2">
+                    <form method="GET" class="row g-2">
                         <div class="col-md-8">
-                            <input type="text" name="search" class="form-control"
-                                   placeholder="Search by invoice number or client name..."
-                                   value="{{ search_query }}">
+                            <input type="text" name="search" class="form-control form-control-sm"
+                                placeholder="Search by invoice number or client name..."
+                                value="{{ search_query }}">
                         </div>
                         <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">🔍 Search</button>
+                            <button type="submit" class="btn btn-primary btn-sm w-100">🔍 Search</button>
                         </div>
                         <div class="col-md-2">
-                            <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-outline-secondary w-100">🔄 Clear</a>
+                            <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-outline-secondary btn-sm w-100">🔄 Clear</a>
                         </div>
                     </form>
                 </div>
             </div>
-
             {% if invoices %}
             <div class="card shadow-sm">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 table-sm">
                         <thead class="table-light">
                             <tr>
                                 <th>Invoice #</th>
