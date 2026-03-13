@@ -22,30 +22,37 @@
         </div>
     </div>
      
-    <!-- Low Stock Alerts -->
+    <!-- Low Stock Alerts (scrollable) -->
     {% if low_stock_alerts %}
     <div class="row mb-4">
         <div class="col">
-            <div class="alert alert-warning">
-                <h5>⚠️ Low Stock Alerts</h5>
-                <div class="row">
-                    {% for alert in low_stock_alerts %}
-                    <div class="col-md-6 mb-2">
-                        <strong>{{ alert.name }}</strong>:
-                        {{ alert.current_stock }} units (Min: {{ alert.reorder_level }})
-                        {% if alert.sku and alert.sku != 'N/A' %}
-                            <small class="text-muted">(SKU: {{ alert.sku }})</small>
-                        {% endif %}
+            <div class="card border-warning">
+                <div class="card-header bg-warning bg-opacity-10 py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">⚠️ Low Stock Alerts ({{ low_stock_alerts|length }})</h6>
+                    <button class="btn btn-sm btn-outline-warning" id="viewAllLowStockBtn">View All</button>
+                </div>
+                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
+                    <div class="row g-1">
+                        {% for alert in low_stock_alerts %}
+                        <div class="col-md-6">
+                            <small>
+                                <strong>{{ alert.name }}</strong>:
+                                {{ alert.current_stock }} units (Min: {{ alert.reorder_level }})
+                                {% if alert.sku and alert.sku != 'N/A' %}
+                                    <span class="text-muted">({{ alert.sku }})</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- 🛡️ ACCURATE INVENTORY SUMMARY CARDS -->
-    <div class="row mb-4">
+    <!-- 🛡️ INVENTORY SUMMARY CARDS (COMPACT) -->
+    <div class="row g-2 mb-4">
         {% set inventory_summary = namespace(
             total=0,
             in_stock=0,
@@ -66,37 +73,37 @@
 
         <div class="col-md-3">
             <div class="card text-white bg-primary">
-                <div class="card-body">
-                    <h5>Total Products</h5>
-                    <h3>{{ inventory_summary.total }}</h3>
-                    <small>All inventory items</small>
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">Total Products</h6>
+                    <h4 class="mb-0">{{ inventory_summary.total }}</h4>
+                    <small class="small">All inventory</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-white bg-success">
-                <div class="card-body">
-                    <h5>In Stock</h5>
-                    <h3>{{ inventory_summary.in_stock }}</h3>
-                    <small>Stock > Min Level</small>
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">In Stock</h6>
+                    <h4 class="mb-0">{{ inventory_summary.in_stock }}</h4>
+                    <small class="small">> Min Level</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-white bg-warning">
-                <div class="card-body">
-                    <h5>Low Stock</h5>
-                    <h3>{{ inventory_summary.low_stock }}</h3>
-                    <small>Stock ≤ Min Level</small>
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">Low Stock</h6>
+                    <h4 class="mb-0">{{ inventory_summary.low_stock }}</h4>
+                    <small class="small">≤ Min Level</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-white bg-danger">
-                <div class="card-body">
-                    <h5>Out of Stock</h5>
-                    <h3>{{ inventory_summary.out_of_stock }}</h3>
-                    <small>Stock = 0</small>
+                <div class="card-body p-2 text-center">
+                    <h6 class="mb-0">Out of Stock</h6>
+                    <h4 class="mb-0">{{ inventory_summary.out_of_stock }}</h4>
+                    <small class="small">= 0</small>
                 </div>
             </div>
         </div>
@@ -110,7 +117,7 @@
         <div class="card-body">
             {% if inventory_items %}
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="table table-striped table-sm">
                     <thead>
                         <tr>
                             <th>Product Name</th>
@@ -516,5 +523,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
+<!-- Optional: JavaScript to handle "View All" (if you want to open a modal or new page) -->
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    const viewAllBtn = document.getElementById('viewAllLowStockBtn');
+    if (viewAllBtn) {
+        viewAllBtn.addEventListener('click', function() {
+            // Option 1: open a new page with full list
+            // window.location.href = "{{ url_for('inventory.low_stock_report') }}";
+            
+            // Option 2: expand the list (toggle max-height)
+            // For now, just alert or do nothing.
+            alert('Full low stock report coming soon!');
+        });
+    }
+});
+</script>
+{% endif %}
+<style>
+/* Scrollbar styling for low stock alerts */
+.card-body::-webkit-scrollbar {
+    width: 6px;
+}
+.card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.card-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
 {% endblock %}
