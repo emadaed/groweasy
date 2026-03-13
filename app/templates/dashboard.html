@@ -14,41 +14,41 @@
         </div>
     </div>
 
-    <!-- Key Metrics Cards (small, hover effects) -->
-    <div class="row g-3 mb-4">
+    <!-- Key Metrics Cards (compact) -->
+    <div class="row g-2 mb-4">
         <div class="col-6 col-md-3">
             <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="metric-icon text-primary mb-2">💰</div>
-                    <h6 class="text-muted mb-1">Revenue</h6>
-                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.revenue) }}</h4>
+                <div class="card-body text-center p-2">
+                    <div class="metric-icon text-primary mb-1">💰</div>
+                    <h6 class="text-muted small mb-0">Revenue</h6>
+                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.revenue) }}</h5>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="metric-icon text-success mb-2">📈</div>
-                    <h6 class="text-muted mb-1">Profit</h6>
-                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.net_profit) }}</h4>
+                <div class="card-body text-center p-2">
+                    <div class="metric-icon text-success mb-1">📈</div>
+                    <h6 class="text-muted small mb-0">Profit</h6>
+                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.net_profit) }}</h5>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="metric-icon text-warning mb-2">🧾</div>
-                    <h6 class="text-muted mb-1">Tax Liability</h6>
-                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.tax_liability) }}</h4>
+                <div class="card-body text-center p-2">
+                    <div class="metric-icon text-warning mb-1">🧾</div>
+                    <h6 class="text-muted small mb-0">Tax Liability</h6>
+                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.tax_liability) }}</h5>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="metric-icon text-info mb-2">📦</div>
-                    <h6 class="text-muted mb-1">Inventory Value</h6>
-                    <h4 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.inventory_value) }}</h4>
+                <div class="card-body text-center p-2">
+                    <div class="metric-icon text-info mb-1">📦</div>
+                    <h6 class="text-muted small mb-0">Inventory Value</h6>
+                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.inventory_value) }}</h5>
                 </div>
             </div>
         </div>
@@ -58,57 +58,54 @@
     <div class="row g-3 mb-4">
         <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-warning bg-opacity-10">
+                <div class="card-header bg-warning bg-opacity-10 py-2">
                     <h6 class="mb-0">📦 Deadstock (90 days no sale)</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
                     {% if deadstock %}
-                        <ul class="list-unstyled mb-0">
+                        <ul class="list-unstyled mb-0 small">
                         {% for item in deadstock %}
                             <li>{{ item.name }}</li>
                         {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted mb-0">No deadstock items.</p>
+                        <p class="text-muted mb-0 small">No deadstock items.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-danger bg-opacity-10">
+                <div class="card-header bg-danger bg-opacity-10 py-2">
                     <h6 class="mb-0">⚠️ Reorder Alerts</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
                     {% if reorder_items %}
-                        <ul class="list-unstyled mb-0">
-                        {% for item in reorder_items[:3] %}
+                        <ul class="list-unstyled mb-0 small">
+                        {% for item in reorder_items %}
                             <li><strong>{{ item.name }}</strong> (stock: {{ item.current }}, min: {{ item.min }})</li>
                         {% endfor %}
-                        {% if reorder_items|length > 3 %}
-                            <li class="text-muted">and {{ reorder_items|length - 3 }} more...</li>
-                        {% endif %}
                         </ul>
                     {% else %}
-                        <p class="text-muted mb-0">All items above reorder level</p>
+                        <p class="text-muted mb-0 small">All items above reorder level</p>
                     {% endif %}
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-info bg-opacity-10">
+                <div class="card-header bg-info bg-opacity-10 py-2">
                     <h6 class="mb-0">🛒 Frequently Bought Together</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
                     {% if market_basket %}
-                        <ul class="list-unstyled mb-0">
-                        {% for pair in market_basket[:3] %}
+                        <ul class="list-unstyled mb-0 small">
+                        {% for pair in market_basket %}
                             <li>{{ pair.pair }} – {{ pair.times }}×</li>
                         {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted mb-0">Not enough data</p>
+                        <p class="text-muted mb-0 small">Not enough data</p>
                     {% endif %}
                 </div>
             </div>
@@ -168,8 +165,22 @@
     box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
 }
 .metric-icon {
-    font-size: 2rem;
+    font-size: 1.5rem;
     line-height: 1;
+}
+/* Optional: style scrollbars (for WebKit browsers) */
+.card-body::-webkit-scrollbar {
+    width: 6px;
+}
+.card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.card-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 </style>
 {% endblock %}
