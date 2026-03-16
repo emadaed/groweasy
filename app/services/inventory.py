@@ -12,15 +12,20 @@ class InventoryManager:
 
     @staticmethod
     def add_product(user_id, product_data):
-        """Add new product to inventory - YOUR ORIGINAL CODE (PERFECT)"""
+        """Add new product — NOW WITH ALL STANDARD FIELDS (unit_type, expiry, barcode, batch, etc.)"""
         try:
             with DB_ENGINE.begin() as conn:
                 result = conn.execute(text('''
                     INSERT INTO inventory_items
                     (user_id, name, sku, category, description, current_stock,
-                     min_stock_level, cost_price, selling_price, supplier, location)
-                    VALUES (:user_id, :name, :sku, :category, :description, :current_stock,
-                            :min_stock_level, :cost_price, :selling_price, :supplier, :location)
+                     min_stock_level, cost_price, selling_price, supplier, location,
+                     unit_type, is_perishable, expiry_date, batch_number, barcode,
+                     pack_size, weight_kg)
+                    VALUES 
+                    (:user_id, :name, :sku, :category, :description, :current_stock,
+                     :min_stock_level, :cost_price, :selling_price, :supplier, :location,
+                     :unit_type, :is_perishable, :expiry_date, :batch_number, :barcode,
+                     :pack_size, :weight_kg)
                     RETURNING id
                 '''), {
                     "user_id": user_id,
@@ -33,7 +38,16 @@ class InventoryManager:
                     "cost_price": product_data.get('cost_price', 0.0),
                     "selling_price": product_data.get('selling_price', 0.0),
                     "supplier": product_data.get('supplier'),
-                    "location": product_data.get('location')
+                    "location": product_data.get('location'),
+
+                    # NEW FIELDS
+                    "unit_type": product_data.get('unit_type', 'piece'),
+                    "is_perishable": product_data.get('is_perishable', False),
+                    "expiry_date": product_data.get('expiry_date'),
+                    "batch_number": product_data.get('batch_number'),
+                    "barcode": product_data.get('barcode'),
+                    "pack_size": product_data.get('pack_size', 1.0),
+                    "weight_kg": product_data.get('weight_kg'),
                 }).fetchone()
 
                 if result and product_data.get('current_stock', 0) > 0:
@@ -48,8 +62,9 @@ class InventoryManager:
                         "quantity": product_data.get('current_stock', 0)
                     })
 
-                logger.info(f"Product added: {product_data['name']} (ID: {result[0] if result else 'None'})")
+                logger.info(f"Product added with full details: {product_data['name']} (ID: {result[0] if result else 'None'})")
                 return result[0] if result else None
+
         except Exception as e:
             logger.error(f"Error adding product: {e}")
             return None

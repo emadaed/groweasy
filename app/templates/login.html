@@ -89,11 +89,11 @@ function updateGreeting() {
     const greetingEl = document.getElementById('greetingText');
 
     let message = '';
-    if (hour < 5) message = 'Late night! Workiing so hard? 🌙<br>السلام علیکم';
+    if (hour < 5) message = 'Its Late night! Working so hard? 🌙<br>السلام علیکم';
     else if (hour < 12) message = 'Good morning! ☀️<br>السلام علیکم';
     else if (hour < 17) message = 'Good afternoon! 🌤️<br>السلام علیکم';
     else if (hour < 21) message = 'Good evening! 🌆<br>السلام علیکم';
-    else message = 'Working late? 🌃<br>السلام علیکم';
+    else message = 'Working late again? 🌃<br>السلام علیکم';
 
     greetingEl.innerHTML = message;
 }

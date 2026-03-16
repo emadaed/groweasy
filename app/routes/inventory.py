@@ -84,16 +84,16 @@ def inventory_reports():
         flash("Reports temporarily unavailable", "info")
         return redirect(url_for('inventory.inventory'))
 
-# add products = 3
+# app/routes/inventory.py add product 4
 @inventory_bp.route("/add_product", methods=['POST'])
 def add_product():
-    """Add new product to inventory with validation"""
+    """Add new product to inventory — NOW WITH ALL STANDARD FIELDS"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
     from app.services.inventory import InventoryManager
 
-    # Helper function to safely handle empty string conversions
+    # Safe number converter (you already had this)
     def safe_num(val, func, default=0):
         if val is None or str(val).strip() == '':
             return default
@@ -102,14 +102,7 @@ def add_product():
         except (ValueError, TypeError):
             return default
 
-    cost_price = safe_num(request.form.get('cost_price'), float, 0.0)
-    selling_price = safe_num(request.form.get('selling_price'), float, 0.0)
-
-    # NEW: Validate selling price >= cost price
-    if selling_price < cost_price:
-        flash('❌ Selling price cannot be less than cost price.', 'error')
-        return redirect(url_for('inventory.inventory'))
-
+    # NEW FIELDS PARSING
     product_data = {
         'name': request.form.get('name'),
         'sku': request.form.get('sku'),
@@ -117,31 +110,34 @@ def add_product():
         'description': request.form.get('description'),
         'current_stock': safe_num(request.form.get('current_stock'), int, 0),
         'min_stock_level': safe_num(request.form.get('min_stock_level'), int, 5),
-        'cost_price': cost_price,
-        'selling_price': selling_price,
+        'cost_price': safe_num(request.form.get('cost_price'), float, 0.0),
+        'selling_price': safe_num(request.form.get('selling_price'), float, 0.0),
         'supplier': request.form.get('supplier'),
-        'location': request.form.get('location')
+        'location': request.form.get('location'),
+
+        # === NEW STANDARD INVENTORY FIELDS ===
+        'unit_type': request.form.get('unit_type', 'piece'),
+        'is_perishable': 'is_perishable' in request.form,
+        'expiry_date': request.form.get('expiry_date') or None,
+        'batch_number': request.form.get('batch_number', '').strip() or None,
+        'barcode': request.form.get('barcode', '').strip() or None,
+        'pack_size': safe_num(request.form.get('pack_size'), float, 1.0),
+        'weight_kg': safe_num(request.form.get('weight_kg'), float, None),
     }
+
+    # Price validation (you already had this)
+    if product_data['selling_price'] < product_data['cost_price']:
+        flash('❌ Selling price cannot be less than cost price.', 'error')
+        return redirect(url_for('inventory.inventory'))
 
     product_id = InventoryManager.add_product(session['user_id'], product_data)
 
     if product_id:
-        # If initial stock > 0, use delta to log it (already logged in add_product, but safe)
-        initial_stock = int(product_data.get('current_stock', 0))
-        if initial_stock > 0:
-            InventoryManager.update_stock_delta(
-                session['user_id'],
-                product_id,
-                initial_stock,
-                'initial',
-                notes='Initial stock on product creation'
-            )
-        flash(random_success_message('product_added'), 'success')
+        flash('✅ Product added successfully!', 'success')
     else:
-        flash('Error adding product. SKU might already exist.', 'error')
+        flash('❌ Error adding product. SKU might already exist.', 'error')
 
     return redirect(url_for('inventory.inventory'))
-
 
 #delete 4
 @inventory_bp.route("/delete_product", methods=['POST'])
