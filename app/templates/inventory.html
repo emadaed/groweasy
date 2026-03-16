@@ -413,7 +413,121 @@
             <form method="POST" action="{{ url_for('inventory.adjust_stock_audit') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
-                    <!-- ... rest of adjust modal remains unchanged ... -->
+                    <input type="hidden" name="product_id" id="editProductId">
+
+                    <!-- Product Info -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6>Product Details</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Product Name</label>
+                                    <input type="text" class="form-control" id="editProductName" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Current Stock</label>
+                                    <input type="number" class="form-control" id="editCurrentStock" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Adjustment Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0">Stock Adjustment</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Adjustment Type *</label>
+                                <select class="form-control" name="adjustment_type" required>
+                                    <option value="">Select type...</option>
+                                    <option value="add_stock">Add Stock</option>
+                                    <option value="remove_stock">Remove Stock</option>
+                                    <option value="set_stock">Set Exact Quantity</option>
+                                    <option value="damaged">Damaged Goods</option>
+                                    <option value="found_stock">Found Stock</option>
+                                </select>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label" id="quantityLabel">Quantity *</label>
+                                        <input type="number" class="form-control" name="quantity" min="0" step="1" required>
+                                        <small class="text-muted">Number of units</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Unit Cost (Optional)</label>
+                                        <input type="number" step="0.01" class="form-control" name="unit_cost" placeholder="0.00">
+                                        <small class="text-muted">Cost per unit for this batch</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Adjustment Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-info">
+                            <h6 class="mb-0">Price Adjustment (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">New Cost Price ({{ currency_symbol }})</label>
+                                        <input type="number" step="0.01" class="form-control" name="new_cost_price"
+                                               id="editCostPrice" placeholder="Keep current">
+                                        <small class="text-muted">Cost to you</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">New Selling Price ({{ currency_symbol }})</label>
+                                        <input type="number" step="0.01" class="form-control" name="new_selling_price"
+                                               id="editSellingPrice" placeholder="Keep current">
+                                        <small class="text-muted">Price to customers</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Information -->
+                    <div class="card">
+                        <div class="card-header bg-secondary">
+                            <h6 class="mb-0">Audit Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Adjustment *</label>
+                                <select class="form-control" name="reason" required>
+                                    <option value="">Select reason...</option>
+                                    <option value="purchase_order">Purchase Order Arrival</option>
+                                    <option value="damaged_goods">Damaged/Expired Goods</option>
+                                    <option value="stock_take">Stock Take/Count</option>
+                                    <option value="price_change">Supplier Price Change</option>
+                                    <option value="market_adjustment">Market Price Adjustment</option>
+                                    <option value="manual_correction">Manual Correction</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Additional Notes</label>
+                                <textarea class="form-control" name="notes" rows="2"
+                                          placeholder="e.g., Supplier: ABC Corp, Invoice #123, Quality issues, etc."></textarea>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="create_audit" id="createAudit" checked>
+                                <label class="form-check-label" for="createAudit">
+                                    Create audit trail for this adjustment
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
