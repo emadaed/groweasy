@@ -301,11 +301,8 @@ def download_inventory_report():
 
     # Write data
     for item in inventory_data:
-        writer.writerow([
-            item['name'], item['sku'], item['category'], item['current_stock'],
-            item['min_stock'], item['cost_price'], item['selling_price'],
-            item['supplier'], item['location']
-        ])
+        writer.writerow(['Product Name', 'SKU', 'Barcode', 'Category', 'Current Stock', 'Unit Type', 'Min Stock',
+                 'Cost Price', 'Selling Price', 'Supplier', 'Location', 'Perishable', 'Expiry Date', 'Batch'])
 
     # Return CSV file
     output.seek(0)

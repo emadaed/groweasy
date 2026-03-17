@@ -341,16 +341,22 @@ class InventoryManager:
 
                 report_data = []
                 for row in result:
+                    # In get_inventory_report (inventory.py) - update the dict:
                     report_data.append({
                         'name': row.name,
                         'sku': row.sku or 'N/A',
+                        'barcode': row.barcode or 'N/A',
                         'category': row.category or '',
-                        'current_stock': row.current_stock,
-                        'min_stock': row.min_stock_level or 0, # Note: route expects 'min_stock'
+                        'current_stock': f"{float(row.current_stock):.3f}" if row.current_stock else '0.000',  # ← formatted
+                        'unit_type': row.unit_type or 'piece',
+                        'min_stock': row.min_stock_level or 0,
                         'cost_price': float(row.cost_price) if row.cost_price else 0.0,
                         'selling_price': float(row.selling_price) if row.selling_price else 0.0,
                         'supplier': row.supplier or '',
-                        'location': row.location or ''
+                        'location': row.location or '',
+                        'is_perishable': 'Yes' if row.is_perishable else 'No',
+                        'expiry_date': row.expiry_date.strftime('%Y-%m-%d') if row.expiry_date else '',
+                        'batch_number': row.batch_number or '',
                     })
                 return report_data
         except Exception as e:
