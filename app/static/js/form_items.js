@@ -223,7 +223,7 @@ class InvoiceFormManager {
                 <button type="button" class="btn btn-outline-danger removeItemBtn w-100">×</button>
             </div>
             <div class="col-md-1 text-end">
-                <div class="fw-bold text-success fs-6 line-total">${this.currencySymbol}${productPrice.toFixed(2)}</div>
+                <div class="fw-bold text-success fs-6 line-total">${this.currencySymbol}${Number(productPrice).toFixed(2)}</div>
             </div>
         `;
 
@@ -279,7 +279,7 @@ class InvoiceFormManager {
 
     updateLineTotal(row) {
         const qty = parseFloat(row.querySelector('input[name="item_qty[]"]').value) || 0;
-        const price = parseFloat(row.querySelector('input[name="item_price[]"]').value) || 0;
+        const price = Number(row.querySelector('input[name="item_price[]"]').value) || 0;
         const lineTotalEl = row.querySelector('.line-total');
         if (lineTotalEl) {
             lineTotalEl.textContent = `${this.currencySymbol}${(qty * price).toFixed(2)}`;
@@ -349,6 +349,8 @@ class InvoiceFormManager {
             .replace(/'/g, "&#039;");
     }
 }
+// Temporary debug
+console.log('InvoiceFormManager prototype methods:', Object.getOwnPropertyNames(InvoiceFormManager.prototype));
 
 document.addEventListener('DOMContentLoaded', () => {
     new InvoiceFormManager();
