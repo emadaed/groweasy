@@ -1,39 +1,48 @@
-#app/services/invoice_logic.py
+# app/services/invoice_logic.py
 
-from app.services.utils import process_uploaded_logo  # ← NEW IMPORT
+from app.services.utils import process_uploaded_logo
 
 def prepare_invoice_data(form_data, files=None):
     """Prepare complete invoice data with FBR fields - INVENTORY ITEMS ONLY"""
 
     # Extract arrays - ALL items MUST have product_id now
     items = []
-    item_names = form_data.getlist('item_name[]')
-    item_qtys = form_data.getlist('item_qty[]')
-    item_prices = form_data.getlist('item_price[]')
-    item_ids = form_data.getlist('item_id[]')
+    item_names   = form_data.getlist('item_name[]')
+    item_qtys    = form_data.getlist('item_qty[]')
+    item_prices  = form_data.getlist('item_price[]')
+    item_ids     = form_data.getlist('item_id[]')
+    item_units   = form_data.getlist('item_unit_type[]')  # ← NEW: capture unit type
 
     # 🛡️ VALIDATION: All arrays must have same length
-    array_lengths = [len(item_names), len(item_qtys), len(item_prices), len(item_ids)]
+    array_lengths = [len(item_names), len(item_qtys), len(item_prices), len(item_ids), len(item_units)]
     if len(set(array_lengths)) != 1:
-        raise ValueError(f"Array length mismatch: names={len(item_names)}, qtys={len(item_qtys)}, prices={len(item_prices)}, ids={len(item_ids)}")
+        raise ValueError(f"Array length mismatch: names={len(item_names)}, qtys={len(item_qtys)}, "
+                         f"prices={len(item_prices)}, ids={len(item_ids)}, units={len(item_units)}")
 
     # Process items - all should have product_id
     for i in range(len(item_names)):
         if item_names[i].strip():
-            qty = float(item_qtys[i]) if item_qtys[i] else 0
-            price = float(item_prices[i]) if item_prices[i] else 0
+            # IMPORTANT CHANGE: qty is float now
+            qty = float(item_qtys[i]) if item_qtys[i] and item_qtys[i].strip() else 0.0
+            price = float(item_prices[i]) if item_prices[i] else 0.0
             product_id = item_ids[i] if item_ids[i] else None
+            unit_type = item_units[i] if i < len(item_units) else 'piece'
 
             # 🛡️ VALIDATION: Reject items without product_id
             if not product_id:
                 raise ValueError(f"Item '{item_names[i]}' missing product_id - all items must come from inventory")
 
+            # Optional: prevent zero or negative qty
+            if qty <= 0:
+                raise ValueError(f"Quantity for '{item_names[i]}' must be greater than 0")
+
             items.append({
                 'name': item_names[i],
-                'qty': qty,
+                'qty': qty,               # now float
                 'price': price,
                 'total': qty * price,
-                'product_id': product_id
+                'product_id': product_id,
+                'unit_type': unit_type    # saved for logging / future use
             })
 
     # 🛡️ VALIDATION: Must have at least one item
@@ -56,13 +65,12 @@ def prepare_invoice_data(form_data, files=None):
         try:
             logo_b64 = process_uploaded_logo(
                 files['logo'],
-                max_kb=300,          # Limit to 300KB
+                max_kb=300,
                 max_width=200,
                 max_height=200
             )
-            print(f"✅ Logo uploaded and processed successfully")
+            print("✅ Logo uploaded and processed successfully")
         except ValueError as e:
-            # Flash error in your routes (preview_invoice / download_invoice)
             raise ValueError(f"Logo upload failed: {str(e)}")
         except Exception as e:
             raise ValueError("Failed to process logo image")
@@ -97,7 +105,7 @@ def prepare_invoice_data(form_data, files=None):
         'buyer_ntn': form_data.get('buyer_ntn', ''),
         'buyer_strn': form_data.get('buyer_strn', ''),
         'invoice_type': form_data.get('invoice_type', 'S'),
-        'logo_b64': logo_b64  # ← Now always clean base64 or None
+        'logo_b64': logo_b64
     }
 
     # INVOICE TYPE SPECIFIC LOGIC
@@ -110,7 +118,7 @@ def prepare_invoice_data(form_data, files=None):
             raise ValueError("Exporter NTN is required for export invoices")
         invoice_data['tax_rate'] = 0
         invoice_data['tax_amount'] = 0
-        invoice_data['grand_total'] = subtotal - discount_amount  + delivery_charge
+        invoice_data['grand_total'] = subtotal - discount_amount + delivery_charge
 
     return invoice_data
 

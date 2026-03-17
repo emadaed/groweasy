@@ -52,22 +52,22 @@ class InvoiceService:
                             'total': item['total']
                         })
 
-            # Update stock - decrease for sales
+            # Update stock - decrease for sales (NOW SUPPORTS FLOAT QUANTITIES)
             movement_type = 'sale'
-            quantity_multiplier = -1
 
             for item in invoice_data.get('items', []):
                 if item.get('product_id'):
+                    qty_sold = item['qty']                     # already float from prepare_invoice_data
                     success = InventoryManager.update_stock_delta(
                         self.user_id,
                         item['product_id'],
-                        quantity_multiplier * item['qty'],
+                        -qty_sold,                             # negative float
                         movement_type,
-                        invoice_data['invoice_number'],
-                        f"Sale via invoice {invoice_data['invoice_number']}"
+                        reference_id=invoice_data['invoice_number'],
+                        notes=f"Sold {qty_sold} {item.get('unit_type', 'unit')} via invoice {invoice_data['invoice_number']}"
                     )
                     if not success:
-                        self.warnings.append(f"Stock update failed for {item['name']}")
+                        self.warnings.append(f"Stock update failed for {item['name']} (possible negative stock)")
 
             return invoice_data, self.errors or self.warnings
 
