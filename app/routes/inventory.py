@@ -93,7 +93,7 @@ def add_product():
 
     from app.services.inventory import InventoryManager
 
-    # Safe number converter (you already had this)
+    # Safe number converter (already had this)
     def safe_num(val, func, default=0):
         if val is None or str(val).strip() == '':
             return default

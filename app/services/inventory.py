@@ -156,9 +156,14 @@ class InventoryManager:
 
     @staticmethod
     def update_stock_delta(user_id, product_id, quantity_delta, movement_type, reference_id=None, notes=None):
-        """Update stock by delta - used by invoice/PO"""
+        """Update stock by delta - used by invoice/PO - WITH DETAILED LOGGING"""
         try:
             with DB_ENGINE.begin() as conn:
+                # Log incoming values
+                logger.info(f"update_stock_delta called: user={user_id}, prod={product_id}, "
+                            f"delta={quantity_delta}, type={movement_type}, ref={reference_id}, notes={notes}")
+
+                # Lock row and fetch current
                 result = conn.execute(text('''
                     SELECT name, current_stock FROM inventory_items
                     WHERE id = :product_id AND user_id = :user_id AND is_active = TRUE
@@ -166,18 +171,26 @@ class InventoryManager:
                 '''), {"product_id": product_id, "user_id": user_id}).fetchone()
 
                 if not result:
+                    logger.warning(f"Product not found or inactive: id={product_id}, user={user_id}")
                     return False
 
                 product_name, current_stock = result
-                new_stock = current_stock + quantity_delta
+                logger.info(f"Current stock for '{product_name}' (id={product_id}): {current_stock}")
 
+                new_stock = current_stock + quantity_delta
+                logger.info(f"Calculated new_stock: {new_stock} (from {current_stock} + {quantity_delta})")
+
+                # Safety check
                 if new_stock < 0:
+                    logger.warning(f"Prevented negative stock for product {product_id}: would be {new_stock}")
                     return False
 
+                # Apply update
                 conn.execute(text('''
                     UPDATE inventory_items SET current_stock = :new_stock WHERE id = :product_id
                 '''), {"new_stock": new_stock, "product_id": product_id})
 
+                # Log movement
                 conn.execute(text('''
                     INSERT INTO stock_movements
                     (user_id, product_id, movement_type, quantity, reference_id, notes)
@@ -191,9 +204,13 @@ class InventoryManager:
                     "notes": notes
                 })
 
+                logger.info(f"Stock updated successfully: {current_stock} → {new_stock} "
+                            f"({movement_type}, qty={quantity_delta})")
                 return True
+
         except Exception as e:
-            logger.error(f"Stock delta update failed: {e}")
+            logger.error(f"Stock delta update FAILED: user={user_id}, prod={product_id}, "
+                         f"delta={quantity_delta}, error={str(e)}", exc_info=True)
             return False
 
     @staticmethod
