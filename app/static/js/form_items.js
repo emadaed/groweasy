@@ -182,62 +182,66 @@ class InvoiceFormManager {
     }
 
     addInventoryItem(productId, productName, productPrice, productStock, productSku = '', unitType = 'piece') {
-        if (this.usedProductIds.has(productId)) {
-            this.showToast('This item is already in the invoice', 'warning');
-            return;
-        }
-
-        const itemsContainer = document.getElementById('itemsContainer');
-        if (!itemsContainer) return;
-
-        this.usedProductIds.add(productId);
-
-        const qtyAttributes = this.getQuantityAttributes(unitType);
-
-        const newRow = document.createElement('div');
-        newRow.className = 'row g-3 align-items-end mb-3 pb-3 border-bottom item-row';
-        newRow.innerHTML = `
-            <div class="col-md-5">
-                <label class="form-label small fw-semibold">Item</label>
-                <input type="text" name="item_name[]" class="form-control" value="${this.escapeHtml(productName)}" readonly>
-                ${productSku ? `<small class="text-muted d-block">SKU: ${this.escapeHtml(productSku)}</small>` : ''}
-                <small class="text-muted">Stock: ${productStock} ${this.getUnitLabel(unitType)}</small>
-                <input type="hidden" name="item_id[]" value="${productId}">
-                <input type="hidden" name="item_unit_type[]" value="${unitType}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold">Qty</label>
-                <div class="input-group">
-                    <input type="number" name="item_qty[]" class="form-control" value="1" 
-                           ${qtyAttributes} required>
-                    <span class="input-group-text">${this.getUnitLabel(unitType)}</span>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold">Unit Price</label>
-                <input type="number" name="item_price[]" class="form-control" value="${Number(productPrice)}" step="0.01" readonly>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label small opacity-0">Remove</label>
-                <button type="button" class="btn btn-outline-danger removeItemBtn w-100">×</button>
-            </div>
-            <div class="col-md-1 text-end">
-                <div class="fw-bold text-success fs-6 line-total">${this.currencySymbol}${Number(productPrice).toFixed(2)}</div>
-            </div>
-        `;
-
-        itemsContainer.appendChild(newRow);
-
-        this.showToast(`${productName} added!`);
-        this.updateEmptyState();
-        this.updateInventoryDropdown();
-        this.updateGrandTotal();
-
-        const resultsDiv = document.getElementById('inventoryResults');
-        if (resultsDiv) resultsDiv.style.display = 'none';
-        const searchInput = document.getElementById('modalSearch') || document.getElementById('inventorySearch');
-        if (searchInput) searchInput.value = '';
+    if (this.usedProductIds.has(productId)) {
+        this.showToast('This item is already in the invoice', 'warning');
+        return;
     }
+
+    const itemsContainer = document.getElementById('itemsContainer');
+    if (!itemsContainer) return;
+
+    this.usedProductIds.add(productId);
+
+    const qtyAttributes = this.getQuantityAttributes(unitType);
+    const initialQty = (unitType === 'piece') ? '1' : '1.00';  // ← nicer default
+
+    const newRow = document.createElement('div');
+    newRow.className = 'row g-3 align-items-end mb-3 pb-3 border-bottom item-row';
+    newRow.innerHTML = `
+        <div class="col-md-5">
+            <label class="form-label small fw-semibold">Item</label>
+            <input type="text" name="item_name[]" class="form-control" value="${this.escapeHtml(productName)}" readonly>
+            ${productSku ? `<small class="text-muted d-block">SKU: ${this.escapeHtml(productSku)}</small>` : ''}
+            <!-- NEW: show unit type clearly -->
+            <small class="text-muted d-block">
+                Unit: ${this.getUnitLabel(unitType)} • Stock: ${productStock} ${this.getUnitLabel(unitType)}
+            </small>
+            <input type="hidden" name="item_id[]" value="${productId}">
+            <input type="hidden" name="item_unit_type[]" value="${unitType}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Qty</label>
+            <div class="input-group">
+                <input type="number" name="item_qty[]" class="form-control" value="${initialQty}" 
+                       ${qtyAttributes} required>
+                <span class="input-group-text">${this.getUnitLabel(unitType)}</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold">Unit Price</label>
+            <input type="number" name="item_price[]" class="form-control" value="${Number(productPrice)}" step="0.01" readonly>
+        </div>
+        <div class="col-md-1">
+            <label class="form-label small opacity-0">Remove</label>
+            <button type="button" class="btn btn-outline-danger removeItemBtn w-100">×</button>
+        </div>
+        <div class="col-md-1 text-end">
+            <div class="fw-bold text-success fs-6 line-total">${this.currencySymbol}${Number(productPrice).toFixed(2)}</div>
+        </div>
+    `;
+
+    itemsContainer.appendChild(newRow);
+
+    this.showToast(`${productName} added!`);
+    this.updateEmptyState();
+    this.updateInventoryDropdown();
+    this.updateGrandTotal();
+
+    const resultsDiv = document.getElementById('inventoryResults');
+    if (resultsDiv) resultsDiv.style.display = 'none';
+    const searchInput = document.getElementById('modalSearch') || document.getElementById('inventorySearch');
+    if (searchInput) searchInput.value = '';
+}
 
     getQuantityAttributes(unitType) {
         if (unitType === 'piece') {
