@@ -50,7 +50,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Product</th>
+                            <th>Product (SKU)</th>
                             <th>Type</th>
                             <th>Quantity</th>
                             <th>Reference</th>
@@ -62,7 +62,7 @@
                         {% for movement in movements %}
                         <tr>
                             <td>{{ movement.id }}</td>
-                            <td>{{ movement.product_name }}</td>
+                            <td>{{ movement.product_name }} <small class="text-muted">({{ movement.sku }})</small></td>
                             <td>
                                 {% if movement.movement_type == 'sale' %}
                                     <span class="badge bg-danger">Sale</span>
@@ -76,10 +76,6 @@
                             <td>{{ movement.reference_id or '—' }}</td>
                             <td>{{ movement.notes or '—' }}</td>
                             <td>{{ movement.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted">No movements found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

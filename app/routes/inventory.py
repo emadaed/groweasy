@@ -378,14 +378,21 @@ def bulk_upload():
         product_data = {
             'name': row.get('name', '').strip(),
             'sku': row.get('sku', '').strip(),
+            'barcode': row.get('barcode', '').strip() or None,
             'category': row.get('category', '').strip() or None,
             'description': row.get('description', '').strip() or None,
-            'current_stock': _safe_int(row.get('current_stock'), 0),
+            'current_stock': _safe_float(row.get('current_stock'), 0.0),
             'min_stock_level': _safe_int(row.get('min_stock_level'), 5),
             'cost_price': _safe_float(row.get('cost_price'), 0.0),
             'selling_price': _safe_float(row.get('selling_price'), 0.0),
             'supplier': row.get('supplier', '').strip() or None,
             'location': row.get('location', '').strip() or None,
+            'unit_type': row.get('unit_type', 'piece').strip(),
+            'is_perishable': str(row.get('is_perishable', '')).lower() in ('yes', 'true', '1'),
+            'expiry_date': row.get('expiry_date', '').strip() or None,
+            'batch_number': row.get('batch_number', '').strip() or None,
+            'pack_size': _safe_float(row.get('pack_size'), 1.0),
+            'weight_kg': _safe_float(row.get('weight_kg'), None),
         }
 
         if not product_data['name'] or not product_data['sku']:
@@ -420,22 +427,21 @@ def bulk_upload_results():
 
 @inventory_bp.route('/sample_products.csv')
 def download_sample_csv():
-    """Provide a sample CSV template for users."""
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['name', 'sku', 'category', 'description', 'current_stock',
-                     'min_stock_level', 'cost_price', 'selling_price', 'supplier', 'location'])
-    writer.writerow(['Example Product', 'EX-123', 'Electronics', 'High-quality item', '50',
-                     '10', '25.00', '39.99', 'Acme Inc.', 'Warehouse A'])
-    writer.writerow(['Another Product', 'AN-456', 'Office Supplies', '', '100',
-                     '20', '5.50', '12.00', '', 'Shelf B'])
-
+    writer.writerow([
+        'name','sku','barcode','category','description','current_stock',
+        'min_stock_level','cost_price','selling_price','supplier','location',
+        'unit_type','is_perishable','expiry_date','batch_number','pack_size','weight_kg'
+    ])
+    writer.writerow([
+        'Fresh Milk','MILK-001','7891234567890','Dairy','1L full cream milk','50',
+        '10','200.00','250.00','Milk Corp','Cold Room A',
+        'weight','Yes','2026-04-15','BATCH-202603','1.0','1.0'
+    ])
     output.seek(0)
-    return Response(
-        output.getvalue(),
-        mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment; filename=sample_products.csv'}
-    )
+    return Response(output.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition': 'attachment; filename=sample_products.csv'})
 
 # Helper conversion functions (place at bottom of the file)
 def _safe_int(val, default):

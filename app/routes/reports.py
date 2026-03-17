@@ -142,66 +142,6 @@ def sales_csv():
     response.headers['Content-Disposition'] = 'attachment; filename=sales_report.csv'
     return response
 
-@reports_bp.route('/stock/movements')
-def stock_movements():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    user_id = session['user_id']
-
-    # Get filter parameters
-    from_date = request.args.get('from')
-    to_date = request.args.get('to')
-    product_id = request.args.get('product_id')
-
-    query = """
-        SELECT sm.id, i.name as product_name, sm.movement_type, sm.quantity,
-               sm.reference_id, sm.notes, sm.created_at
-        FROM stock_movements sm
-        JOIN inventory_items i ON sm.product_id = i.id
-        WHERE sm.user_id = :uid
-    """
-    params = {"uid": user_id}
-    if from_date and to_date:
-        query += " AND sm.created_at::date BETWEEN :from AND :to"
-        params["from"] = from_date
-        params["to"] = to_date
-    if product_id:
-        query += " AND sm.product_id = :pid"
-        params["pid"] = product_id
-    query += " ORDER BY sm.created_at DESC"
-
-    with DB_ENGINE.connect() as conn:
-        rows = conn.execute(text(query), params).fetchall()
-
-    if 'csv' in request.args:
-        # Export CSV
-        import csv
-        from io import StringIO
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['ID', 'Product', 'Type', 'Quantity', 'Reference', 'Notes', 'Date'])
-        for r in rows:
-            writer.writerow(r)
-        response = make_response(output.getvalue())
-        response.headers['Content-Type'] = 'text/csv'
-        response.headers['Content-Disposition'] = 'attachment; filename=stock_movements.csv'
-        return response
-    movements = []
-    for r in rows:
-        movements.append({
-            'id': r[0],
-            'product_name': r[1],
-            'movement_type': r[2],
-            'quantity': r[3],
-            'reference_id': r[4],
-            'notes': r[5],
-            'created_at': r[6]
-        })
-
-    return render_template('stock_movements.html',
-                           movements=movements,
-                           product_id=product_id)
-
     
 @reports_bp.route('/profit_loss', methods=['GET', 'POST'])
 def profit_loss():
@@ -339,3 +279,71 @@ def profit_loss():
     
     # GET: show form
     return render_template('profit_loss_form.html', nonce=g.nonce)
+
+@reports_bp.route('/stock/movements')
+def stock_movements():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    user_id = session['user_id']
+
+    from_date = request.args.get('from')
+    to_date = request.args.get('to')
+    product_id = request.args.get('product_id')
+
+    query = """
+        SELECT sm.id, i.name as product_name, i.sku, sm.movement_type, sm.quantity,
+               sm.reference_id, sm.notes, sm.created_at
+        FROM stock_movements sm
+        JOIN inventory_items i ON sm.product_id = i.id
+        WHERE sm.user_id = :uid
+    """
+    params = {"uid": user_id}
+    if from_date and to_date:
+        query += " AND sm.created_at::date BETWEEN :from AND :to"
+        params["from"] = from_date
+        params["to"] = to_date
+    if product_id:
+        query += " AND sm.product_id = :pid"
+        params["pid"] = product_id
+    query += " ORDER BY sm.created_at DESC"
+
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text(query), params).fetchall()
+
+        # Get products for filter dropdown
+        products = conn.execute(text("""
+            SELECT id, name FROM inventory_items 
+            WHERE user_id = :uid AND is_active = TRUE 
+            ORDER BY name
+        """), {"uid": user_id}).fetchall()
+
+    if 'csv' in request.args:
+        import csv
+        from io import StringIO
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'Product', 'SKU', 'Type', 'Quantity', 'Reference', 'Notes', 'Date'])
+        for r in rows:
+            writer.writerow([r[0], r[1], r[2] or '—', r[3], r[4], r[5], r[6], r[7]])
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=stock_movements.csv'
+        return response
+
+    movements = []
+    for r in rows:
+        movements.append({
+            'id': r[0],
+            'product_name': r[1],
+            'sku': r[2] or '—',
+            'movement_type': r[3],
+            'quantity': r[4],
+            'reference_id': r[5],
+            'notes': r[6],
+            'created_at': r[7]
+        })
+
+    return render_template('stock_movements.html',
+                           movements=movements,
+                           products=products,
+                           nonce=g.nonce)
