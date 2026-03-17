@@ -52,22 +52,31 @@ class InvoiceService:
                             'total': item['total']
                         })
 
-            # Update stock - decrease for sales (NOW SUPPORTS FLOAT QUANTITIES)
+            #Update stock - decrease for sales (EXACT DECIMAL QUANTITY)
             movement_type = 'sale'
 
             for item in invoice_data.get('items', []):
                 if item.get('product_id'):
-                    qty_sold = item['qty']                     # already float from prepare_invoice_data
+                    # Ensure qty is Decimal
+                    qty_sold = Decimal(str(item['qty']))  # safe conversion from float
                     success = InventoryManager.update_stock_delta(
                         self.user_id,
                         item['product_id'],
-                        -qty_sold,                             # negative float
+                        -qty_sold,                             # Decimal negative
                         movement_type,
                         reference_id=invoice_data['invoice_number'],
-                        notes=f"Sold {qty_sold} {item.get('unit_type', 'unit')} via invoice {invoice_data['invoice_number']}"
+                        notes=f"Sold {qty_sold:.3f} {item.get('unit_type', 'unit')} via invoice {invoice_data['invoice_number']}"
                     )
                     if not success:
-                        self.warnings.append(f"Stock update failed for {item['name']} (possible negative stock)")
+                        product_name = item.get('name', 'Unknown')
+                        with DB_ENGINE.connect() as conn:
+                            stock = conn.execute(text(
+                                "SELECT current_stock FROM inventory_items WHERE id = :pid"
+                            ), {"pid": item['product_id']}).scalar() or Decimal('0')
+                        self.warnings.append(
+                            f"Stock update failed for {product_name}: "
+                            f"requested -{qty_sold:.3f}, current stock {stock}"
+                        )
 
             return invoice_data, self.errors or self.warnings
 
