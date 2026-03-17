@@ -1,6 +1,6 @@
 # app/services/inventory.py - FINAL COMPLETE & TESTED VERSION
 # (with soft delete and validation helper)
-
+from decimal import Decimal
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
 from datetime import datetime
@@ -156,12 +156,13 @@ class InventoryManager:
 
     @staticmethod
     def update_stock_delta(user_id, product_id, quantity_delta, movement_type, reference_id=None, notes=None):
-        """Update stock by delta - used by invoice/PO - WITH DETAILED LOGGING"""
+        """Update stock by delta - NOW WITH DECIMAL SUPPORT & DETAILED LOGGING"""
         try:
             with DB_ENGINE.begin() as conn:
                 # Log incoming values
                 logger.info(f"update_stock_delta called: user={user_id}, prod={product_id}, "
-                            f"delta={quantity_delta}, type={movement_type}, ref={reference_id}, notes={notes}")
+                            f"delta={quantity_delta} (type={type(quantity_delta)}), "
+                            f"type={movement_type}, ref={reference_id}, notes={notes}")
 
                 # Lock row and fetch current
                 result = conn.execute(text('''
@@ -175,7 +176,17 @@ class InventoryManager:
                     return False
 
                 product_name, current_stock = result
+                # Ensure current_stock is Decimal
+                if not isinstance(current_stock, Decimal):
+                    current_stock = Decimal(str(current_stock))
                 logger.info(f"Current stock for '{product_name}' (id={product_id}): {current_stock}")
+
+                # Convert delta to Decimal (safe handling for int/float/str)
+                if isinstance(quantity_delta, (int, float)):
+                    quantity_delta = Decimal(str(quantity_delta))
+                elif isinstance(quantity_delta, str):
+                    quantity_delta = Decimal(quantity_delta)
+                # else assume already Decimal
 
                 new_stock = current_stock + quantity_delta
                 logger.info(f"Calculated new_stock: {new_stock} (from {current_stock} + {quantity_delta})")
@@ -185,12 +196,12 @@ class InventoryManager:
                     logger.warning(f"Prevented negative stock for product {product_id}: would be {new_stock}")
                     return False
 
-                # Apply update
+                # Apply update (new_stock is Decimal → SQLAlchemy handles it)
                 conn.execute(text('''
                     UPDATE inventory_items SET current_stock = :new_stock WHERE id = :product_id
                 '''), {"new_stock": new_stock, "product_id": product_id})
 
-                # Log movement
+                # Log movement (quantity_delta stays Decimal)
                 conn.execute(text('''
                     INSERT INTO stock_movements
                     (user_id, product_id, movement_type, quantity, reference_id, notes)
