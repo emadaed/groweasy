@@ -166,25 +166,29 @@ def delete_product():
 # API inventory items 5
 @inventory_bp.route("/api/inventory_items")
 def get_inventory_items_api():
-    """API endpoint for inventory items (for invoice form)"""
+    """API endpoint for invoice form - now includes sku & unit_type"""
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
-
+    
     with DB_ENGINE.connect() as conn:
         items = conn.execute(text("""
-            SELECT id, name, selling_price, current_stock
+            SELECT id, name, sku, selling_price, current_stock, unit_type
             FROM inventory_items
-            WHERE user_id = :user_id AND is_active = TRUE AND current_stock > 0
+            WHERE user_id = :user_id 
+              AND is_active = TRUE 
+              AND current_stock > 0
             ORDER BY name
         """), {"user_id": session['user_id']}).fetchall()
-
+    
     inventory_data = [{
-        'id': item[0],
+        'id': str(item[0]),               # string to be safe with JS Set
         'name': item[1],
-        'price': float(item[2]) if item[2] else 0,
-        'stock': item[3]
+        'sku': item[2] or '',
+        'price': float(item[3]) if item[3] else 0.0,
+        'stock': int(item[4]),
+        'unit_type': item[5] or 'piece'
     } for item in items]
-
+    
     return jsonify(inventory_data)
 
 # stock adjustment - FINAL WORKING VERSION 6
