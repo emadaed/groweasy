@@ -332,8 +332,9 @@ class InventoryManager:
         try:
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(text('''
-                    SELECT name, sku, category, current_stock, min_stock_level,
-                           cost_price, selling_price, supplier, location
+                    SELECT name, sku, barcode, category, current_stock, unit_type,
+                           min_stock_level, cost_price, selling_price, supplier, location,
+                           is_perishable, expiry_date, batch_number
                     FROM inventory_items
                     WHERE user_id = :user_id AND is_active = TRUE
                     ORDER BY name
@@ -341,17 +342,16 @@ class InventoryManager:
 
                 report_data = []
                 for row in result:
-                    # In get_inventory_report (inventory.py) - update the dict:
                     report_data.append({
                         'name': row.name,
                         'sku': row.sku or 'N/A',
                         'barcode': row.barcode or 'N/A',
                         'category': row.category or '',
-                        'current_stock': f"{float(row.current_stock):.3f}" if row.current_stock else '0.000',  # ← formatted
+                        'current_stock': f"{float(row.current_stock):.3f}" if row.current_stock is not None else '0.000',
                         'unit_type': row.unit_type or 'piece',
                         'min_stock': row.min_stock_level or 0,
-                        'cost_price': float(row.cost_price) if row.cost_price else 0.0,
-                        'selling_price': float(row.selling_price) if row.selling_price else 0.0,
+                        'cost_price': float(row.cost_price) if row.cost_price is not None else 0.0,
+                        'selling_price': float(row.selling_price) if row.selling_price is not None else 0.0,
                         'supplier': row.supplier or '',
                         'location': row.location or '',
                         'is_perishable': 'Yes' if row.is_perishable else 'No',

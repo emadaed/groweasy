@@ -281,29 +281,46 @@ def adjust_stock_audit():
 # inventory report =7
 @inventory_bp.route("/download_inventory_report")
 def download_inventory_report():
-    """Download inventory as CSV"""
+    """Download inventory as CSV - with all new fields"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-
+    
     from app.services.inventory import InventoryManager
     import csv
     import io
-
+    
     inventory_data = InventoryManager.get_inventory_report(session['user_id'])
-
+    
     # Create CSV in memory
     output = io.StringIO()
     writer = csv.writer(output)
-
-    # Write header
-    writer.writerow(['Product Name', 'SKU', 'Category', 'Current Stock', 'Min Stock',
-                    'Cost Price', 'Selling Price', 'Supplier', 'Location'])
-
-    # Write data
+    
+    # Write header - matches exactly what get_inventory_report returns
+    writer.writerow([
+        'Product Name', 'SKU', 'Barcode', 'Category', 'Current Stock', 'Unit Type',
+        'Min Stock', 'Cost Price', 'Selling Price', 'Supplier', 'Location',
+        'Perishable', 'Expiry Date', 'Batch'
+    ])
+    
+    # Write data rows
     for item in inventory_data:
-        writer.writerow(['Product Name', 'SKU', 'Barcode', 'Category', 'Current Stock', 'Unit Type', 'Min Stock',
-                 'Cost Price', 'Selling Price', 'Supplier', 'Location', 'Perishable', 'Expiry Date', 'Batch'])
-
+        writer.writerow([
+            item['name'],
+            item['sku'],
+            item['barcode'],
+            item['category'],
+            item['current_stock'],          # already formatted string
+            item['unit_type'],
+            item['min_stock'],
+            item['cost_price'],
+            item['selling_price'],
+            item['supplier'],
+            item['location'],
+            item['is_perishable'],
+            item['expiry_date'],
+            item['batch_number']
+        ])
+    
     # Return CSV file
     output.seek(0)
     return Response(
