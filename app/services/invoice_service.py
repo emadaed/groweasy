@@ -1,6 +1,7 @@
 # app/services/invoice_service.py - FINAL PROFESSIONAL VERSION
 
 import logging
+from decimal import Decimal
 from app.services.db import DB_ENGINE
 from app.services.number_generator import NumberGenerator
 from app.services.auth import save_user_invoice
