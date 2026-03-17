@@ -1,4 +1,5 @@
 // form_items.js - Enhanced with SKU display + unit-aware quantity input
+// FIXED: all methods present, safe Number() usage, debug kept
 
 class InvoiceFormManager {
     constructor() {
@@ -92,10 +93,9 @@ class InvoiceFormManager {
             if (this.usedProductIds.has(item.id)) return;
             const option = document.createElement('option');
             option.value = item.id;
-            // UPDATED: show SKU when available
             let label = item.name;
             if (item.sku) label = `${item.sku} - ${label}`;
-            label += ` - ${this.currencySymbol}${item.price.toFixed(2)} (Stock: ${item.stock})`;
+            label += ` - ${this.currencySymbol}${Number(item.price).toFixed(2)} (Stock: ${item.stock})`;
             option.textContent = label;
             option.dataset.name = item.name;
             option.dataset.price = item.price;
@@ -152,7 +152,7 @@ class InvoiceFormManager {
                                     ${this.escapeHtml(item.name)}
                                     ${item.sku ? `<br><small class="text-muted">SKU: ${this.escapeHtml(item.sku)}</small>` : ''}
                                 </h6>
-                                <p class="mb-2"><strong>${this.currencySymbol}${item.price.toFixed(2)}</strong></p>
+                                <p class="mb-2"><strong>${this.currencySymbol}${Number(item.price).toFixed(2)}</strong></p>
                                 <p class="mb-3">
                                     <span class="badge ${item.stock > 10 ? 'bg-success' : item.stock > 0 ? 'bg-warning' : 'bg-danger'}">
                                         Stock: ${item.stock}
@@ -181,7 +181,6 @@ class InvoiceFormManager {
         resultsDiv.style.display = 'block';
     }
 
-    // UPDATED: now accepts sku & unit_type
     addInventoryItem(productId, productName, productPrice, productStock, productSku = '', unitType = 'piece') {
         if (this.usedProductIds.has(productId)) {
             this.showToast('This item is already in the invoice', 'warning');
@@ -216,7 +215,7 @@ class InvoiceFormManager {
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Unit Price</label>
-                <input type="number" name="item_price[]" class="form-control" value="${productPrice}" step="0.01" readonly>
+                <input type="number" name="item_price[]" class="form-control" value="${Number(productPrice)}" step="0.01" readonly>
             </div>
             <div class="col-md-1">
                 <label class="form-label small opacity-0">Remove</label>
@@ -240,7 +239,6 @@ class InvoiceFormManager {
         if (searchInput) searchInput.value = '';
     }
 
-    // NEW helper
     getQuantityAttributes(unitType) {
         if (unitType === 'piece') {
             return 'min="1" step="1"';
@@ -249,7 +247,6 @@ class InvoiceFormManager {
         }
     }
 
-    // NEW helper
     getUnitLabel(unitType) {
         const map = {
             'piece': 'pcs',
@@ -260,7 +257,6 @@ class InvoiceFormManager {
         return map[unitType] || unitType;
     }
 
-    // UPDATED: also updates line total
     validateQuantityInRealTime(input) {
         const row = input.closest('.item-row');
         const qty = parseFloat(input.value) || 0;
@@ -290,13 +286,22 @@ class InvoiceFormManager {
         let total = 0;
         document.querySelectorAll('.item-row').forEach(row => {
             const qty = parseFloat(row.querySelector('input[name="item_qty[]"]').value) || 0;
-            const price = parseFloat(row.querySelector('input[name="item_price[]"]').value) || 0;
+            const price = Number(row.querySelector('input[name="item_price[]"]').value) || 0;
             total += qty * price;
         });
         const grandTotalEl = document.getElementById('grandTotal');
         if (grandTotalEl) {
             grandTotalEl.textContent = total.toFixed(2);
         }
+    }
+
+    updateEmptyState() {
+        const itemsContainer = document.getElementById('itemsContainer');
+        const noItemsMessage = document.getElementById('noItemsMessage');
+        if (!itemsContainer || !noItemsMessage) return;
+
+        const hasItems = itemsContainer.querySelectorAll('.item-row').length > 0;
+        noItemsMessage.style.display = hasItems ? 'none' : 'block';
     }
 
     removeItem(button) {
@@ -349,7 +354,8 @@ class InvoiceFormManager {
             .replace(/'/g, "&#039;");
     }
 }
-// Temporary debug
+
+// Temporary debug - keep this for one more test
 console.log('InvoiceFormManager prototype methods:', Object.getOwnPropertyNames(InvoiceFormManager.prototype));
 
 document.addEventListener('DOMContentLoaded', () => {
