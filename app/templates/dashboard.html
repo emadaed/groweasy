@@ -1,4 +1,10 @@
 {% extends "base.html" %}
+{% macro unit_label(ut) -%}
+    {% if ut == 'weight' -%}kg
+    {%- elif ut == 'volume' -%}L
+    {%- else -%}pcs
+    {%- endif -%}
+{%- endmacro %}
 
 {% block title %}Dashboard - GrowEasy ERP{% endblock %}
 
