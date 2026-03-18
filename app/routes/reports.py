@@ -1,4 +1,5 @@
 from flask import send_file, make_response, g
+from flask import redirect, url_for
 from app.services.pdf_engine import generate_pdf  # if not already imported
 from app.context_processors import CURRENCY_SYMBOLS
 from app.services.cache import get_user_profile_cached
@@ -143,142 +144,6 @@ def sales_csv():
     return response
 
     
-@reports_bp.route('/profit_loss', methods=['GET', 'POST'])
-def profit_loss():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    user_id = session['user_id']
-    
-    if request.method == 'POST':
-        from_date = request.form.get('from_date')
-        to_date = request.form.get('to_date')
-        include_details = request.form.get('include_details') == 'yes'
-        
-        # Validate dates (optional)
-        
-        with DB_ENGINE.connect() as conn:
-            # --- SALES TOTALS ---
-            sales_result = conn.execute(text("""
-                SELECT 
-                    COUNT(*) as invoice_count,
-                    SUM(grand_total) as total_sales,
-                    SUM(COALESCE((invoice_data::json->>'tax_amount')::numeric, 0)) as total_tax_collected
-                FROM user_invoices
-                WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
-            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
-
-            invoice_count = sales_result[0] or 0
-            total_sales = float(sales_result[1] or 0.0)
-            total_tax_collected = float(sales_result[2] or 0.0)
-            
-            # --- EXPENSE TOTALS ---
-            expense_result = conn.execute(text("""
-                SELECT 
-                    COUNT(*) as expense_count,
-                    SUM(amount) as total_net_expenses,
-                    COALESCE(SUM(tax_amount), 0) as total_input_tax
-                FROM expenses
-                WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
-            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
-
-            expense_count = expense_result[0] or 0
-            total_net_expenses = float(expense_result[1] or 0.0)
-            total_input_tax = float(expense_result[2] or 0.0)
-            total_expenses_including_tax = total_net_expenses + total_input_tax
-            
-            # --- DETAILS (if requested) ---
-            invoices = []
-            expenses = []
-            
-            if include_details:
-                # Invoice details
-                inv_rows = conn.execute(text("""
-                    SELECT 
-                        invoice_number,
-                        invoice_date,
-                        client_name,
-                        grand_total,
-                        COALESCE((invoice_data::json->>'tax_amount')::numeric, 0) as tax_amount
-                    FROM user_invoices
-                    WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
-                    ORDER BY invoice_date DESC
-                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
-                
-                for row in inv_rows:
-                    invoices.append({
-                        'number': row[0],
-                        'date': row[1].strftime('%Y-%m-%d') if row[1] else '',
-                        'client': row[2],
-                        'total': float(row[3]),
-                        'tax': float(row[4])
-                    })
-                
-                # Expense details
-                exp_rows = conn.execute(text("""
-                    SELECT 
-                        expense_date,
-                        description,
-                        category,
-                        amount,
-                        notes
-                    FROM expenses
-                    WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
-                    ORDER BY expense_date DESC
-                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
-                
-                for row in exp_rows:
-                    expenses.append({
-                        'date': row[0].strftime('%Y-%m-%d') if row[0] else '',
-                        'description': row[1],
-                        'category': row[2],
-                        'amount': float(row[3]),
-                        'notes': row[4]
-                    })
-        
-        # Get user profile for company details
-        user_profile = get_user_profile_cached(user_id)
-        company_name = user_profile.get('company_name', 'Your Company')
-        currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
-        
-        # Generate report number
-        report_number = f"PL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        issue_date = datetime.now().strftime('%d-%b-%Y')
-        
-        # Render the template
-        html = render_template('profit_loss_report.html',
-                       company_name=company_name,
-                       currency_symbol=currency_symbol,
-                       report_number=report_number,
-                       issue_date=issue_date,
-                       from_date=from_date,
-                       to_date=to_date,
-                       invoice_count=invoice_count,
-                       total_sales=total_sales,
-                       total_tax_collected=total_tax_collected,
-                       expense_count=expense_count,
-                       total_expenses=total_net_expenses,          # net expenses (amount)
-                       total_expenses_including_tax=total_expenses_including_tax,  # optional
-                       total_input_tax=total_input_tax,            # <-- NEW
-                       net_profit=total_sales - total_net_expenses,
-                       include_details=include_details,
-                       invoices=invoices,
-                       expenses=expenses)
-        
-        # Generate PDF
-        from app.services.pdf_engine import generate_pdf
-        pdf_bytes = generate_pdf(html)
-        
-        # Return as download
-        response = make_response(send_file(
-            io.BytesIO(pdf_bytes),
-            as_attachment=True,
-            download_name=f"Profit_Loss_{from_date}_to_{to_date}.pdf",
-            mimetype='application/pdf'
-        ))
-        return response
-    
-    # GET: show form
-    return render_template('profit_loss_form.html', nonce=g.nonce)
 
 @reports_bp.route('/stock/movements')
 def stock_movements():
@@ -347,3 +212,207 @@ def stock_movements():
                            movements=movements,
                            products=products,
                            nonce=g.nonce)
+
+# new PEL Enhanced
+
+@reports_bp.route('/profit_loss', methods=['GET', 'POST'])
+def profit_loss():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    user_id = session['user_id']
+    
+    if request.method == 'POST':
+        from_date = request.form.get('from_date')
+        to_date = request.form.get('to_date')
+        include_details = request.form.get('include_details') == 'yes'
+        
+        with DB_ENGINE.connect() as conn:
+            # --- EXISTING SALES TOTALS ---
+            sales_result = conn.execute(text("""
+                SELECT 
+                    COUNT(*) as invoice_count,
+                    SUM(grand_total) as total_sales,
+                    SUM(COALESCE((invoice_data::json->>'tax_amount')::numeric, 0)) as total_tax_collected
+                FROM user_invoices
+                WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
+            invoice_count = sales_result[0] or 0
+            total_sales = float(sales_result[1] or 0.0)
+            total_tax_collected = float(sales_result[2] or 0.0)
+            
+            # --- EXISTING EXPENSE TOTALS ---
+            expense_result = conn.execute(text("""
+                SELECT 
+                    COUNT(*) as expense_count,
+                    SUM(amount) as total_net_expenses,
+                    COALESCE(SUM(tax_amount), 0) as total_input_tax
+                FROM expenses
+                WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
+            expense_count = expense_result[0] or 0
+            total_net_expenses = float(expense_result[1] or 0.0)
+            total_input_tax = float(expense_result[2] or 0.0)
+            
+            # --- NEW: COGS (Cost of Goods Sold) ---
+            cogs = conn.execute(text("""
+                SELECT COALESCE(SUM(ii.quantity * i.cost_price), 0)
+                FROM invoice_items ii
+                JOIN user_invoices ui ON ii.invoice_id = ui.id
+                JOIN inventory_items i ON ii.product_id = i.id
+                WHERE ui.user_id = :user_id 
+                    AND ui.status = 'paid'
+                    AND ui.invoice_date BETWEEN :from_date AND :to_date
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0
+            
+            # --- NEW: Opening Inventory (value at start date) ---
+            opening_inventory = conn.execute(text("""
+                WITH inventory_snapshot AS (
+                    SELECT 
+                        i.id,
+                        i.cost_price,
+                        COALESCE((
+                            SELECT SUM(quantity)
+                            FROM invoice_items ii
+                            JOIN user_invoices ui ON ii.invoice_id = ui.id
+                            WHERE ii.product_id = i.id 
+                                AND ui.status = 'paid'
+                                AND ui.invoice_date < :from_date
+                        ), 0) as sold_before,
+                        COALESCE((
+                            SELECT SUM(quantity)
+                            FROM purchase_order_items poi
+                            JOIN purchase_orders po ON poi.purchase_order_id = po.id
+                            WHERE poi.product_id = i.id 
+                                AND po.created_at < :from_date
+                                AND po.status = 'received'
+                        ), 0) as purchased_before
+                    FROM inventory_items i
+                    WHERE i.user_id = :user_id
+                )
+                SELECT COALESCE(SUM(cost_price * (purchased_before - sold_before)), 0)
+                FROM inventory_snapshot
+            """), {"user_id": user_id, "from_date": from_date}).scalar() or 0
+            
+            # --- NEW: Purchases during period ---
+            purchases = conn.execute(text("""
+                SELECT COALESCE(SUM(poi.quantity * poi.cost_price), 0)
+                FROM purchase_order_items poi
+                JOIN purchase_orders po ON poi.purchase_order_id = po.id
+                WHERE po.user_id = :user_id 
+                    AND po.created_at BETWEEN :from_date AND :to_date
+                    AND po.status = 'received'
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0
+            
+            # --- NEW: Closing Inventory (current value) ---
+            closing_inventory = conn.execute(text("""
+                SELECT COALESCE(SUM(current_stock * cost_price), 0)
+                FROM inventory_items
+                WHERE user_id = :user_id
+            """), {"user_id": user_id}).scalar() or 0
+            
+            # --- NEW: Receivables Aging ---
+            receivables = conn.execute(text("""
+                SELECT 
+                    COUNT(*) as total_invoices,
+                    COALESCE(SUM(grand_total), 0) as total_due,
+                    COALESCE(SUM(CASE 
+                        WHEN invoice_date < NOW() - INTERVAL '60 days' 
+                        THEN grand_total ELSE 0 
+                    END), 0) as over_60_days,
+                    COALESCE(SUM(CASE 
+                        WHEN invoice_date BETWEEN NOW() - INTERVAL '60 days' AND NOW() - INTERVAL '30 days'
+                        THEN grand_total ELSE 0 
+                    END), 0) as between_30_60,
+                    COALESCE(SUM(CASE 
+                        WHEN invoice_date > NOW() - INTERVAL '30 days'
+                        THEN grand_total ELSE 0 
+                    END), 0) as under_30_days
+                FROM user_invoices
+                WHERE user_id = :user_id AND status = 'unpaid'
+            """), {"user_id": user_id}).first()
+            
+            # --- NEW: Payables (unpaid purchase orders) ---
+            payables = conn.execute(text("""
+                SELECT 
+                    COUNT(*) as total_pos,
+                    COALESCE(SUM(total_amount), 0) as total_payable
+                FROM purchase_orders
+                WHERE user_id = :user_id AND status = 'pending'
+            """), {"user_id": user_id}).first()
+            
+            # --- EXISTING DETAILS (if requested) ---
+            invoices = []
+            expenses = []
+            if include_details:
+                inv_rows = conn.execute(text("""
+                    SELECT invoice_number, invoice_date, client_name, grand_total,
+                           COALESCE((invoice_data::json->>'tax_amount')::numeric, 0) as tax_amount
+                    FROM user_invoices
+                    WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
+                    ORDER BY invoice_date DESC
+                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
+                for row in inv_rows:
+                    invoices.append({'number': row[0], 'date': row[1].strftime('%Y-%m-%d'), 
+                                     'client': row[2], 'total': float(row[3]), 'tax': float(row[4])})
+                
+                exp_rows = conn.execute(text("""
+                    SELECT expense_date, description, category, amount, notes
+                    FROM expenses
+                    WHERE user_id = :user_id AND expense_date BETWEEN :from_date AND :to_date
+                    ORDER BY expense_date DESC
+                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
+                for row in exp_rows:
+                    expenses.append({'date': row[0].strftime('%Y-%m-%d'), 'description': row[1],
+                                     'category': row[2], 'amount': float(row[3]), 'notes': row[4]})
+        
+        # Calculate derived metrics
+        gross_profit = total_sales - cogs
+        net_profit = gross_profit - total_net_expenses
+        
+        # Get user profile
+        user_profile = get_user_profile_cached(user_id)
+        company_name = user_profile.get('company_name', 'Your Company')
+        currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+        
+        report_number = f"PL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        issue_date = datetime.now().strftime('%d-%b-%Y')
+        
+        # Render template (you'll need to update the template to show new fields)
+        html = render_template('profit_loss_report.html',
+                               company_name=company_name,
+                               currency_symbol=currency_symbol,
+                               report_number=report_number,
+                               issue_date=issue_date,
+                               from_date=from_date,
+                               to_date=to_date,
+                               invoice_count=invoice_count,
+                               total_sales=total_sales,
+                               total_tax_collected=total_tax_collected,
+                               expense_count=expense_count,
+                               total_expenses=total_net_expenses,
+                               total_input_tax=total_input_tax,
+                               cogs=cogs,
+                               opening_inventory=opening_inventory,
+                               purchases=purchases,
+                               closing_inventory=closing_inventory,
+                               gross_profit=gross_profit,
+                               net_profit=net_profit,
+                               receivables=receivables,
+                               payables=payables,
+                               include_details=include_details,
+                               invoices=invoices,
+                               expenses=expenses)
+        
+        # Generate PDF (same as before)
+        from app.services.pdf_engine import generate_pdf
+        pdf_bytes = generate_pdf(html)
+        return make_response(send_file(
+            io.BytesIO(pdf_bytes),
+            as_attachment=True,
+            download_name=f"Profit_Loss_{from_date}_to_{to_date}.pdf",
+            mimetype='application/pdf'
+        ))
+    
+    # GET: show form
+    return render_template('profit_loss_form.html', nonce=g.nonce)
+

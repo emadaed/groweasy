@@ -26,6 +26,7 @@
         .invoice-table td, .expense-table td { border: 1px solid #bdc3c7; padding: 6px; }
         .footer { margin-top: 50px; border-top: 1px solid #333; padding-top: 20px; font-size: 12px; text-align: center; }
         .page-break { page-break-before: always; }
+        h3 { background-color: #ecf0f1; padding: 8px; margin-top: 30px; }
     </style>
 </head>
 <body>
@@ -50,46 +51,76 @@
         </div>
     </div>
 
-    <h2>Summary</h2>
+    <!-- INCOME SECTION -->
+    <h3>Income</h3>
     <table class="summary-table">
-        <tr>
-            <th>Description</th>
-            <th>Count</th>
-            <th>Amount ({{ currency_symbol }})</th>
-        </tr>
-        <tr>
-            <td>Total Sales (Invoices)</td>
-            <td>{{ invoice_count }}</td>
-            <td>{{ "%.2f"|format(total_sales) }}</td>
-        </tr>
-        <tr>
-            <td>Total Expenses</td>
-            <td>{{ expense_count }}</td>
-            <td>{{ "%.2f"|format(total_expenses) }}</td>
-        </tr>
-        <tr>
-            <td colspan="2" style="text-align: right;"><strong>Net Profit / Loss</strong></td>
-            <td class="{% if net_profit >= 0 %}net-profit{% else %}net-loss{% endif %}">
-                {{ "%.2f"|format(net_profit) }}
-            </td>
-        </tr>
+        <tr><th>Description</th><th>Amount ({{ currency_symbol }})</th></tr>
+        <tr><td>Total Sales (Invoices)</td><td>{{ "%.2f"|format(total_sales) }}</td></tr>
     </table>
-    <h3>Tax Summary</h3>
+
+    <!-- COST OF GOODS SOLD SECTION -->
+    <h3>Cost of Goods Sold</h3>
     <table class="summary-table">
-        <tr>
-            <td>Output Tax (collected on sales)</td>
-            <td>{{ "%.2f"|format(total_tax_collected) }}</td>
-        </tr>
-        <tr>
-            <td>Input Tax (paid on expenses)</td>
-            <td>{{ "%.2f"|format(total_input_tax) }}</td>
-        </tr>
-        <tr>
-            <td><strong>Net Tax Payable / (Refundable)</strong></td>
-            <td><strong>{{ "%.2f"|format(total_tax_collected - total_input_tax) }}</strong></td>
+        <tr><th>Description</th><th>Amount ({{ currency_symbol }})</th></tr>
+        <tr><td>Opening Inventory</td><td>{{ "%.2f"|format(opening_inventory) }}</td></tr>
+        <tr><td>+ Purchases (during period)</td><td>{{ "%.2f"|format(purchases) }}</td></tr>
+        <tr><td>- Closing Inventory</td><td>{{ "%.2f"|format(closing_inventory) }}</td></tr>
+        <tr style="font-weight: bold; background-color: #d5dbdb;"><td>COGS (Inventory Movement)</td><td>{{ "%.2f"|format(opening_inventory + purchases - closing_inventory) }}</td></tr>
+        <tr><td>COGS (from actual sales)</td><td>{{ "%.2f"|format(cogs) }}</td></tr>
+    </table>
+
+    <!-- GROSS PROFIT -->
+    <table class="summary-table">
+        <tr style="background-color: #2ecc71; color: white;"><th>Gross Profit</th><th>{{ "%.2f"|format(gross_profit) }}</th></tr>
+    </table>
+
+    <!-- EXPENSES SECTION -->
+    <h3>Expenses</h3>
+    <table class="summary-table">
+        <tr><th>Description</th><th>Amount ({{ currency_symbol }})</th></tr>
+        <tr><td>Total Expenses (net)</td><td>{{ "%.2f"|format(total_expenses) }}</td></tr>
+        <tr><td>Input Tax (on expenses)</td><td>{{ "%.2f"|format(total_input_tax) }}</td></tr>
+        <tr style="font-weight: bold;"><td>Total Expenses (including tax)</td><td>{{ "%.2f"|format(total_expenses + total_input_tax) }}</td></tr>
+    </table>
+
+    <!-- NET PROFIT -->
+    <table class="summary-table">
+        <tr class="{% if net_profit >= 0 %}net-profit{% else %}net-loss{% endif %}">
+            <th>Net Profit / Loss</th>
+            <th>{{ "%.2f"|format(net_profit) }}</th>
         </tr>
     </table>
 
+    <!-- TAX SUMMARY -->
+    <h3>Tax Summary</h3>
+    <table class="summary-table">
+        <tr><td>Output Tax (collected on sales)</td><td>{{ "%.2f"|format(total_tax_collected) }}</td></tr>
+        <tr><td>Input Tax (paid on expenses)</td><td>{{ "%.2f"|format(total_input_tax) }}</td></tr>
+        <tr style="font-weight: bold;"><td>Net Tax Payable / (Refundable)</td><td>{{ "%.2f"|format(total_tax_collected - total_input_tax) }}</td></tr>
+    </table>
+
+    <!-- RECEIVABLES AGING -->
+    <h3>Receivables Aging (as of {{ issue_date }})</h3>
+    <table class="summary-table">
+        <tr><th>Age</th><th>Amount ({{ currency_symbol }})</th></tr>
+        <tr><td>Current (< 30 days)</td><td>{{ "%.2f"|format(receivables.under_30_days) }}</td></tr>
+        <tr><td>30 - 60 days</td><td>{{ "%.2f"|format(receivables.between_30_60) }}</td></tr>
+        <tr><td>Over 60 days</td><td>{{ "%.2f"|format(receivables.over_60_days) }}</td></tr>
+        <tr style="font-weight: bold;"><td>Total Receivables</td><td>{{ "%.2f"|format(receivables.total_due) }}</td></tr>
+        <tr><td colspan="2">Number of unpaid invoices: {{ receivables.total_invoices }}</td></tr>
+    </table>
+
+    <!-- PAYABLES (optional) -->
+    {% if payables %}
+    <h3>Payables (Unpaid Purchase Orders)</h3>
+    <table class="summary-table">
+        <tr><th>Description</th><th>Amount ({{ currency_symbol }})</th></tr>
+        <tr><td>Total Payables</td><td>{{ "%.2f"|format(payables.total_payable) }}</td></tr>
+        <tr><td colspan="2">Number of pending POs: {{ payables.total_pos }}</td></tr>
+    </table>
+    {% endif %}
+
+    <!-- DETAILED LISTS (if requested) -->
     {% if include_details %}
         <!-- Invoice Details -->
         {% if invoices %}
@@ -101,8 +132,8 @@
                         <th>Invoice #</th>
                         <th>Date</th>
                         <th>Client</th>
-                        <th>Total</th>
-                        <th>Tax</th>
+                        <th>Total ({{ currency_symbol }})</th>
+                        <th>Tax ({{ currency_symbol }})</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -130,7 +161,7 @@
                         <th>Date</th>
                         <th>Description</th>
                         <th>Category</th>
-                        <th>Amount</th>
+                        <th>Amount ({{ currency_symbol }})</th>
                         <th>Notes</th>
                     </tr>
                 </thead>
@@ -150,6 +181,7 @@
         {% endif %}
     {% endif %}
 
+    <!-- FOOTER -->
     <div class="footer">
         This report is computer-generated and does not require a signature.
     </div>
