@@ -97,7 +97,6 @@ def home():
 
 
 # new route and methods
-
 @main_bp.route("/dashboard")
 def dashboard():
     if 'user_id' not in session:
@@ -139,21 +138,23 @@ def dashboard():
             WHERE user_id = :uid
         """), {"uid": user_id}).scalar() or 0
 
-        # 5. Existing inventory stats (unchanged)
+        # 5. Inventory stats
         total_products = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
             WHERE user_id = :uid AND is_active = TRUE
         """), {"uid": user_id}).scalar() or 0
+
         low_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
             WHERE user_id = :uid AND current_stock <= min_stock_level AND current_stock > 0
         """), {"uid": user_id}).scalar() or 0
+
         out_of_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
             WHERE user_id = :uid AND current_stock = 0
         """), {"uid": user_id}).scalar() or 0
 
-        # 6. Deadstock (SKU added earlier)
+        # 6. Deadstock (no sales in last 90 days)
         deadstock_items = conn.execute(text("""
             SELECT i.id, i.name, i.sku
             FROM inventory_items i
@@ -165,16 +166,22 @@ def dashboard():
         """), {"uid": user_id}).fetchall()
         deadstock = [{"id": r.id, "name": r.name, "sku": r.sku or '—'} for r in deadstock_items]
 
-        # 7. Reorder items (SKU added earlier)
+        # 7. Reorder items (stock <= min level)
         reorder_rows = conn.execute(text("""
             SELECT id, name, sku, current_stock, min_stock_level
             FROM inventory_items
             WHERE user_id = :uid AND current_stock <= min_stock_level
             ORDER BY current_stock ASC
         """), {"uid": user_id}).fetchall()
-        reorder_items = [{"id": r.id, "name": r.name, "sku": r.sku or '—', "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
+        reorder_items = [{
+            "id": r.id,
+            "name": r.name,
+            "sku": r.sku or '—',
+            "current": r.current_stock,
+            "min": r.min_stock_level
+        } for r in reorder_rows]
 
-        # 8. Market basket (SKU added earlier)
+        # 8. Market basket analysis (top 5 product pairs)
         basket_rows = conn.execute(text("""
             SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
             FROM invoice_items a
@@ -185,13 +192,17 @@ def dashboard():
             ORDER BY times DESC
             LIMIT 5
         """), {"uid": user_id}).fetchall()
+
         market_basket = []
         for r in basket_rows:
             prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
             prod1_sku = conn.execute(text("SELECT sku FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar() or '—'
             prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
             prod2_sku = conn.execute(text("SELECT sku FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar() or '—'
-            market_basket.append({"pair": f"{prod1_name} ({prod1_sku}) & {prod2_name} ({prod2_sku})", "times": r.times})
+            market_basket.append({
+                "pair": f"{prod1_name} ({prod1_sku}) & {prod2_name} ({prod2_sku})",
+                "times": r.times
+            })
 
         # 9. Cached AI tip
         ai_tip = conn.execute(text("""
@@ -201,23 +212,37 @@ def dashboard():
             LIMIT 1
         """), {"uid": user_id}).scalar()
 
-        # NEW: Calculate COGS (Cost of Goods Sold) from actual sales
+        # 10. Expiring soon items (e.g., within next 30 days)
+        expiry_rows = conn.execute(text("""
+            SELECT id, name, sku, expiry_date
+            FROM inventory_items
+            WHERE user_id = :uid AND expiry_date <= NOW() + INTERVAL '30 days' AND expiry_date > NOW()
+            ORDER BY expiry_date ASC
+        """), {"uid": user_id}).fetchall()
+        expiry_list = [{
+            "id": r.id,
+            "name": r.name,
+            "sku": r.sku or '—',
+            "expiry_date": r.expiry_date.strftime('%Y-%m-%d') if r.expiry_date else None
+        } for r in expiry_rows]
+
+        # 11. COGS (Cost of Goods Sold) from paid invoices – FIXED column name
         cogs = conn.execute(text("""
-            SELECT COALESCE(SUM(ii.qty * i.cost_price), 0)
+            SELECT COALESCE(SUM(ii.quantity * i.cost_price), 0)
             FROM invoice_items ii
             JOIN user_invoices ui ON ii.invoice_id = ui.id
             JOIN inventory_items i ON ii.product_id = i.id
             WHERE ui.user_id = :uid AND ui.status = 'paid'
         """), {"uid": user_id}).scalar() or 0
 
-        # NEW: True net profit = Revenue - COGS - Expenses
+        # 12. Net profit = Revenue - COGS - Expenses
         net_profit = revenue - cogs - expenses
 
-    # Data dict for template - only profit line changed
+    # Prepare summary data
     user_profile = get_user_profile_cached(user_id)
     data = {
         "revenue": revenue,
-        "net_profit": net_profit,          # CHANGED: now real profit
+        "net_profit": net_profit,
         "inventory_value": inventory_value,
         "tax_liability": tax,
         "costs": expenses
@@ -234,7 +259,7 @@ def dashboard():
         total_products=total_products,
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
-        expiry_alerts=expiry_list,
-        #currency_symbol="د.إ",
+        expiry_alerts=expiry_list,          # now properly defined
+        # currency_symbol="د.إ",            # uncomment if needed
         nonce=g.nonce
     )
