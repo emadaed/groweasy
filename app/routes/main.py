@@ -106,8 +106,7 @@ def dashboard():
     user_id = session['user_id']
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
-    from datetime import datetime, timedelta
-    from decimal import Decimal
+    from app.services.inventory import InventoryManager  # NEW: for consistent alerts
 
     with DB_ENGINE.connect() as conn:
         # 1. Revenue from paid invoices
@@ -128,7 +127,7 @@ def dashboard():
             WHERE user_id = :uid
         """), {"uid": user_id}).scalar() or 0
 
-        # 4. Tax liability from JSON (field may be 'tax' or 'tax_amount')
+        # 4. Tax liability from JSON
         tax = conn.execute(text("""
             SELECT COALESCE(SUM(
                 COALESCE(
@@ -155,7 +154,7 @@ def dashboard():
             WHERE user_id = :uid AND current_stock = 0
         """), {"uid": user_id}).scalar() or 0
 
-        # 6. Deadstock - UPDATED: added sku
+        # 6. Deadstock - UPDATED: added SKU
         deadstock_items = conn.execute(text("""
             SELECT i.id, i.name, i.sku
             FROM inventory_items i
@@ -167,16 +166,10 @@ def dashboard():
         """), {"uid": user_id}).fetchall()
         deadstock = [{"id": r.id, "name": r.name, "sku": r.sku or '—'} for r in deadstock_items]
 
-        # 7. Reorder items - UPDATED: added sku
-        reorder_rows = conn.execute(text("""
-            SELECT id, name, sku, current_stock, min_stock_level
-            FROM inventory_items
-            WHERE user_id = :uid AND current_stock <= min_stock_level
-            ORDER BY current_stock ASC
-        """), {"uid": user_id}).fetchall()
-        reorder_items = [{"id": r.id, "name": r.name, "sku": r.sku or '—', "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
+        # 7. Reorder items - UPDATED: use InventoryManager for consistency + SKU
+        reorder_items = InventoryManager.get_low_stock_alerts(user_id)  # NEW: reuse manager (fixes mismatch)
 
-        # 8. Market basket - UPDATED: added sku to pair description
+        # 8. Market basket - UPDATED: added SKU in pair
         basket_rows = conn.execute(text("""
             SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
             FROM invoice_items a
@@ -227,7 +220,7 @@ def dashboard():
                 'days_left': r.days_left
             })
 
-    # Data dict for template - unchanged except new expiry_list
+    # Data dict for template - unchanged
     user_profile = get_user_profile_cached(user_id)
     data = {
         "revenue": revenue,
@@ -248,7 +241,7 @@ def dashboard():
         total_products=total_products,
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
-        expiry_alerts=expiry_list,  # NEW: passed to template
-        currency_symbol="د.إ",  # or your dynamic one
+        expiry_alerts=expiry_list,      # NEW: passed to template
+        #currency_symbol="د.إ",
         nonce=g.nonce
     )

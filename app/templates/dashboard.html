@@ -60,9 +60,9 @@
         </div>
     </div>
 
-    <!-- Second Row: Deadstock, Reorder Alerts, Market Basket + Expiry -->
+    <!-- Second Row: Deadstock, Reorder Alerts, Market Basket -->
     <div class="row g-3 mb-4">
-        <!-- Deadstock - added SKU -->
+        <!-- Deadstock - NEW: added SKU -->
         <div class="col-md-4">
             <div class="card border-warning h-100 shadow-sm">
                 <div class="card-header bg-warning bg-opacity-10 py-2">
@@ -83,19 +83,19 @@
             </div>
         </div>
 
-        <!-- Reorder / Low Stock - added SKU -->
+        <!-- Reorder / Low Stock - NEW: added SKU -->
         <div class="col-md-4">
             <div class="card border-danger h-100 shadow-sm">
                 <div class="card-header bg-danger bg-opacity-10 py-2">
-                    <h6 class="mb-0">⚠️ Reorder Alerts ({{ low_stock_alerts|length }})</h6>
+                    <h6 class="mb-0">⚠️ Reorder Alerts ({{ reorder_items|length }})</h6>
                 </div>
                 <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
-                    {% if low_stock_alerts %}
-                        {% for alert in low_stock_alerts %}
+                    {% if reorder_items %}
+                        {% for alert in reorder_items %}
                         <small class="d-block mb-1">
                             <strong>{{ alert.name }}</strong> 
                             <span class="text-muted">(SKU: {{ alert.sku }})</span>:
-                            {{ alert.current_stock }} units (Min: {{ alert.reorder_level }})
+                            {{ alert.current }} units (Min: {{ alert.min }})
                         </small>
                         {% endfor %}
                     {% else %}
@@ -105,7 +105,7 @@
             </div>
         </div>
 
-        <!-- Frequently Bought Together - added SKU -->
+        <!-- Frequently Bought Together - NEW: added SKU -->
         <div class="col-md-4">
             <div class="card border-info h-100 shadow-sm">
                 <div class="card-header bg-info bg-opacity-10 py-2">
@@ -141,7 +141,7 @@
                         <span class="text-muted">(SKU: {{ alert.sku }})</span>:
                         Expires in <strong>{{ alert.days_left }} days</strong> 
                         ({{ alert.expiry_date }}) – Stock: {{ alert.stock }} 
-                        {{ unit_label(alert.unit_type) }}
+                        {{ 'kg' if alert.unit_type == 'weight' else 'L' if alert.unit_type == 'volume' else 'pcs' }}
                     </small>
                     {% endfor %}
                 </div>
