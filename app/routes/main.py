@@ -106,6 +106,8 @@ def dashboard():
     user_id = session['user_id']
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
+    from datetime import datetime, timedelta
+    from decimal import Decimal
 
     with DB_ENGINE.connect() as conn:
         # 1. Revenue from paid invoices
@@ -144,20 +146,18 @@ def dashboard():
             SELECT COUNT(*) FROM inventory_items
             WHERE user_id = :uid AND is_active = TRUE
         """), {"uid": user_id}).scalar() or 0
-
         low_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
             WHERE user_id = :uid AND current_stock <= min_stock_level AND current_stock > 0
         """), {"uid": user_id}).scalar() or 0
-
         out_of_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
             WHERE user_id = :uid AND current_stock = 0
         """), {"uid": user_id}).scalar() or 0
 
-        # 6. Deadstock
+        # 6. Deadstock - UPDATED: added sku
         deadstock_items = conn.execute(text("""
-            SELECT i.id, i.name
+            SELECT i.id, i.name, i.sku
             FROM inventory_items i
             WHERE i.user_id = :uid AND i.id NOT IN (
                 SELECT DISTINCT product_id FROM invoice_items ii
@@ -165,18 +165,18 @@ def dashboard():
                 WHERE ui.user_id = :uid AND ui.invoice_date > NOW() - INTERVAL '90 days'
             )
         """), {"uid": user_id}).fetchall()
-        deadstock = [{"id": r.id, "name": r.name} for r in deadstock_items]
+        deadstock = [{"id": r.id, "name": r.name, "sku": r.sku or '—'} for r in deadstock_items]
 
-        # 7. Reorder items
+        # 7. Reorder items - UPDATED: added sku
         reorder_rows = conn.execute(text("""
-            SELECT id, name, current_stock, min_stock_level
+            SELECT id, name, sku, current_stock, min_stock_level
             FROM inventory_items
             WHERE user_id = :uid AND current_stock <= min_stock_level
             ORDER BY current_stock ASC
         """), {"uid": user_id}).fetchall()
-        reorder_items = [{"id": r.id, "name": r.name, "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
+        reorder_items = [{"id": r.id, "name": r.name, "sku": r.sku or '—', "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
 
-        # 8. Market basket
+        # 8. Market basket - UPDATED: added sku to pair description
         basket_rows = conn.execute(text("""
             SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
             FROM invoice_items a
@@ -190,8 +190,10 @@ def dashboard():
         market_basket = []
         for r in basket_rows:
             prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
+            prod1_sku = conn.execute(text("SELECT sku FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar() or '—'
             prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
-            market_basket.append({"pair": f"{prod1_name} & {prod2_name}", "times": r.times})
+            prod2_sku = conn.execute(text("SELECT sku FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar() or '—'
+            market_basket.append({"pair": f"{prod1_name} ({prod1_sku}) & {prod2_name} ({prod2_sku})", "times": r.times})
 
         # 9. Cached AI tip
         ai_tip = conn.execute(text("""
@@ -201,7 +203,31 @@ def dashboard():
             LIMIT 1
         """), {"uid": user_id}).scalar()
 
-    # Data dict for template
+        # NEW: Expiry alerts (30 days threshold)
+        expiry_alerts = conn.execute(text("""
+            SELECT name, sku, current_stock, unit_type, expiry_date,
+                   (expiry_date - CURRENT_DATE) as days_left
+            FROM inventory_items
+            WHERE user_id = :uid
+              AND is_active = TRUE
+              AND is_perishable = TRUE
+              AND expiry_date IS NOT NULL
+              AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+            ORDER BY expiry_date ASC
+        """), {"uid": user_id}).fetchall()
+
+        expiry_list = []
+        for r in expiry_alerts:
+            expiry_list.append({
+                'name': r.name,
+                'sku': r.sku or '—',
+                'stock': r.current_stock,
+                'unit_type': r.unit_type or 'piece',
+                'expiry_date': r.expiry_date.strftime('%Y-%m-%d'),
+                'days_left': r.days_left
+            })
+
+    # Data dict for template - unchanged except new expiry_list
     user_profile = get_user_profile_cached(user_id)
     data = {
         "revenue": revenue,
@@ -210,7 +236,6 @@ def dashboard():
         "tax_liability": tax,
         "costs": expenses
     }
-##    show_fbr = user_profile.get('show_fbr_fields', False)
 
     return render_template(
         "dashboard.html",
@@ -223,7 +248,7 @@ def dashboard():
         total_products=total_products,
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
-##        currency_symbol="د.إ",
-##        show_fbr = user_profile.get('show_fbr_fields', False),
+        expiry_alerts=expiry_list,  # NEW: passed to template
+        currency_symbol="د.إ",  # or your dynamic one
         nonce=g.nonce
     )

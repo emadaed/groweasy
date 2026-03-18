@@ -54,64 +54,95 @@
         </div>
     </div>
 
-    <!-- Second Row: Deadstock, Reorder Alerts, Market Basket -->
+    <!-- Second Row: Deadstock, Reorder Alerts, Market Basket + Expiry -->
     <div class="row g-3 mb-4">
+        <!-- Deadstock - added SKU -->
         <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card border-warning h-100 shadow-sm">
                 <div class="card-header bg-warning bg-opacity-10 py-2">
                     <h6 class="mb-0">📦 Deadstock (90 days no sale)</h6>
                 </div>
-                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
+                <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
                     {% if deadstock %}
-                        <ul class="list-unstyled mb-0 small">
                         {% for item in deadstock %}
-                            <li>{{ item.name }}</li>
+                        <small class="d-block mb-1">
+                            <strong>{{ item.name }}</strong> 
+                            <span class="text-muted">(SKU: {{ item.sku }})</span>
+                        </small>
                         {% endfor %}
-                        </ul>
                     {% else %}
                         <p class="text-muted mb-0 small">No deadstock items.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- Reorder / Low Stock - added SKU -->
         <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card border-danger h-100 shadow-sm">
                 <div class="card-header bg-danger bg-opacity-10 py-2">
-                    <h6 class="mb-0">⚠️ Reorder Alerts</h6>
+                    <h6 class="mb-0">⚠️ Reorder Alerts ({{ low_stock_alerts|length }})</h6>
                 </div>
-                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
-                    {% if reorder_items %}
-                        <ul class="list-unstyled mb-0 small">
-                        {% for item in reorder_items %}
-                            <li><strong>{{ item.name }}</strong> (stock: {{ item.current }}, min: {{ item.min }})</li>
+                <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
+                    {% if low_stock_alerts %}
+                        {% for alert in low_stock_alerts %}
+                        <small class="d-block mb-1">
+                            <strong>{{ alert.name }}</strong> 
+                            <span class="text-muted">(SKU: {{ alert.sku }})</span>:
+                            {{ alert.current_stock }} units (Min: {{ alert.reorder_level }})
+                        </small>
                         {% endfor %}
-                        </ul>
                     {% else %}
-                        <p class="text-muted mb-0 small">All items above reorder level</p>
+                        <p class="text-muted mb-0 small">No low stock items.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- Frequently Bought Together - added SKU -->
         <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card border-info h-100 shadow-sm">
                 <div class="card-header bg-info bg-opacity-10 py-2">
                     <h6 class="mb-0">🛒 Frequently Bought Together</h6>
                 </div>
-                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
+                <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
                     {% if market_basket %}
-                        <ul class="list-unstyled mb-0 small">
-                        {% for pair in market_basket %}
+                        <ul class="list-unstyled small mb-0">
+                            {% for pair in market_basket %}
                             <li>{{ pair.pair }} – {{ pair.times }}×</li>
-                        {% endfor %}
+                            {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted mb-0 small">Not enough data</p>
+                        <p class="text-muted mb-0 small">No frequent pairs yet.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- NEW: Expiry Alert Card -->
+    {% if expiry_alerts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-danger shadow-sm">
+                <div class="card-header bg-danger bg-opacity-10 py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">⏰ Expiry Alerts ({{ expiry_alerts|length }})</h6>
+                </div>
+                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
+                    {% for alert in expiry_alerts %}
+                    <small class="d-block mb-1">
+                        <strong>{{ alert.name }}</strong> 
+                        <span class="text-muted">(SKU: {{ alert.sku }})</span>:
+                        Expires in <strong>{{ alert.days_left }} days</strong> 
+                        ({{ alert.expiry_date }}) – Stock: {{ alert.stock }} 
+                        {{ unit_label(alert.unit_type) }}
+                    </small>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <!-- AI Tip Card -->
     {% if ai_tip %}
     <div class="row mb-4">
