@@ -139,7 +139,7 @@ def dashboard():
             WHERE user_id = :uid
         """), {"uid": user_id}).scalar() or 0
 
-        # 5. Existing inventory stats
+        # 5. Existing inventory stats (unchanged)
         total_products = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
             WHERE user_id = :uid AND is_active = TRUE
@@ -153,7 +153,7 @@ def dashboard():
             WHERE user_id = :uid AND current_stock = 0
         """), {"uid": user_id}).scalar() or 0
 
-        # 6. Deadstock - NEW: added SKU
+        # 6. Deadstock (SKU added earlier)
         deadstock_items = conn.execute(text("""
             SELECT i.id, i.name, i.sku
             FROM inventory_items i
@@ -165,7 +165,7 @@ def dashboard():
         """), {"uid": user_id}).fetchall()
         deadstock = [{"id": r.id, "name": r.name, "sku": r.sku or '—'} for r in deadstock_items]
 
-        # 7. Reorder items - NEW: added sku (kept your original query so keys match)
+        # 7. Reorder items (SKU added earlier)
         reorder_rows = conn.execute(text("""
             SELECT id, name, sku, current_stock, min_stock_level
             FROM inventory_items
@@ -174,7 +174,7 @@ def dashboard():
         """), {"uid": user_id}).fetchall()
         reorder_items = [{"id": r.id, "name": r.name, "sku": r.sku or '—', "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
 
-        # 8. Market basket - NEW: added SKU in pair
+        # 8. Market basket (SKU added earlier)
         basket_rows = conn.execute(text("""
             SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
             FROM invoice_items a
@@ -201,35 +201,23 @@ def dashboard():
             LIMIT 1
         """), {"uid": user_id}).scalar()
 
-        # NEW: Expiry alerts (already working perfectly)
-        expiry_alerts = conn.execute(text("""
-            SELECT name, sku, current_stock, unit_type, expiry_date,
-                   (expiry_date - CURRENT_DATE) as days_left
-            FROM inventory_items
-            WHERE user_id = :uid
-              AND is_active = TRUE
-              AND is_perishable = TRUE
-              AND expiry_date IS NOT NULL
-              AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
-            ORDER BY expiry_date ASC
-        """), {"uid": user_id}).fetchall()
+        # NEW: Calculate COGS (Cost of Goods Sold) from actual sales
+        cogs = conn.execute(text("""
+            SELECT COALESCE(SUM(ii.qty * i.cost_price), 0)
+            FROM invoice_items ii
+            JOIN user_invoices ui ON ii.invoice_id = ui.id
+            JOIN inventory_items i ON ii.product_id = i.id
+            WHERE ui.user_id = :uid AND ui.status = 'paid'
+        """), {"uid": user_id}).scalar() or 0
 
-        expiry_list = []
-        for r in expiry_alerts:
-            expiry_list.append({
-                'name': r.name,
-                'sku': r.sku or '—',
-                'stock': r.current_stock,
-                'unit_type': r.unit_type or 'piece',
-                'expiry_date': r.expiry_date.strftime('%Y-%m-%d'),
-                'days_left': r.days_left
-            })
+        # NEW: True net profit = Revenue - COGS - Expenses
+        net_profit = revenue - cogs - expenses
 
-    # Data dict for template - unchanged
+    # Data dict for template - only profit line changed
     user_profile = get_user_profile_cached(user_id)
     data = {
         "revenue": revenue,
-        "net_profit": revenue - expenses,
+        "net_profit": net_profit,          # CHANGED: now real profit
         "inventory_value": inventory_value,
         "tax_liability": tax,
         "costs": expenses
