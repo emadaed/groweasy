@@ -215,6 +215,17 @@ def stock_movements():
 
 # new PEL Enhanced
 
+# Add missing imports at the top of reports.py if not already present
+from flask import redirect, url_for, send_file, make_response, render_template, session, request, g
+from app.services.db import DB_ENGINE
+from sqlalchemy import text
+from app.services.cache import get_user_profile_cached
+from app.context_processors import CURRENCY_SYMBOLS
+import io
+from datetime import datetime
+
+# ... (your existing routes remain) ...
+
 @reports_bp.route('/profit_loss', methods=['GET', 'POST'])
 def profit_loss():
     if 'user_id' not in session:
@@ -227,7 +238,7 @@ def profit_loss():
         include_details = request.form.get('include_details') == 'yes'
         
         with DB_ENGINE.connect() as conn:
-            # --- EXISTING SALES TOTALS ---
+            # --- SALES TOTALS (unchanged) ---
             sales_result = conn.execute(text("""
                 SELECT 
                     COUNT(*) as invoice_count,
@@ -240,7 +251,7 @@ def profit_loss():
             total_sales = float(sales_result[1] or 0.0)
             total_tax_collected = float(sales_result[2] or 0.0)
             
-            # --- EXISTING EXPENSE TOTALS ---
+            # --- EXPENSE TOTALS (unchanged) ---
             expense_result = conn.execute(text("""
                 SELECT 
                     COUNT(*) as expense_count,
@@ -253,7 +264,7 @@ def profit_loss():
             total_net_expenses = float(expense_result[1] or 0.0)
             total_input_tax = float(expense_result[2] or 0.0)
             
-            # --- NEW: COGS (Cost of Goods Sold) ---
+            # --- COGS (Cost of Goods Sold) from paid invoices ---
             cogs = conn.execute(text("""
                 SELECT COALESCE(SUM(ii.quantity * i.cost_price), 0)
                 FROM invoice_items ii
@@ -264,14 +275,14 @@ def profit_loss():
                     AND ui.invoice_date BETWEEN :from_date AND :to_date
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0
             
-            # --- NEW: Opening Inventory (value at start date) ---
+            # --- OPENING INVENTORY (value before from_date) ---
             opening_inventory = conn.execute(text("""
                 WITH inventory_snapshot AS (
                     SELECT 
                         i.id,
                         i.cost_price,
                         COALESCE((
-                            SELECT SUM(quantity)
+                            SELECT SUM(ii.quantity)
                             FROM invoice_items ii
                             JOIN user_invoices ui ON ii.invoice_id = ui.id
                             WHERE ii.product_id = i.id 
@@ -279,12 +290,10 @@ def profit_loss():
                                 AND ui.invoice_date < :from_date
                         ), 0) as sold_before,
                         COALESCE((
-                            SELECT SUM(quantity)
-                            FROM purchase_order_items poi
-                            JOIN purchase_orders po ON poi.purchase_order_id = po.id
-                            WHERE poi.product_id = i.id 
-                                AND po.created_at < :from_date
-                                AND po.status = 'received'
+                            SELECT SUM(pr.received_qty)
+                            FROM po_receipts pr
+                            WHERE pr.product_id = i.id 
+                                AND pr.received_date < :from_date
                         ), 0) as purchased_before
                     FROM inventory_items i
                     WHERE i.user_id = :user_id
@@ -293,24 +302,23 @@ def profit_loss():
                 FROM inventory_snapshot
             """), {"user_id": user_id, "from_date": from_date}).scalar() or 0
             
-            # --- NEW: Purchases during period ---
+            # --- PURCHASES DURING PERIOD (from receipts) ---
             purchases = conn.execute(text("""
-                SELECT COALESCE(SUM(poi.quantity * poi.cost_price), 0)
-                FROM purchase_order_items poi
-                JOIN purchase_orders po ON poi.purchase_order_id = po.id
-                WHERE po.user_id = :user_id 
-                    AND po.created_at BETWEEN :from_date AND :to_date
-                    AND po.status = 'received'
+                SELECT COALESCE(SUM(pr.received_qty * i.cost_price), 0)
+                FROM po_receipts pr
+                JOIN inventory_items i ON pr.product_id = i.id
+                WHERE pr.user_id = :user_id 
+                    AND pr.received_date BETWEEN :from_date AND :to_date
             """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0
             
-            # --- NEW: Closing Inventory (current value) ---
+            # --- CLOSING INVENTORY (current value) ---
             closing_inventory = conn.execute(text("""
                 SELECT COALESCE(SUM(current_stock * cost_price), 0)
                 FROM inventory_items
                 WHERE user_id = :user_id
             """), {"user_id": user_id}).scalar() or 0
             
-            # --- NEW: Receivables Aging ---
+            # --- RECEIVABLES AGING (unchanged) ---
             receivables = conn.execute(text("""
                 SELECT 
                     COUNT(*) as total_invoices,
@@ -331,16 +339,16 @@ def profit_loss():
                 WHERE user_id = :user_id AND status = 'unpaid'
             """), {"user_id": user_id}).first()
             
-            # --- NEW: Payables (unpaid purchase orders) ---
+            # --- PAYABLES (unpaid purchase orders) ---
             payables = conn.execute(text("""
                 SELECT 
                     COUNT(*) as total_pos,
-                    COALESCE(SUM(total_amount), 0) as total_payable
+                    COALESCE(SUM(grand_total), 0) as total_payable
                 FROM purchase_orders
                 WHERE user_id = :user_id AND status = 'pending'
             """), {"user_id": user_id}).first()
             
-            # --- EXISTING DETAILS (if requested) ---
+            # --- DETAILED LISTS (if requested) ---
             invoices = []
             expenses = []
             if include_details:
@@ -352,8 +360,13 @@ def profit_loss():
                     ORDER BY invoice_date DESC
                 """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
                 for row in inv_rows:
-                    invoices.append({'number': row[0], 'date': row[1].strftime('%Y-%m-%d'), 
-                                     'client': row[2], 'total': float(row[3]), 'tax': float(row[4])})
+                    invoices.append({
+                        'number': row[0],
+                        'date': row[1].strftime('%Y-%m-%d') if row[1] else '',
+                        'client': row[2],
+                        'total': float(row[3]),
+                        'tax': float(row[4])
+                    })
                 
                 exp_rows = conn.execute(text("""
                     SELECT expense_date, description, category, amount, notes
@@ -362,8 +375,13 @@ def profit_loss():
                     ORDER BY expense_date DESC
                 """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
                 for row in exp_rows:
-                    expenses.append({'date': row[0].strftime('%Y-%m-%d'), 'description': row[1],
-                                     'category': row[2], 'amount': float(row[3]), 'notes': row[4]})
+                    expenses.append({
+                        'date': row[0].strftime('%Y-%m-%d') if row[0] else '',
+                        'description': row[1],
+                        'category': row[2],
+                        'amount': float(row[3]),
+                        'notes': row[4]
+                    })
         
         # Calculate derived metrics
         gross_profit = total_sales - cogs
@@ -377,7 +395,7 @@ def profit_loss():
         report_number = f"PL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         issue_date = datetime.now().strftime('%d-%b-%Y')
         
-        # Render template (you'll need to update the template to show new fields)
+        # Render template (use the updated template you already have)
         html = render_template('profit_loss_report.html',
                                company_name=company_name,
                                currency_symbol=currency_symbol,
@@ -403,7 +421,7 @@ def profit_loss():
                                invoices=invoices,
                                expenses=expenses)
         
-        # Generate PDF (same as before)
+        # Generate PDF
         from app.services.pdf_engine import generate_pdf
         pdf_bytes = generate_pdf(html)
         return make_response(send_file(
@@ -415,4 +433,3 @@ def profit_loss():
     
     # GET: show form
     return render_template('profit_loss_form.html', nonce=g.nonce)
-
