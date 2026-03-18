@@ -215,17 +215,6 @@ def stock_movements():
 
 # new PEL Enhanced
 
-# Add missing imports at the top of reports.py if not already present
-from flask import redirect, url_for, send_file, make_response, render_template, session, request, g
-from app.services.db import DB_ENGINE
-from sqlalchemy import text
-from app.services.cache import get_user_profile_cached
-from app.context_processors import CURRENCY_SYMBOLS
-import io
-from datetime import datetime
-
-# ... (your existing routes remain) ...
-
 @reports_bp.route('/profit_loss', methods=['GET', 'POST'])
 def profit_loss():
     if 'user_id' not in session:
@@ -238,7 +227,7 @@ def profit_loss():
         include_details = request.form.get('include_details') == 'yes'
         
         with DB_ENGINE.connect() as conn:
-            # --- SALES TOTALS (unchanged) ---
+            # --- SALES TOTALS ---
             sales_result = conn.execute(text("""
                 SELECT 
                     COUNT(*) as invoice_count,
@@ -251,7 +240,7 @@ def profit_loss():
             total_sales = float(sales_result[1] or 0.0)
             total_tax_collected = float(sales_result[2] or 0.0)
             
-            # --- EXPENSE TOTALS (unchanged) ---
+            # --- EXPENSE TOTALS ---
             expense_result = conn.execute(text("""
                 SELECT 
                     COUNT(*) as expense_count,
@@ -265,7 +254,7 @@ def profit_loss():
             total_input_tax = float(expense_result[2] or 0.0)
             
             # --- COGS (Cost of Goods Sold) from paid invoices ---
-            cogs = conn.execute(text("""
+            cogs = float(conn.execute(text("""
                 SELECT COALESCE(SUM(ii.quantity * i.cost_price), 0)
                 FROM invoice_items ii
                 JOIN user_invoices ui ON ii.invoice_id = ui.id
@@ -273,10 +262,10 @@ def profit_loss():
                 WHERE ui.user_id = :user_id 
                     AND ui.status = 'paid'
                     AND ui.invoice_date BETWEEN :from_date AND :to_date
-            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0)
             
             # --- OPENING INVENTORY (value before from_date) ---
-            opening_inventory = conn.execute(text("""
+            opening_inventory = float(conn.execute(text("""
                 WITH inventory_snapshot AS (
                     SELECT 
                         i.id,
@@ -300,25 +289,25 @@ def profit_loss():
                 )
                 SELECT COALESCE(SUM(cost_price * (purchased_before - sold_before)), 0)
                 FROM inventory_snapshot
-            """), {"user_id": user_id, "from_date": from_date}).scalar() or 0
+            """), {"user_id": user_id, "from_date": from_date}).scalar() or 0)
             
             # --- PURCHASES DURING PERIOD (from receipts) ---
-            purchases = conn.execute(text("""
+            purchases = float(conn.execute(text("""
                 SELECT COALESCE(SUM(pr.received_qty * i.cost_price), 0)
                 FROM po_receipts pr
                 JOIN inventory_items i ON pr.product_id = i.id
                 WHERE pr.user_id = :user_id 
                     AND pr.received_date BETWEEN :from_date AND :to_date
-            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0
+            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).scalar() or 0)
             
             # --- CLOSING INVENTORY (current value) ---
-            closing_inventory = conn.execute(text("""
+            closing_inventory = float(conn.execute(text("""
                 SELECT COALESCE(SUM(current_stock * cost_price), 0)
                 FROM inventory_items
                 WHERE user_id = :user_id
-            """), {"user_id": user_id}).scalar() or 0
+            """), {"user_id": user_id}).scalar() or 0)
             
-            # --- RECEIVABLES AGING (unchanged) ---
+            # --- RECEIVABLES AGING ---
             receivables = conn.execute(text("""
                 SELECT 
                     COUNT(*) as total_invoices,
