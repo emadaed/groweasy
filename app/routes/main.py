@@ -106,7 +106,6 @@ def dashboard():
     user_id = session['user_id']
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
-    from app.services.inventory import InventoryManager  # NEW: for consistent alerts
 
     with DB_ENGINE.connect() as conn:
         # 1. Revenue from paid invoices
@@ -154,7 +153,7 @@ def dashboard():
             WHERE user_id = :uid AND current_stock = 0
         """), {"uid": user_id}).scalar() or 0
 
-        # 6. Deadstock - UPDATED: added SKU
+        # 6. Deadstock - NEW: added SKU
         deadstock_items = conn.execute(text("""
             SELECT i.id, i.name, i.sku
             FROM inventory_items i
@@ -166,10 +165,16 @@ def dashboard():
         """), {"uid": user_id}).fetchall()
         deadstock = [{"id": r.id, "name": r.name, "sku": r.sku or '—'} for r in deadstock_items]
 
-        # 7. Reorder items - UPDATED: use InventoryManager for consistency + SKU
-        reorder_items = InventoryManager.get_low_stock_alerts(user_id)  # NEW: reuse manager (fixes mismatch)
+        # 7. Reorder items - NEW: added sku (kept your original query so keys match)
+        reorder_rows = conn.execute(text("""
+            SELECT id, name, sku, current_stock, min_stock_level
+            FROM inventory_items
+            WHERE user_id = :uid AND current_stock <= min_stock_level
+            ORDER BY current_stock ASC
+        """), {"uid": user_id}).fetchall()
+        reorder_items = [{"id": r.id, "name": r.name, "sku": r.sku or '—', "current": r.current_stock, "min": r.min_stock_level} for r in reorder_rows]
 
-        # 8. Market basket - UPDATED: added SKU in pair
+        # 8. Market basket - NEW: added SKU in pair
         basket_rows = conn.execute(text("""
             SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
             FROM invoice_items a
@@ -196,7 +201,7 @@ def dashboard():
             LIMIT 1
         """), {"uid": user_id}).scalar()
 
-        # NEW: Expiry alerts (30 days threshold)
+        # NEW: Expiry alerts (already working perfectly)
         expiry_alerts = conn.execute(text("""
             SELECT name, sku, current_stock, unit_type, expiry_date,
                    (expiry_date - CURRENT_DATE) as days_left
@@ -241,7 +246,7 @@ def dashboard():
         total_products=total_products,
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
-        expiry_alerts=expiry_list,      # NEW: passed to template
+        expiry_alerts=expiry_list,
         #currency_symbol="د.إ",
         nonce=g.nonce
     )
