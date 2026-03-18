@@ -15,45 +15,45 @@
             padding-bottom: 5px; 
             display: flex; 
             justify-content: space-between; 
-            align-items: center; /* Align items to center vertically */
+            align-items: center;
         }
         .logo-section { flex: 1; text-align: left; }
         .logo-section img { max-height: 70px; display: block; }
         
-        .company-info-center { flex: 2; text-align: center; } /* More space for center */
+        .company-info-center { flex: 2; text-align: center; }
         .company-info-center h2 { font-size: 12pt; color: #2c5aa0; margin: 0; }
         .company-info-center p { margin: 0; font-size: 10pt; }
 
         .invoice-info-right { flex: 1; text-align: right; }
         .invoice-info-right h1 { font-size: 18pt; margin: 0; }
 
-        /* Unified 3-Column Metadata Row */
-        .metadata-row { display: flex; justify-content: space-between; gap: 5px; margin: 5px 0; align-items: stretch; }
+        /* Three Column Metadata Row - Original Clean Layout */
+        .metadata-row { display: flex; justify-content: space-between; gap: 8px; margin: 8px 0; }
         .metadata-column { 
             flex: 1; 
-            padding: 5px; 
-            background: #f8f9fa; /* Unified Light Gray */
-            border-left: 1px solid #2c5aa0; /* Unified Blue Border */
-            min-height: 60px; 
+            padding: 8px; 
+            background: #f8f9fa; 
+            border: 1px solid #2c5aa0; 
+            min-height: 85px; 
         }
 
-        table.items { width: 100%; border-collapse: collapse; margin: 1px 0; page-break-inside: avoid; }
-        table.items th, table.items td { border: 1px solid #ddd; padding: 2px; text-align: left; font-size: 7pt; }
+        table.items { width: 100%; border-collapse: collapse; margin: 10px 0; page-break-inside: avoid; }
+        table.items th, table.items td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 8pt; }
         table.items thead { background: #2c5aa0; color: white; }
         
-        .totals { width: 30%; float: right; background: #f8f9fa; border: 1px solid #ddd; margin-top: 5px; }
-        .totals td { padding: 2px; font-size: 7pt; }
+        .totals { width: 35%; float: right; background: #f8f9fa; border: 1px solid #ddd; margin-top: 10px; }
+        .totals td { padding: 4px; font-size: 8pt; }
         .grand-total { background: #2c5aa0; color: white; font-weight: bold; }
         
-        .qr-section { text-align: center; margin: 5px 0; }
-        .qr-section img { width: 70px; height: 70px; border: 1px solid #2c5aa0; padding: 1px; background: white; }
-        .footer { text-align: center; margin-top: 5px; font-size: 6pt; color: #666; }
+        .qr-section { text-align: center; margin: 15px 0; }
+        .qr-section img { width: 75px; height: 75px; border: 1px solid #2c5aa0; padding: 2px; background: white; }
+        .footer { text-align: center; margin-top: 10px; font-size: 7pt; color: #666; }
         .clear { clear: both; }
         .text-right { text-align: right; }
-        h3 { color: #2c5aa0; margin: 0 0 2px 0; font-size: 8pt; text-transform: uppercase; }
+        h3 { color: #2c5aa0; margin: 0 0 4px 0; font-size: 9pt; text-transform: uppercase; }
     </style>
 
-    <!-- Macro for unit label – defined early so it's available everywhere -->
+    <!-- Unit label macro -->
     {% macro unit_label(ut) -%}
         {% if ut == 'weight' -%}kg
         {%- elif ut == 'volume' -%}L
@@ -73,38 +73,35 @@
             <div class="company-info-center">
                 <h2>{{ data.get('company_name', 'Your Company') }}</h2>
                 <p>{{ data.get('company_address', '') }}</p>
-                <p>Phone: {{ data.get('company_phone', '') }}</p>
+                <p>Phone: {{ data.get('company_phone', '') }} | Email: {{ data.get('company_email', '') }}</p>
             </div>
 
             <div class="invoice-info-right">
                 <h1>INVOICE</h1>
+                <p><strong>#:</strong> {{ data.get('invoice_number', '') }}<br>
+                <strong>Date:</strong> {{ data.get('invoice_date', '') }}</p>
             </div>
         </div>
 
-        <!-- Metadata Row – your original columns preserved -->
+        <!-- Original Three Column Layout -->
         <div class="metadata-row">
             <div class="metadata-column">
-                <strong>Invoice #:</strong> {{ data.get('invoice_number', 'N/A') }}<br>
-                <strong>Date:</strong> {{ data.get('invoice_date', 'N/A') }}<br>
-                {% if data.get('due_date') %}
-                <strong>Due Date:</strong> {{ data.get('due_date') }}
-                {% endif %}
+                <h3>BILL TO</h3>
+                <p><strong>{{ data.get('client_name', '') }}</strong></p>
+                <p>{{ data.get('client_address', '') }}</p>
+                <p>Ph: {{ data.get('client_phone', '') }}</p>
             </div>
+
             <div class="metadata-column">
-                <strong>Client:</strong> {{ data.get('client_name', 'N/A') }}<br>
-                {% if data.get('client_email') %}
-                <strong>Email:</strong> {{ data.get('client_email') }}<br>
-                {% endif %}
-                {% if data.get('client_phone') %}
-                <strong>Phone:</strong> {{ data.get('client_phone') }}
-                {% endif %}
+                <h3>PAYMENT INFO</h3>
+                <p><strong>Terms:</strong> {{ data.get('payment_terms', 'Due on Receipt') }}</p>
+                <p><strong>Methods:</strong> {{ data.get('payment_methods', 'Bank Transfer, Credit Card') }}</p>
+                <p><strong>Status:</strong> {{ data.get('status', 'Pending')|upper }}</p>
             </div>
+
             <div class="metadata-column">
-                <strong>From:</strong> {{ data.get('company_name', 'Your Company') }}<br>
-                <strong>Address:</strong> {{ data.get('company_address', '') }}<br>
-                {% if data.get('company_phone') %}
-                <strong>Phone:</strong> {{ data.get('company_phone') }}
-                {% endif %}
+                <h3>NOTES / INSTRUCTIONS</h3>
+                <p>{{ data.get('notes') if data.get('notes') else 'Thank you for choosing our services.' }}</p>
             </div>
         </div>
 
@@ -113,8 +110,8 @@
                 <thead>
                     <tr>
                         <th style="width: 5%;">#</th>
-                        <th style="width: 50%;">Description</th>
-                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 45%;">Description</th>
+                        <th style="width: 15%;">Qty</th>
                         <th style="width: 15%;">Price</th>
                         <th style="width: 20%;">Amount</th>
                     </tr>
@@ -124,7 +121,6 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ item.name }}</td>
-                        <!-- Clean & correct: uses macro for unit -->
                         <td>{{ item.qty }} {{ unit_label(item.unit_type) }}</td>
                         <td>{{ currency_symbol }}{{ "%.2f"|format(item.price) }}</td>
                         <td>{{ currency_symbol }}{{ "%.2f"|format(item.total) }}</td>
@@ -146,10 +142,7 @@
                 <tr><td>Tax:</td><td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('tax_amount', 0)) }}</td></tr>
                 {% endif %}        
                 {% if data.get('delivery_charge', 0)|float > 0 %}
-                <tr>
-                    <td>Delivery Charge:</td>
-                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('delivery_charge', 0)) }}</td>
-                </tr>
+                <tr><td>Delivery Charge:</td><td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('delivery_charge', 0)) }}</td></tr>
                 {% endif %}
                 <tr class="grand-total">
                     <td><strong>TOTAL DUE:</strong></td>
