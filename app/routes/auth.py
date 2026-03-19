@@ -2,10 +2,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
 from app.extensions import limiter
 from app.services.db import DB_ENGINE
+from sqlalchemy import text
 from app.services.auth import verify_user, get_user_profile, create_user
 from app.services.utils import random_success_message
 from app.services.cache import get_user_profile_cached
 from app.services.account import create_account, check_user_limit
+from app.decorators import role_required
 
 # Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)
