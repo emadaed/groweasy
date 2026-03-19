@@ -9,6 +9,7 @@ from sqlalchemy import text
 from weasyprint import HTML
 import io
 from datetime import datetime
+from app.decorators import role_required
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 

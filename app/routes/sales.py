@@ -17,6 +17,7 @@ from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
 from app.services.services import InvoiceService
 from app.services.number_generator import NumberGenerator
 from app.services.purchases import save_purchase_order
+from app.decorators import role_required
 
 
 sales_bp = Blueprint('sales', __name__)

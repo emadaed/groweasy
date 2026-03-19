@@ -17,7 +17,7 @@ from app.services.cache import get_user_profile_cached
 from app import generate_simple_qr
 from app.extensions import limiter
 from app.context_processors import register_context_processors, CURRENCY_SYMBOLS
-
+from app.decorators import role_required
 
 purchases_bp = Blueprint('purchases', __name__)
 
