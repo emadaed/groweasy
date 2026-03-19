@@ -1,4 +1,5 @@
 #app/services/auth.py - Fully Postgres Ready
+from app.services.account import create_account, check_user_limit
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
 import hashlib

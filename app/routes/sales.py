@@ -24,6 +24,7 @@ sales_bp = Blueprint('sales', __name__)
 
 # 1 create invoice 1
 @sales_bp.route('/create_invoice')
+@role_required('owner', 'assistant')
 def create_invoice():
     """Dedicated route for creating sales invoices ONLY"""
     if 'user_id' not in session:

@@ -9,6 +9,8 @@ from app.services.purchases import save_purchase_order
 from app.services.inventory import InventoryManager
 from app.services.invoice_logic import prepare_invoice_data
 from app.services.invoice_logic_po import prepare_po_data
+from app.services.account import check_invoice_limit, increment_invoice_count, has_feature
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +19,23 @@ class InvoiceService:
         self.user_id = user_id
         self.errors = []
         self.warnings = []
+        # Fetch account_id from users table
+        with DB_ENGINE.connect() as conn:
+            row = conn.execute(
+                text("SELECT account_id FROM users WHERE id = :uid"),
+                {"uid": user_id}
+            ).first()
+            self.account_id = row[0] if row else None
 
     def create_invoice(self, form_data, files=None):
         try:
             invoice_data = prepare_invoice_data(form_data, files=files)
+            # Check invoice limit
+            if self.account_id:
+                allowed, msg = check_invoice_limit(self.account_id)
+                if not allowed:
+                    self.errors.append(msg)
+                    return None, self.errors
 
             # Generate number
             invoice_data['invoice_number'] = NumberGenerator.generate_invoice_number(self.user_id)
@@ -78,6 +93,9 @@ class InvoiceService:
                             f"Stock update failed for {product_name}: "
                             f"requested -{qty_sold:.3f}, current stock {stock}"
                         )
+                        # Increment invoice count
+                        if self.account_id:
+                            increment_invoice_count(self.account_id)
 
             return invoice_data, self.errors or self.warnings
 
@@ -89,6 +107,12 @@ class InvoiceService:
     def create_purchase_order(self, form_data, files=None):
         try:
             po_data = prepare_po_data(form_data, files=files)
+            
+            # Check if plan allows purchase orders
+            if self.account_id:
+                if not has_feature(self.account_id, 'purchase_orders'):
+                    self.errors.append("Your plan does not include purchase orders. Upgrade to Growth or Pro.")
+                    return None, self.errors
 
             po_data['po_number'] = NumberGenerator.generate_po_number(self.user_id)
             po_data['invoice_type'] = 'P'

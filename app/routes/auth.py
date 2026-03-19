@@ -5,6 +5,7 @@ from app.services.db import DB_ENGINE
 from app.services.auth import verify_user, get_user_profile, create_user
 from app.services.utils import random_success_message
 from app.services.cache import get_user_profile_cached
+from app.services.account import create_account, check_user_limit
 
 # Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -21,16 +22,25 @@ def login():
         if user_id:
             from app.services.session_manager import SessionManager
 
-            # Check location restrictions
             if not SessionManager.check_location_restrictions(user_id, request.remote_addr):
                 flash('❌ Login not allowed from this location', 'error')
                 return render_template('login.html', nonce=g.nonce)
 
-            # Create secure session
+            # Fetch user's role and account_id
+            with DB_ENGINE.connect() as conn:
+                row = conn.execute(
+                    text("SELECT role, account_id FROM users WHERE id = :uid"),
+                    {"uid": user_id}
+                ).first()
+                role = row[0] if row else 'assistant'
+                account_id = row[1] if row else None
+
             session_token = SessionManager.create_session(user_id, request)
 
             session['user_id'] = user_id
             session['user_email'] = email
+            session['role'] = role
+            session['account_id'] = account_id
             session['session_token'] = session_token
 
             flash(random_success_message('login'), 'success')
@@ -38,7 +48,6 @@ def login():
         else:
             return render_template('login.html', error='Invalid credentials', nonce=g.nonce)
 
-    # GET request - show login form
     return render_template('login.html', nonce=g.nonce)
 
 
@@ -49,15 +58,11 @@ def logout():
     flash('You have been logged out successfully.', 'info')
     return redirect(url_for('auth.login'))  # Changed from 'home' to 'login'
 
-
-
-
 # 3. Registration
 @auth_bp.route("/register", methods=['GET', 'POST'])
 @limiter.limit("3 per hour")
 def register():
     if request.method == 'POST':
-        # Validate terms acceptance
         if not request.form.get('agree_terms'):
             flash('❌ You must agree to Terms of Service to register', 'error')
             return render_template('register.html', nonce=g.nonce)
@@ -65,24 +70,32 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         company_name = request.form.get('company_name', '')
+        plan = request.form.get('plan', 'starter')   # <-- new field from form
 
-        # 🆕 ADD DEBUG LOGGING
-        print(f"📝 Attempting to register user: {email}")
-        print(f"🔑 Password length: {len(password) if password else 0}")
+        # Validate plan
+        if plan not in ['starter', 'growth', 'pro']:
+            plan = 'starter'
 
-        user_created = create_user(email, password, company_name)
-        print(f"✅ User creation result: {user_created}")
-
-        if user_created:
-            flash('✅ Account created! Please login.', 'success')
-            return redirect(url_for('auth.login'))
-        else:
+        # 1. Create the user in the users table (existing create_user returns user_id)
+        user_id = create_user(email, password, company_name)
+        if not user_id:
             flash('❌ User already exists or registration failed', 'error')
             return render_template('register.html', nonce=g.nonce)
 
-    # GET request - show form
-    return render_template('register.html', nonce=g.nonce)
+        # 2. Create an account for this user
+        account_id = create_account(company_name, plan)
 
+        # 3. Link user to account and set role = owner
+        with DB_ENGINE.begin() as conn:
+            conn.execute(
+                text("UPDATE users SET account_id = :aid, role = 'owner' WHERE id = :uid"),
+                {"aid": account_id, "uid": user_id}
+            )
+
+        flash('✅ Account created! Please login.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('register.html', nonce=g.nonce)
 
 
 # 4 Password Recovery

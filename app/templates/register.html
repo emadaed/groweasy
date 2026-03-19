@@ -55,6 +55,21 @@
                                 and <a href="{{ url_for('main.privacy') }}" target="_blank">Privacy Policy</a>
                             </label>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Choose Plan</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="plan" id="planStarter" value="starter" checked>
+                                <label class="form-check-label" for="planStarter">Starter (50 invoices/month, 100 items, 1 user)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="plan" id="planGrowth" value="growth">
+                                <label class="form-check-label" for="planGrowth">Growth ($12/mo – unlimited invoices/items, 3 users, purchase orders)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="plan" id="planPro" value="pro">
+                                <label class="form-check-label" for="planPro">Pro ($29/mo – unlimited everything, AI insights)</label>
+                            </div>
+                        </div>
 
                         <button type="submit" class="btn btn-success w-100">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

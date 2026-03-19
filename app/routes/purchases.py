@@ -23,6 +23,7 @@ purchases_bp = Blueprint('purchases', __name__)
 
 #create po 1
 @purchases_bp.route("/create_purchase_order")
+@role_required('owner', 'assistant')
 def create_purchase_order():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

@@ -216,6 +216,7 @@ def stock_movements():
 # new PEL Enhanced
 
 @reports_bp.route('/profit_loss', methods=['GET', 'POST'])
+@role_required('owner', 'accountant')
 def profit_loss():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
