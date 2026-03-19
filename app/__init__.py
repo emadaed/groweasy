@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 from app.extensions import csrf
-
+from flask_mail import Mail
 # Local Imports
 #from app.assets import init_assets
 from app.extensions import limiter, compress
@@ -29,6 +29,7 @@ def block_automation():
         if request.path.startswith('/reports/'):
             abort(403)
 
+mail = Mail()
 def create_app():
     load_dotenv()
 
@@ -42,6 +43,13 @@ def create_app():
 
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.config['MAIL_SERVER'] = 'smtp.gmail.com'          #  SMTP server
+    app.config['MAIL_PORT'] = 587
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USERNAME'] = 'groweasycloud@gmail.com'  # replace
+    app.config['MAIL_PASSWORD'] = 'postgresql://postgres:SBfVfXGPTdjEEoUKOSkaeGVdQcPmNfSk@postgres.railway.internal:5432/railway'     # replace
+    app.config['MAIL_DEFAULT_SENDER'] = 'groweasycloud@gmail.com'
+    mail.init_app(app)
 
 
     # --- Security: Initialize CSRF Protection ---

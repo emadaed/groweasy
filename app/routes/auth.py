@@ -10,8 +10,9 @@ from app.services.account import create_account, check_user_limit
 from app.decorators import role_required
 from flask import current_app
 from flask_mail import Message
-from app import mail
+
 def send_welcome_email(user_email, plan):
+    from app import mail
     msg = Message(
         subject="Welcome to Groweasy!",
         recipients=[user_email]
