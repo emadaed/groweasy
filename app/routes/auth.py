@@ -8,28 +8,6 @@ from app.services.utils import random_success_message
 from app.services.cache import get_user_profile_cached
 from app.services.account import create_account, check_user_limit
 from app.decorators import role_required
-from flask import current_app
-from flask_mail import Message
-
-def send_welcome_email(user_email, plan):
-    from app import mail
-    msg = Message(
-        subject="Welcome to Groweasy!",
-        recipients=[user_email]
-    )
-    msg.body = f"""
-Thank you for signing up for Groweasy!
-
-You've selected the {plan.capitalize()} plan.
-You can now log in and start managing your business.
-
-Best regards,
-The Groweasy Team
-"""
-    try:
-        mail.send(msg)
-    except Exception as e:
-        current_app.logger.error(f"Failed to send welcome email: {e}")
 
 # Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -109,28 +87,62 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         company_name = request.form.get('company_name', '')
-        plan = request.form.get('plan', 'starter')   # <-- new field from form
+        plan = request.form.get('plan', 'starter')
 
-        # Validate plan
         if plan not in ['starter', 'growth', 'pro']:
             plan = 'starter'
 
-        # 1. Create the user in the users table (existing create_user returns user_id)
-        user_id = create_user(email, password, company_name)
-        if not user_id:
+        # 1. Create user (returns True/False)
+        user_created = create_user(email, password, company_name)
+        if not user_created:
             flash('❌ User already exists or registration failed', 'error')
             return render_template('register.html', nonce=g.nonce)
 
-        # 2. Create an account for this user
+        # 2. Fetch the newly created user's ID
+        with DB_ENGINE.connect() as conn:
+            row = conn.execute(
+                text("SELECT id FROM users WHERE email = :email"),
+                {"email": email}
+            ).first()
+            if not row:
+                flash("❌ User created but ID not found – please contact support.", "error")
+                return render_template('register.html', nonce=g.nonce)
+            user_id = row[0]
+
+        # 3. Create an account for this user
         account_id = create_account(company_name, plan)
 
-        # 3. Link user to account and set role = owner
+        # 4. Link user to account and set role = owner
         with DB_ENGINE.begin() as conn:
             conn.execute(
                 text("UPDATE users SET account_id = :aid, role = 'owner' WHERE id = :uid"),
                 {"aid": account_id, "uid": user_id}
             )
-        
+
+        # 5. Send welcome email (optional)
+        from flask_mail import Message
+        from app import mail
+        from flask import current_app
+
+        def send_welcome_email(user_email, plan):
+            msg = Message(
+                subject="Welcome to Groweasy!",
+                recipients=[user_email]
+            )
+            msg.body = f"""
+Thank you for signing up for Groweasy!
+
+You've selected the {plan.capitalize()} plan.
+You can now log in and start managing your business.
+
+Best regards,
+The Groweasy Team
+"""
+            try:
+                mail.send(msg)
+            except Exception as e:
+                current_app.logger.error(f"Failed to send welcome email: {e}")
+
         flash('✅ Account created! Please login.', 'success')
         send_welcome_email(email, plan)
         return redirect(url_for('auth.login'))
