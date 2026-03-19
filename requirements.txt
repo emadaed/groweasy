@@ -28,6 +28,9 @@ greenlet==3.0.3
 cssmin==0.2.0
 jsmin==3.0.1
 
+#Flask-Mail
+Flask-Mail
+
 # PDF Generation – WeasyPrint (critical for preview-matching PDFs)
 weasyprint==66.0
 Pillow==11.3.0  # Required by WeasyPrint and qrcode

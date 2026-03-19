@@ -45,7 +45,7 @@ def get_account(account_id):
             text("SELECT * FROM accounts WHERE id = :aid"),
             {"aid": account_id}
         ).first()
-    return dict(row) if row else None
+    return dict(row._mapping) if row else None
 
 def get_plan_limits(plan_name):
     """Return limits dict for a given plan."""

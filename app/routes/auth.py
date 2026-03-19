@@ -8,6 +8,27 @@ from app.services.utils import random_success_message
 from app.services.cache import get_user_profile_cached
 from app.services.account import create_account, check_user_limit
 from app.decorators import role_required
+from flask import current_app
+from flask_mail import Message
+from app import mail
+def send_welcome_email(user_email, plan):
+    msg = Message(
+        subject="Welcome to Groweasy!",
+        recipients=[user_email]
+    )
+    msg.body = f"""
+Thank you for signing up for Groweasy!
+
+You've selected the {plan.capitalize()} plan.
+You can now log in and start managing your business.
+
+Best regards,
+The Groweasy Team
+"""
+    try:
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.error(f"Failed to send welcome email: {e}")
 
 # Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -36,6 +57,21 @@ def login():
                 ).first()
                 role = row[0] if row else 'assistant'
                 account_id = row[1] if row else None
+
+            # --- INSERT LOGIN RECORD ---
+            with DB_ENGINE.begin() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO user_logins (user_id, ip_address, user_agent)
+                        VALUES (:uid, :ip, :ua)
+                    """),
+                    {
+                        "uid": user_id,
+                        "ip": request.remote_addr,
+                        "ua": request.user_agent.string
+                    }
+                )
+            # __Session management__etc
 
             session_token = SessionManager.create_session(user_id, request)
 
@@ -93,8 +129,9 @@ def register():
                 text("UPDATE users SET account_id = :aid, role = 'owner' WHERE id = :uid"),
                 {"aid": account_id, "uid": user_id}
             )
-
+        
         flash('✅ Account created! Please login.', 'success')
+        send_welcome_email(email, plan)
         return redirect(url_for('auth.login'))
 
     return render_template('register.html', nonce=g.nonce)
