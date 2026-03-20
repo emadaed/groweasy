@@ -120,32 +120,32 @@ def register():
             )
 
         # 5. Send welcome email (optional)
-        def send_welcome_email(user_email, plan):
-            from app import mail
-            from flask_mail import Message
-            from flask import current_app
-            print(f"📧 Attempting to send welcome email to {user_email} for plan {plan}")
-            msg = Message(
-                subject="Welcome to Groweasy!",
-                recipients=[user_email]
-            )
-            msg.body = f"""
-        Thank you for signing up for Groweasy!
-
-        You've selected the {plan.capitalize()} plan.
-        You can now log in and start managing your business.
-
-        Best regards,
-        The Groweasy Team
-        """
-            try:
-                mail.send(msg)
-                print("✅ Email sent successfully")
-            except Exception as e:
-                print(f"❌ Email sending failed: {e}")
-                current_app.logger.error(f"Failed to send welcome email: {e}")
+##        def send_welcome_email(user_email, plan):
+##            from app import mail
+##            from flask_mail import Message
+##            from flask import current_app
+##            print(f"📧 Attempting to send welcome email to {user_email} for plan {plan}")
+##            msg = Message(
+##                subject="Welcome to Groweasy!",
+##                recipients=[user_email]
+##            )
+##            msg.body = f"""
+##        Thank you for signing up for Groweasy!
+##
+##        You've selected the {plan.capitalize()} plan.
+##        You can now log in and start managing your business.
+##
+##        Best regards,
+##        The Groweasy Team
+##        """
+##            try:
+##                mail.send(msg)
+##                print("✅ Email sent successfully")
+##            except Exception as e:
+##                print(f"❌ Email sending failed: {e}")
+##                current_app.logger.error(f"Failed to send welcome email: {e}")
         flash('✅ Account created! Please login.', 'success')
-        send_welcome_email(email, plan)
+        #send_welcome_email(email, plan)
         return redirect(url_for('auth.login'))
 
     return render_template('register.html', nonce=g.nonce)
