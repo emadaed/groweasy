@@ -11,11 +11,12 @@ from app.decorators import role_required
 import threading
 from flask_mail import Message
 from app import mail
-from flask import current_app
-
 def send_welcome_email_async(user_email, plan):
+    from app import create_app
+    app = create_app()
+
     def _send():
-        with current_app.app_context():
+        with app.app_context():
             msg = Message(
                 subject="Welcome to Groweasy!",
                 recipients=[user_email]
@@ -31,9 +32,11 @@ The Groweasy Team
 """
             try:
                 mail.send(msg)
+                print(f"✅ Welcome email sent to {user_email}")
             except Exception as e:
-                current_app.logger.error(f"Failed to send welcome email: {e}")
-    threading.Thread(target=_send).start()
+                app.logger.error(f"❌ Failed to send welcome email to {user_email}: {e}")
+
+    threading.Thread(target=_send, daemon=True).start()
     
 # Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)
