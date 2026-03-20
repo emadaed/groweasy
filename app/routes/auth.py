@@ -8,7 +8,33 @@ from app.services.utils import random_success_message
 from app.services.cache import get_user_profile_cached
 from app.services.account import create_account, check_user_limit
 from app.decorators import role_required
+import threading
+from flask_mail import Message
+from app import mail
+from flask import current_app
 
+def send_welcome_email_async(user_email, plan):
+    def _send():
+        with current_app.app_context():
+            msg = Message(
+                subject="Welcome to Groweasy!",
+                recipients=[user_email]
+            )
+            msg.body = f"""
+Thank you for signing up for Groweasy!
+
+You've selected the {plan.capitalize()} plan.
+You can now log in and start managing your business.
+
+Best regards,
+The Groweasy Team
+"""
+            try:
+                mail.send(msg)
+            except Exception as e:
+                current_app.logger.error(f"Failed to send welcome email: {e}")
+    threading.Thread(target=_send).start()
+    
 # Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)
 
@@ -79,73 +105,78 @@ def logout():
 @auth_bp.route("/register", methods=['GET', 'POST'])
 @limiter.limit("3 per hour")
 def register():
-    if request.method == 'POST':
-        if not request.form.get('agree_terms'):
-            flash('❌ You must agree to Terms of Service to register', 'error')
+    # --- GET: pass token to template (if present) ---
+    token = request.args.get('token')
+    if request.method == 'GET':
+        return render_template('register.html', nonce=g.nonce, token=token)
+
+    # --- POST: handle registration ---
+    if not request.form.get('agree_terms'):
+        flash('❌ You must agree to Terms of Service to register', 'error')
+        return render_template('register.html', nonce=g.nonce)
+
+    email = request.form.get('email')
+    password = request.form.get('password')
+    company_name = request.form.get('company_name', '')
+    plan = request.form.get('plan', 'starter')
+    token = request.form.get('token')  # hidden input
+
+    if plan not in ['starter', 'growth', 'pro']:
+        plan = 'starter'
+
+    # 1. Create the user (no account yet)
+    user_created = create_user(email, password, company_name)
+    if not user_created:
+        flash('❌ User already exists or registration failed', 'error')
+        return render_template('register.html', nonce=g.nonce)
+
+    # 2. Fetch the newly created user's ID
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(
+            text("SELECT id FROM users WHERE email = :email"),
+            {"email": email}
+        ).first()
+        if not row:
+            flash("❌ User created but ID not found – please contact support.", "error")
             return render_template('register.html', nonce=g.nonce)
+        user_id = row[0]
 
-        email = request.form.get('email')
-        password = request.form.get('password')
-        company_name = request.form.get('company_name', '')
-        plan = request.form.get('plan', 'starter')
-
-        if plan not in ['starter', 'growth', 'pro']:
-            plan = 'starter'
-
-        # 1. Create user (returns True/False)
-        user_created = create_user(email, password, company_name)
-        if not user_created:
-            flash('❌ User already exists or registration failed', 'error')
-            return render_template('register.html', nonce=g.nonce)
-
-        # 2. Fetch the newly created user's ID
-        with DB_ENGINE.connect() as conn:
-            row = conn.execute(
-                text("SELECT id FROM users WHERE email = :email"),
-                {"email": email}
+    # 3. Handle invite token (if any)
+    if token:
+        with DB_ENGINE.begin() as conn:
+            invite = conn.execute(
+                text("SELECT * FROM user_invites WHERE token = :token AND expires_at > NOW() AND accepted_at IS NULL"),
+                {"token": token}
             ).first()
-            if not row:
-                flash("❌ User created but ID not found – please contact support.", "error")
-                return render_template('register.html', nonce=g.nonce)
-            user_id = row[0]
-
-        # 3. Create an account for this user
+            if invite:
+                # Link to existing account and set role from invite
+                conn.execute(
+                    text("UPDATE users SET account_id = :aid, role = :role WHERE id = :uid"),
+                    {"aid": invite.account_id, "role": invite.role, "uid": user_id}
+                )
+                # Mark invite as accepted
+                conn.execute(
+                    text("UPDATE user_invites SET accepted_at = NOW() WHERE id = :id"),
+                    {"id": invite.id}
+                )
+                flash('✅ You have been added to the team! Please login.', 'success')
+                return redirect(url_for('auth.login'))
+            else:
+                flash('❌ Invalid or expired invite token.', 'error')
+                # Optionally delete the user? Better to let them retry without token.
+                return redirect(url_for('auth.register'))
+    else:
+        # 4. No token – normal registration: create a new account and set as owner
         account_id = create_account(company_name, plan)
-
-        # 4. Link user to account and set role = owner
         with DB_ENGINE.begin() as conn:
             conn.execute(
                 text("UPDATE users SET account_id = :aid, role = 'owner' WHERE id = :uid"),
                 {"aid": account_id, "uid": user_id}
             )
-
-        # 5. Send welcome email (optional)
-##        def send_welcome_email(user_email, plan):
-##            from app import mail
-##            from flask_mail import Message
-##            from flask import current_app
-##            print(f"📧 Attempting to send welcome email to {user_email} for plan {plan}")
-##            msg = Message(
-##                subject="Welcome to Groweasy!",
-##                recipients=[user_email]
-##            )
-##            msg.body = f"""
-##        Thank you for signing up for Groweasy!
-##
-##        You've selected the {plan.capitalize()} plan.
-##        You can now log in and start managing your business.
-##
-##        Best regards,
-##        The Groweasy Team
-##        """
-##            try:
-##                mail.send(msg)
-##                print("✅ Email sent successfully")
-##            except Exception as e:
-##                print(f"❌ Email sending failed: {e}")
-##                current_app.logger.error(f"Failed to send welcome email: {e}")
         flash('✅ Account created! Please login.', 'success')
-        #send_welcome_email(email, plan)
+
+        # 5. Send welcome email (async)   
+        send_welcome_email_async(email, plan)
         return redirect(url_for('auth.login'))
 
     return render_template('register.html', nonce=g.nonce)

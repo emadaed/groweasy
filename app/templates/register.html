@@ -59,7 +59,7 @@
                             <label class="form-label">Choose Plan</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="plan" id="planStarter" value="starter" checked>
-                                <label class="form-check-label" for="planStarter">Starter (50 invoices/month, 100 items, 1 user)</label>
+                                <label class="form-check-label" for="planStarter">Forever Free (100 invoices/month, 2000 items, 1 user)</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="plan" id="planGrowth" value="growth">
@@ -70,7 +70,9 @@
                                 <label class="form-check-label" for="planPro">Pro ($29/mo – unlimited everything, AI insights)</label>
                             </div>
                         </div>
-
+                        {% if token %}
+                        <input type="hidden" name="token" value="{{ token }}">
+                        {% endif %}
                         <button type="submit" class="btn btn-success w-100">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             Create Account

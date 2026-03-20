@@ -3,12 +3,16 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>👥 Team Members</h2>
-        <a href="{{ url_for('users.add_user') }}" class="btn btn-primary">
-            <i class="fas fa-user-plus"></i> Add User
-        </a>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
+            <i class="fas fa-user-plus"></i> Invite User
+        </button>
     </div>
 
-    <div class="card">
+    <!-- Existing Users Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Current Team</h5>
+        </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
@@ -52,6 +56,74 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Invites Section (if any) -->
+    {% if pending_invites %}
+    <div class="card">
+        <div class="card-header">
+            <h5>📧 Pending Invites</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Expires</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invite in pending_invites %}
+                        <tr>
+                            <td>{{ invite.email }}</td>
+                            <td>{{ invite.role|capitalize }}</td>
+                            <td>{{ invite.expires_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <form action="{{ url_for('users.revoke_invite', invite_id=invite.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-danger">Revoke</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Invite Modal -->
+    <div class="modal fade" id="inviteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('users.send_invite') }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Invite Team Member</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <select name="role" class="form-select">
+                                <option value="assistant">Assistant (can manage inventory, invoices, purchases)</option>
+                                <option value="accountant">Accountant (can view reports only)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Send Invite</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
