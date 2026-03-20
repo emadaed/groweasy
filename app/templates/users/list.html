@@ -85,6 +85,7 @@
                             <td>{{ invite.expires_at.strftime('%Y-%m-%d') }}</td>
                             <td>
                                 <form action="{{ url_for('users.revoke_invite', invite_id=invite.id) }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger">Revoke</button>
                                 </form>
                             </td>

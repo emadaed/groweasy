@@ -11,11 +11,10 @@ import threading
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
 def send_invite_email_async(email, token, inviter_name):
-    """Send invite email in a background thread to avoid slowing down the request."""
-    def _send():
-        from flask_mail import Message
-        from app import mail
-        with current_app.app_context():
+    def _send(app):
+        with app.app_context():
+            from flask_mail import Message
+            from app import mail
             register_link = url_for('auth.register', token=token, _external=True)
             msg = Message(
                 subject=f"{inviter_name} invited you to join Groweasy",
@@ -32,9 +31,13 @@ This invite will expire in 7 days.
             try:
                 mail.send(msg)
             except Exception as e:
-                current_app.logger.error(f"Failed to send invite email: {e}")
-    threading.Thread(target=_send).start()
+                app.logger.error(f"Failed to send invite email: {e}")
 
+    # Get the actual Flask app instance
+    from flask import current_app
+    app = current_app._get_current_object()
+    threading.Thread(target=_send, args=(app,)).start()
+    
 @users_bp.route('/')
 @role_required('owner')
 def list_users():
