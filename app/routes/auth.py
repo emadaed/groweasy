@@ -14,8 +14,8 @@ from app import mail
 from flask import current_app
 
 def send_welcome_email_async(user_email, plan):
-    def _send():
-        with current_app.app_context():
+    def _send(app):
+        with app.app_context():
             msg = Message(
                 subject="Welcome to Groweasy!",
                 recipients=[user_email]
@@ -32,8 +32,11 @@ The Groweasy Team
             try:
                 mail.send(msg)
             except Exception as e:
-                current_app.logger.error(f"Failed to send welcome email: {e}")
-    threading.Thread(target=_send).start()
+                app.logger.error(f"Failed to send welcome email: {e}")
+
+    # Get the actual Flask app instance (the one currently handling the request)
+    app = current_app._get_current_object()
+    threading.Thread(target=_send, args=(app,)).start()
     
 # Initialize Blueprint
 auth_bp = Blueprint('auth', __name__)

@@ -316,7 +316,13 @@
                         <li><a class="dropdown-item" href="{{ url_for('reports.tax_certificate') }}"><i class="bi bi-file-pdf me-2"></i>Tax Certificate</a></li>
                     </ul>
                 </li>
-                
+                {% if session.role == 'owner' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('users.list_users') }}">
+                        <i class="fas fa-users"></i> Team
+                    </a>
+                </li>
+                {% endif %}                
                 {% else %}
                 <li> 
                     <a href="{{ url_for('auth.login') }}" class="nav-item">
