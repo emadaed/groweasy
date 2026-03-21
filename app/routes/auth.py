@@ -156,7 +156,7 @@ def register():
                 # Link to existing account and set role from invite
                 conn.execute(
                     text("UPDATE users SET account_id = :aid, role = :role WHERE id = :uid"),
-                    print(f"📦 Invite found: {invite is not None}")
+                    print(f"📦 Invite found: {invite is not None}"),
                     {"aid": invite.account_id, "role": invite.role, "uid": user_id}
                 )
                 # Mark invite as accepted
