@@ -172,9 +172,9 @@ def download_document(document_number):
                 result = conn.execute(text("""
                     SELECT order_data, created_at, status, po_number
                     FROM purchase_orders
-                    WHERE user_id = :user_id AND po_number = :doc_number
+                    WHERE account_id = :aid AND po_number = :doc_number
                     ORDER BY created_at DESC LIMIT 1
-                """), {"user_id": user_id, "doc_number": document_number}).fetchone()
+                """), {"aid": account_id, "doc_number": document_number}).fetchone()
 
             if not result:
                 flash("❌ Purchase order not found or access denied.", "error")
@@ -201,7 +201,7 @@ def download_document(document_number):
 
             # === ENRICH PO ITEMS WITH REAL PRODUCT DATA (same as preview) ===
             from app.services.inventory import InventoryManager
-            inventory_items = InventoryManager.get_inventory_items(user_id)
+            inventory_items = InventoryManager.get_inventory_items(account_id)
 
             product_lookup = {}
             for product in inventory_items:
@@ -228,9 +228,9 @@ def download_document(document_number):
                 result = conn.execute(text("""
                     SELECT invoice_data, created_at, invoice_number, status
                     FROM user_invoices
-                    WHERE user_id = :user_id AND invoice_number = :doc_number
+                    WHERE account_id = :aid AND invoice_number = :doc_number
                     ORDER BY created_at DESC LIMIT 1
-                """), {"user_id": user_id, "doc_number": document_number}).fetchone()
+                """), {"aid": account_id, "doc_number": document_number}).fetchone()
 
             if not result:
                 flash("❌ Invoice not found or access denied.", "error")
@@ -307,9 +307,9 @@ def invoice_history():
         base_sql = '''
             SELECT id, invoice_number, client_name, invoice_date, due_date, grand_total, status, created_at
             FROM user_invoices
-            WHERE user_id = :user_id
+            WHERE account_id = :aid
         '''
-        params = {"user_id": user_id}
+        params = {"aid": account_id}
 
         # Add search if provided
         if search:

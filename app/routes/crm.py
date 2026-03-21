@@ -6,24 +6,16 @@ crm_bp = Blueprint('crm', __name__)
 
 @crm_bp.route("/customers")
 def customers():
-    """Customer management page"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-  
-    customer_list = get_customers(session['user_id'])
-
+    account_id = session['account_id']
+    customer_list = get_customers(account_id)
     return render_template("customers.html", customers=customer_list, nonce=g.nonce)
-
-
 
 @crm_bp.route("/suppliers")
 def suppliers():
-    """Supplier management"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-   
-    suppliers = SupplierManager.get_suppliers(session['user_id'])
-
-    return render_template("suppliers.html",
-                         suppliers=suppliers,
-                         nonce=g.nonce)
+    account_id = session['account_id']
+    suppliers = SupplierManager.get_suppliers(account_id)
+    return render_template("suppliers.html", suppliers=suppliers, nonce=g.nonce)

@@ -1,6 +1,7 @@
 # app/routes/suppliers.py
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from app.services.suppliers import SupplierManager
+from app.decorators import role_required
 
 suppliers_bp = Blueprint('suppliers', __name__)
 
@@ -8,15 +9,16 @@ suppliers_bp = Blueprint('suppliers', __name__)
 def list_suppliers():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    
-    suppliers = SupplierManager.get_suppliers(session['user_id'])
+    account_id = session['account_id']
+    suppliers = SupplierManager.get_suppliers(account_id)
     return render_template('suppliers.html', suppliers=suppliers)
 
 @suppliers_bp.route('/suppliers/add', methods=['POST'])
 def add_supplier():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    
+    user_id = session['user_id']
+    account_id = session['account_id']
     supplier_data = {
         "name": request.form.get('name'),
         "contact_person": request.form.get('contact_person'),
@@ -27,27 +29,28 @@ def add_supplier():
         "payment_terms": request.form.get('payment_terms'),
         "bank_details": request.form.get('bank_details')
     }
-    
-    new_id = SupplierManager.add_supplier(session['user_id'], supplier_data)
+    new_id = SupplierManager.add_supplier(user_id, account_id, supplier_data)
     if new_id:
         flash('Supplier added successfully!', 'success')
     else:
         flash('Error adding supplier.', 'danger')
-        
     return redirect(url_for('suppliers.list_suppliers'))
 
-# app/routes/suppliers.py
 @suppliers_bp.route('/suppliers/edit/<int:id>', methods=['POST'])
 def edit_supplier(id):
-    if 'user_id' not in session: return redirect(url_for('auth.login'))
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    account_id = session['account_id']
     data = {k: request.form.get(k) for k in ['name', 'contact_person', 'email', 'phone', 'address', 'tax_id', 'payment_terms', 'bank_details']}
-    SupplierManager.update_supplier(session['user_id'], id, data)
+    SupplierManager.update_supplier(account_id, id, data)
     flash('Supplier updated!', 'success')
     return redirect(url_for('suppliers.list_suppliers'))
 
 @suppliers_bp.route('/suppliers/delete/<int:id>')
 def delete_supplier(id):
-    if 'user_id' not in session: return redirect(url_for('auth.login'))
-    SupplierManager.delete_supplier(session['user_id'], id)
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    account_id = session['account_id']
+    SupplierManager.delete_supplier(account_id, id)
     flash('Supplier removed.', 'info')
     return redirect(url_for('suppliers.list_suppliers'))

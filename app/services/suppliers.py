@@ -1,4 +1,4 @@
-# app/services/supplier.py
+# app/services/suppliers.py
 import secrets
 import logging
 from datetime import datetime
@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 class SupplierManager:
     @staticmethod
     def ensure_table_exists():
-        """Ensures the table exists and has all professional ERP columns"""
         try:
             with DB_ENGINE.begin() as conn:
                 conn.execute(text('''
                     CREATE TABLE IF NOT EXISTS suppliers (
                         id SERIAL PRIMARY KEY,
                         user_id INTEGER NOT NULL,
+                        account_id INTEGER NOT NULL,
                         name VARCHAR(255) NOT NULL,
                         vendor_id VARCHAR(50) UNIQUE,
                         contact_person VARCHAR(255),
@@ -36,58 +36,55 @@ class SupplierManager:
             logger.error(f"Migration error: {e}")
 
     @staticmethod
-    def add_supplier(user_id, data):
+    def add_supplier(user_id, account_id, data):
         SupplierManager.ensure_table_exists()
-        
-        # Check for duplicate name
         with DB_ENGINE.connect() as conn:
-            dup = conn.execute(text("SELECT id FROM suppliers WHERE user_id=:u AND name=:n"), 
-                              {"u": user_id, "n": data['name']}).fetchone()
-            if dup: return None # Indicate duplicate
+            dup = conn.execute(text("SELECT id FROM suppliers WHERE account_id=:aid AND name=:n"), 
+                              {"aid": account_id, "n": data['name']}).fetchone()
+            if dup:
+                return None
 
         vendor_id = data.get('vendor_id') or f"VEN-{datetime.now().strftime('%y%m')}-{secrets.token_hex(2).upper()}"
-        
         query = text('''
-            INSERT INTO suppliers (user_id, vendor_id, name, contact_person, email, phone, address, tax_id, payment_terms, bank_details)
-            VALUES (:user_id, :vendor_id, :name, :contact_person, :email, :phone, :address, :tax_id, :payment_terms, :bank_details)
+            INSERT INTO suppliers (user_id, account_id, vendor_id, name, contact_person, email, phone, address, tax_id, payment_terms, bank_details)
+            VALUES (:user_id, :aid, :vendor_id, :name, :contact_person, :email, :phone, :address, :tax_id, :payment_terms, :bank_details)
         ''')
         with DB_ENGINE.begin() as conn:
-            conn.execute(query, {**data, "user_id": user_id, "vendor_id": vendor_id})
+            conn.execute(query, {**data, "user_id": user_id, "aid": account_id, "vendor_id": vendor_id})
             return True
 
     @staticmethod
-    def update_supplier(user_id, supplier_id, data):
+    def update_supplier(account_id, supplier_id, data):
         query = text('''
             UPDATE suppliers SET name=:name, contact_person=:contact_person, email=:email, 
             phone=:phone, address=:address, tax_id=:tax_id, payment_terms=:payment_terms, bank_details=:bank_details
-            WHERE id=:id AND user_id=:user_id
+            WHERE id=:id AND account_id=:aid
         ''')
         with DB_ENGINE.begin() as conn:
-            conn.execute(query, {**data, "id": supplier_id, "user_id": user_id})
+            conn.execute(query, {**data, "id": supplier_id, "aid": account_id})
             return True
 
     @staticmethod
-    def delete_supplier(user_id, supplier_id):
+    def delete_supplier(account_id, supplier_id):
         with DB_ENGINE.begin() as conn:
-            conn.execute(text("DELETE FROM suppliers WHERE id=:id AND user_id=:user_id"), 
-                        {"id": supplier_id, "user_id": user_id})
+            conn.execute(text("DELETE FROM suppliers WHERE id=:id AND account_id=:aid"), 
+                        {"id": supplier_id, "aid": account_id})
             return True
 
     @staticmethod
-    def update_volume(user_id, supplier_id, amount):
-        """Updates Total Volume and Order Count after a successful PO"""
+    def update_volume(account_id, supplier_id, amount):
         query = text('''
             UPDATE suppliers 
             SET total_purchased = total_purchased + :amount,
                 order_count = order_count + 1
-            WHERE id = :id AND user_id = :user_id
+            WHERE id = :id AND account_id = :aid
         ''')
         with DB_ENGINE.begin() as conn:
-            conn.execute(query, {"amount": amount, "id": supplier_id, "user_id": user_id})
+            conn.execute(query, {"amount": amount, "id": supplier_id, "aid": account_id})
 
     @staticmethod
-    def get_suppliers(user_id):
+    def get_suppliers(account_id):
         SupplierManager.ensure_table_exists()
         with DB_ENGINE.connect() as conn:
-            result = conn.execute(text("SELECT * FROM suppliers WHERE user_id = :u ORDER BY name ASC"), {"u": user_id})
+            result = conn.execute(text("SELECT * FROM suppliers WHERE account_id = :aid ORDER BY name ASC"), {"aid": account_id})
             return [dict(row._mapping) for row in result]

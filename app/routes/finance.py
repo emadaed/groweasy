@@ -8,11 +8,10 @@ finance_bp = Blueprint('finance', __name__)
 def expenses():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    
-    expense_list = get_expenses(session['user_id'])
-    expense_summary = get_expense_summary(session['user_id'])
+    account_id = session['account_id']
+    expense_list = get_expenses(account_id)
+    expense_summary = get_expense_summary(account_id)
     today_date = datetime.now().strftime('%Y-%m-%d')
-
     return render_template("expenses.html",
                          expenses=expense_list,
                          expense_summary=expense_summary,
@@ -23,7 +22,8 @@ def expenses():
 def add_expense():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-
+    user_id = session['user_id']
+    account_id = session['account_id']
     expense_data = {
         'description': request.form.get('description'),
         'amount': float(request.form.get('amount', 0)),
@@ -33,10 +33,9 @@ def add_expense():
         'expense_date': request.form.get('expense_date'),
         'notes': request.form.get('notes', '')
     }
-
-    if save_expense(session['user_id'], expense_data):
+    if save_expense(user_id, account_id, expense_data):
         flash('✅ Expense added successfully!', 'success')
     else:
         flash('❌ Error adding expense', 'error')
-
     return redirect(url_for('finance.expenses'))
+

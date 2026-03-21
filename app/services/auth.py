@@ -1,13 +1,9 @@
-#app/services/auth.py - Fully Postgres Ready
-from app.services.account import create_account, check_user_limit
+# app/services/auth.py
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
 import hashlib
-import os
 import json
 from datetime import datetime
-
-
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -24,7 +20,7 @@ def create_user(email, password, company_name=""):
                 "company_name": company_name
             })
             return True
-        except Exception:  # IntegrityError for duplicate email
+        except Exception:
             return False
 
 def verify_user(email, password):
@@ -32,18 +28,15 @@ def verify_user(email, password):
         result = conn.execute(text('''
             SELECT id, password_hash FROM users WHERE email = :email
         '''), {"email": email}).fetchone()
-
     if result and result[1] == hash_password(password):
         return result[0]
     return None
 
 def update_user_profile(user_id, company_name=None, company_address=None, company_phone=None,
                        company_tax_id=None, seller_ntn=None, seller_strn=None, preferred_currency=None):
-    """Update user profile information"""
     with DB_ENGINE.begin() as conn:
         updates = []
         params = {"user_id": user_id}
-
         if company_name is not None:
             updates.append("company_name = :company_name")
             params["company_name"] = company_name
@@ -65,7 +58,6 @@ def update_user_profile(user_id, company_name=None, company_address=None, compan
         if preferred_currency is not None:
             updates.append("preferred_currency = :preferred_currency")
             params["preferred_currency"] = preferred_currency
-
         if updates:
             updates.append("updated_at = CURRENT_TIMESTAMP")
             sql = f"UPDATE users SET {', '.join(updates)} WHERE id = :user_id"
@@ -79,7 +71,6 @@ def get_user_profile(user_id):
                    created_at, id, email
             FROM users WHERE id = :user_id
         '''), {"user_id": user_id}).fetchone()
-
     if result:
         return {
             'company_name': result[0],
@@ -96,8 +87,9 @@ def get_user_profile(user_id):
         }
     return {}
 
-def get_business_summary(user_id):
-    """Get overall business summary"""
+# ----- SHARED DATA FUNCTIONS (use account_id) -----
+
+def get_business_summary(account_id):
     with DB_ENGINE.connect() as conn:
         result = conn.execute(text('''
             SELECT
@@ -107,9 +99,8 @@ def get_business_summary(user_id):
                 MIN(invoice_date) as first_invoice,
                 MAX(invoice_date) as last_invoice
             FROM user_invoices
-            WHERE user_id = :user_id
-        '''), {"user_id": user_id}).fetchone()
-
+            WHERE account_id = :aid
+        '''), {"aid": account_id}).fetchone()
     if result and result[0] > 0:
         return {
             'total_invoices': result[0],
@@ -118,16 +109,9 @@ def get_business_summary(user_id):
             'first_invoice': result[3].isoformat() if result[3] else None,
             'last_invoice': result[4].isoformat() if result[4] else None
         }
-    return {
-        'total_invoices': 0,
-        'total_revenue': 0,
-        'avg_invoice': 0,
-        'first_invoice': None,
-        'last_invoice': None
-    }
+    return {'total_invoices': 0, 'total_revenue': 0, 'avg_invoice': 0, 'first_invoice': None, 'last_invoice': None}
 
-def get_client_analytics(user_id):
-    """Get top clients by revenue"""
+def get_client_analytics(account_id):
     with DB_ENGINE.connect() as conn:
         results = conn.execute(text('''
             SELECT
@@ -136,12 +120,11 @@ def get_client_analytics(user_id):
                 COALESCE(SUM(grand_total), 0) as total_spent,
                 COALESCE(AVG(grand_total), 0) as avg_invoice
             FROM user_invoices
-            WHERE user_id = :user_id
+            WHERE account_id = :aid
             GROUP BY client_name
             ORDER BY total_spent DESC
             LIMIT 10
-        '''), {"user_id": user_id}).fetchall()
-
+        '''), {"aid": account_id}).fetchall()
     clients = []
     for row in results:
         clients.append({
@@ -150,13 +133,9 @@ def get_client_analytics(user_id):
             'total_spent': float(row[2]),
             'avg_invoice': float(row[3])
         })
-
     return clients
 
-from datetime import datetime
-
-def save_user_invoice(user_id, invoice_data):
-    """Save invoice data with metadata"""
+def save_user_invoice(user_id, account_id, invoice_data):
     with DB_ENGINE.begin() as conn:
         invoice_number = invoice_data.get('invoice_number', 'Unknown')
         client_name = invoice_data.get('client_name', 'Unknown Client')
@@ -165,27 +144,26 @@ def save_user_invoice(user_id, invoice_data):
         grand_total = float(invoice_data.get('grand_total', 0))
         invoice_json = json.dumps(invoice_data)
 
-        # Convert date strings to date objects or None
         invoice_date = None
         if invoice_date_str:
             try:
                 invoice_date = datetime.strptime(invoice_date_str, '%Y-%m-%d').date()
             except ValueError:
-                invoice_date = None
-
+                pass
         due_date = None
         if due_date_str:
             try:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
             except ValueError:
-                due_date = None
+                pass
 
         conn.execute(text('''
             INSERT INTO user_invoices
-            (user_id, invoice_number, client_name, invoice_date, due_date, grand_total, invoice_data)
-            VALUES (:user_id, :invoice_number, :client_name, :invoice_date, :due_date, :grand_total, :invoice_json)
+            (user_id, account_id, invoice_number, client_name, invoice_date, due_date, grand_total, invoice_data)
+            VALUES (:user_id, :aid, :invoice_number, :client_name, :invoice_date, :due_date, :grand_total, :invoice_json)
         '''), {
             "user_id": user_id,
+            "aid": account_id,
             "invoice_number": invoice_number,
             "client_name": client_name,
             "invoice_date": invoice_date,
@@ -193,8 +171,6 @@ def save_user_invoice(user_id, invoice_data):
             "grand_total": grand_total,
             "invoice_json": invoice_json
         })
-
-
 
         # Auto-save customer
         customer_data = {
@@ -205,9 +181,8 @@ def save_user_invoice(user_id, invoice_data):
             'tax_id': invoice_data.get('buyer_ntn', '')
         }
 
-        result = conn.execute(text("SELECT id FROM customers WHERE user_id = :user_id AND name = :name"),
-                             {"user_id": user_id, "name": customer_data['name']}).fetchone()
-
+        result = conn.execute(text("SELECT id FROM customers WHERE account_id = :aid AND name = :name"),
+                             {"aid": account_id, "name": customer_data['name']}).fetchone()
         if result:
             conn.execute(text('''
                 UPDATE customers SET
@@ -224,24 +199,26 @@ def save_user_invoice(user_id, invoice_data):
         else:
             conn.execute(text('''
                 INSERT INTO customers
-                (user_id, name, email, phone, address, tax_id, total_spent, invoice_count)
-                VALUES (:user_id, :name, :email, :phone, :address, :tax_id, :grand_total, 1)
+                (user_id, account_id, name, email, phone, address, tax_id, total_spent, invoice_count)
+                VALUES (:user_id, :aid, :name, :email, :phone, :address, :tax_id, :grand_total, 1)
             '''), {
-                "user_id": user_id, "name": customer_data['name'], "email": customer_data['email'],
-                "phone": customer_data['phone'], "address": customer_data['address'],
-                "tax_id": customer_data['tax_id'], "grand_total": grand_total
+                "user_id": user_id,
+                "aid": account_id,
+                "name": customer_data['name'],
+                "email": customer_data['email'],
+                "phone": customer_data['phone'],
+                "address": customer_data['address'],
+                "tax_id": customer_data['tax_id'],
+                "grand_total": grand_total
             })
-
     return True
 
-def get_customers(user_id):
-    """Get all customers"""
+def get_customers(account_id):
     with DB_ENGINE.connect() as conn:
         customers = conn.execute(text('''
             SELECT id, name, email, phone, address, tax_id, total_spent, invoice_count
-            FROM customers WHERE user_id = :user_id ORDER BY name
-        '''), {"user_id": user_id}).fetchall()
-
+            FROM customers WHERE account_id = :aid ORDER BY name
+        '''), {"aid": account_id}).fetchall()
     result = []
     for customer in customers:
         result.append({
@@ -256,16 +233,16 @@ def get_customers(user_id):
         })
     return result
 
-def save_expense(user_id, expense_data):
-    """Save business expense with tax details"""
+def save_expense(user_id, account_id, expense_data):
     with DB_ENGINE.begin() as conn:
         conn.execute(text('''
             INSERT INTO expenses 
-                (user_id, description, amount, tax_amount, tax_rate, category, expense_date, notes)
+                (user_id, account_id, description, amount, tax_amount, tax_rate, category, expense_date, notes)
             VALUES 
-                (:user_id, :description, :amount, :tax_amount, :tax_rate, :category, :expense_date, :notes)
+                (:user_id, :aid, :description, :amount, :tax_amount, :tax_rate, :category, :expense_date, :notes)
         '''), {
             "user_id": user_id,
+            "aid": account_id,
             "description": expense_data['description'],
             "amount": expense_data['amount'],
             "tax_amount": expense_data.get('tax_amount', 0),
@@ -276,16 +253,14 @@ def save_expense(user_id, expense_data):
         })
     return True
 
-def get_expenses(user_id, limit=50):
-    """Get expenses for a user including tax details"""
+def get_expenses(account_id, limit=50):
     with DB_ENGINE.connect() as conn:
         expenses = conn.execute(text('''
             SELECT id, description, amount, tax_amount, tax_rate, category, expense_date, notes, created_at
-            FROM expenses WHERE user_id = :user_id
+            FROM expenses WHERE account_id = :aid
             ORDER BY expense_date DESC, created_at DESC
             LIMIT :limit
-        '''), {"user_id": user_id, "limit": limit}).fetchall()
-
+        '''), {"aid": account_id, "limit": limit}).fetchall()
     result = []
     for expense in expenses:
         result.append({
@@ -301,15 +276,13 @@ def get_expenses(user_id, limit=50):
         })
     return result
 
-def get_expense_summary(user_id):
-    """Get expense summary by category"""
+def get_expense_summary(account_id):
     with DB_ENGINE.connect() as conn:
         summary = conn.execute(text('''
             SELECT category, COALESCE(SUM(amount), 0) as total, COUNT(*) as count
-            FROM expenses WHERE user_id = :user_id
+            FROM expenses WHERE account_id = :aid
             GROUP BY category ORDER BY total DESC
-        '''), {"user_id": user_id}).fetchall()
-
+        '''), {"aid": account_id}).fetchall()
     result = []
     for item in summary:
         result.append({
@@ -320,7 +293,6 @@ def get_expense_summary(user_id):
     return result
 
 def change_user_password(user_id, new_password):
-    """Change user password"""
     with DB_ENGINE.begin() as conn:
         conn.execute(text("UPDATE users SET password_hash = :hash WHERE id = :id"),
                      {"id": user_id, "hash": hash_password(new_password)})

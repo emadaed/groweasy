@@ -38,10 +38,9 @@ class InvoiceService:
                     return None, self.errors
 
             # Generate number
-            invoice_data['invoice_number'] = NumberGenerator.generate_invoice_number(self.user_id)
-
+            invoice_data['invoice_number'] = NumberGenerator.generate_invoice_number(self.account_id)
             # Save
-            save_user_invoice(self.user_id, invoice_data)
+            save_user_invoice(self.user_id, self.account_id, invoice_data)
 
             # NEW: Insert items into invoice_items table
             from app.services.db import DB_ENGINE
@@ -114,10 +113,10 @@ class InvoiceService:
                     self.errors.append("Your plan does not include purchase orders. Upgrade to Growth or Pro.")
                     return None, self.errors
 
-            po_data['po_number'] = NumberGenerator.generate_po_number(self.user_id)
+            po_data['po_number'] = NumberGenerator.generate_po_number(self.account_id)
             po_data['invoice_type'] = 'P'
 
-            save_purchase_order(self.user_id, po_data)
+            save_purchase_order(self.user_id, self.account_id, po_data)
             return po_data, self.errors or self.warnings
 
         except Exception as e:
@@ -130,8 +129,8 @@ class InvoiceService:
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(text("""
                     SELECT invoice_data FROM user_invoices
-                    WHERE user_id = :user_id AND invoice_number = :invoice_number
-                """), {"user_id": self.user_id, "invoice_number": invoice_number}).fetchone()
+                    WHERE account_id = :aid AND invoice_number = :invoice_number
+                """), {"aid": self.account_id, "invoice_number": invoice_number}).fetchone()
                 if result:
                     return json.loads(result[0])
         except Exception as e:
@@ -143,8 +142,8 @@ class InvoiceService:
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(text("""
                     SELECT order_data FROM purchase_orders
-                    WHERE user_id = :user_id AND po_number = :po_number
-                """), {"user_id": self.user_id, "po_number": po_number}).fetchone()
+                    WHERE account_id = :aid AND po_number = :po_number
+                """), {"aid": self.account_id, "po_number": po_number}).fetchone()
                 if result:
                     return json.loads(result[0])
         except Exception as e:
