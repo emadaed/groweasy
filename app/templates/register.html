@@ -73,8 +73,9 @@
                         {% if token %}
                         <input type="hidden" name="token" value="{{ token }}">
                         {% endif %}
-                        <button type="submit" class="btn btn-success w-100">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <button type="submit" class="btn btn-success w-100">                        
                             Create Account
                         </button>
                     </form>
