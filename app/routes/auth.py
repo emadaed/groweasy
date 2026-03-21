@@ -123,7 +123,6 @@ def register():
     company_name = request.form.get('company_name', '')
     plan = request.form.get('plan', 'starter')
     token = request.form.get('token')  # hidden input
-    print(f"🔍 Registration POST: token = {token}")
 
     if plan not in ['starter', 'growth', 'pro']:
         plan = 'starter'
@@ -156,7 +155,6 @@ def register():
                 # Link to existing account and set role from invite
                 conn.execute(
                     text("UPDATE users SET account_id = :aid, role = :role WHERE id = :uid"),
-                    print(f"📦 Invite found: {invite is not None}"),
                     {"aid": invite.account_id, "role": invite.role, "uid": user_id}
                 )
                 # Mark invite as accepted
@@ -167,8 +165,8 @@ def register():
                 flash('✅ You have been added to the team! Please login.', 'success')
                 return redirect(url_for('auth.login'))
             else:
-                flash('❌ Invalid or expired invite token.', 'error')
-                # Optionally delete the user? Better to let them retry without token.
+                # Invalid token – do NOT create a new account
+                flash('❌ This invite link is invalid or expired. Please ask the owner to send a new one.', 'error')
                 return redirect(url_for('auth.register'))
     else:
         # 4. No token – normal registration: create a new account and set as owner
@@ -180,7 +178,7 @@ def register():
             )
         flash('✅ Account created! Please login.', 'success')
 
-        # 5. Send welcome email (async)   
+        # 5. Send welcome email (async)
         send_welcome_email_async(email, plan)
         return redirect(url_for('auth.login'))
 
