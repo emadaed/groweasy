@@ -10,12 +10,11 @@ import threading
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
-def send_invite_email_async(email, token, inviter_name):
+def send_invite_email_async(email, registration_link, inviter_name):
     def _send(app):
         with app.app_context():
             from flask_mail import Message
             from app import mail
-            register_link = url_for('auth.register', token=token, _external=True)
             msg = Message(
                 subject=f"{inviter_name} invited you to join Groweasy",
                 recipients=[email]
@@ -24,16 +23,15 @@ def send_invite_email_async(email, token, inviter_name):
 You've been invited to join {inviter_name}'s team on Groweasy.
 
 Click the link below to create your account and get started:
-{register_link}
+{registration_link}
 
-This invite will expire in 7 days.
+This invite will expire in 1 days.
 """
             try:
                 mail.send(msg)
             except Exception as e:
                 app.logger.error(f"Failed to send invite email: {e}")
 
-    # Get the actual Flask app instance
     from flask import current_app
     app = current_app._get_current_object()
     threading.Thread(target=_send, args=(app,)).start()
@@ -171,12 +169,13 @@ def send_invite():
             flash("⚠️ An invite has already been sent to this email.", 'warning')
             return redirect(url_for('users.list_users'))
 
-        # Generate token and expiration (7 days)
+        # Generate token and expiration (1 days)
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.now() + timedelta(days=7)
-
-        # Get inviter name (owner's email)
+        expires_at = datetime.now() + timedelta(days=1)
         inviter_name = session.get('user_email', 'The owner')
+
+        # Build registration link BEFORE thread (so it uses request context)
+        registration_link = url_for('auth.register', token=token, _external=True)
 
         with DB_ENGINE.begin() as conn:
             conn.execute(
@@ -194,10 +193,10 @@ def send_invite():
                 }
             )
 
-    # Send email asynchronously
-    send_invite_email_async(email, token, inviter_name)
-    flash("✅ Invite sent! The user will receive an email with registration link.", 'success')
-    return redirect(url_for('users.list_users'))
+        # Send email asynchronously with pre‑built link
+        send_invite_email_async(email, registration_link, inviter_name)
+        flash("✅ Invite sent! The user will receive an email with registration link.", 'success')
+        return redirect(url_for('users.list_users'))
 
 @users_bp.route('/revoke_invite/<int:invite_id>', methods=['POST'])
 @role_required('owner')
