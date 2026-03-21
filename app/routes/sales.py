@@ -290,20 +290,19 @@ def download_document(document_number):
 # 4 invoice history 4
 @sales_bp.route('/invoice_history')
 def invoice_history():
-    """Invoice history and management page with pagination and stats"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
-    # Get pagination parameters
+    # --- FIX: get account_id from session ---
+    account_id = session['account_id']
+
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
-    limit = 20  # Invoices per page
+    limit = 20
     offset = (page - 1) * limit
 
-    user_id = session['user_id']
-
     with DB_ENGINE.connect() as conn:
-        # Base query for counting and filtering
+        # Base query using account_id
         base_sql = '''
             SELECT id, invoice_number, client_name, invoice_date, due_date, grand_total, status, created_at
             FROM user_invoices
@@ -311,26 +310,23 @@ def invoice_history():
         '''
         params = {"aid": account_id}
 
-        # Add search if provided
         if search:
             base_sql += ' AND (invoice_number ILIKE :search OR client_name ILIKE :search)'
             params["search"] = f"%{search}%"
 
-        # ----- STATS: Total count (already have) -----
+        # Total count
         count_sql = f"SELECT COUNT(*) FROM ({base_sql}) AS count_query"
         total_invoices = conn.execute(text(count_sql), params).scalar() or 0
 
-        # ----- STATS: Total sum of grand_total -----
+        # Total sum
         sum_sql = f"SELECT COALESCE(SUM(grand_total), 0) FROM ({base_sql}) AS sum_query"
         total_sum = conn.execute(text(sum_sql), params).scalar() or 0.0
 
-        # ----- STATS: Pending count (status = 'pending') -----
-        # Adjust if your status values are different (e.g., 'unpaid')
+        # Pending count (status = 'pending')
         pending_sql = f"SELECT COUNT(*) FROM ({base_sql} AND status = 'pending') AS pending_query"
         pending_count = conn.execute(text(pending_sql), params).scalar() or 0
 
-        # ----- STATS: This month's invoices -----
-        from datetime import datetime
+        # This month's invoices
         current_month = datetime.now().month
         current_year = datetime.now().year
         month_sql = f"""
@@ -342,7 +338,7 @@ def invoice_history():
         month_params = {**params, "month": current_month, "year": current_year}
         month_count = conn.execute(text(month_sql), month_params).scalar() or 0
 
-        # Get paginated invoices
+        # Paginated invoices
         invoices_sql = base_sql + '''
             ORDER BY invoice_date DESC, created_at DESC
             LIMIT :limit OFFSET :offset
@@ -350,7 +346,7 @@ def invoice_history():
         params.update({"limit": limit, "offset": offset})
         invoices_result = conn.execute(text(invoices_sql), params).fetchall()
 
-    # Convert to list of dicts for template
+    # Convert to dicts
     invoices = []
     for row in invoices_result:
         invoices.append({
@@ -364,10 +360,9 @@ def invoice_history():
             'created_at': row[7].strftime('%Y-%m-%d %H:%M:%S') if row[7] else ''
         })
 
-    total_pages = (total_invoices + limit - 1) // limit  # Ceiling division
+    total_pages = (total_invoices + limit - 1) // limit
 
-    # Get user's currency symbol
-    user_profile = get_user_profile_cached(user_id)
+    user_profile = get_user_profile_cached(session['user_id'])
     user_currency = user_profile.get('preferred_currency', 'PKR') if user_profile else 'PKR'
     currency_symbol = CURRENCY_SYMBOLS.get(user_currency, 'Rs.')
 
@@ -378,10 +373,10 @@ def invoice_history():
         total_pages=total_pages,
         search_query=search,
         total_invoices=total_invoices,
-        total_sum=total_sum,               # NEW
-        pending_count=pending_count,        # NEW
-        month_count=month_count,            # NEW
-        currency_symbol=currency_symbol,    # NEW
+        total_sum=total_sum,
+        pending_count=pending_count,
+        month_count=month_count,
+        currency_symbol=currency_symbol,
         nonce=g.nonce
     )
 

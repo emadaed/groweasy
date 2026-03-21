@@ -1,6 +1,7 @@
+# app/routes/reports.py
 from flask import send_file, make_response, g
 from flask import redirect, url_for
-from app.services.pdf_engine import generate_pdf  # if not already imported
+from app.services.pdf_engine import generate_pdf
 from app.context_processors import CURRENCY_SYMBOLS
 from app.services.cache import get_user_profile_cached
 from flask import Blueprint, render_template, session, request, jsonify
@@ -13,33 +14,32 @@ from app.decorators import role_required
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
+
 @reports_bp.route('/tax/certificate', methods=['GET', 'POST'])
+@role_required('owner', 'accountant')
 def tax_certificate():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user_id = session['user_id']
-    
+    account_id = session['account_id']   # <-- use account_id
+
     if request.method == 'POST':
         from_date = request.form.get('from_date')
         to_date = request.form.get('to_date')
         include_details = request.form.get('include_details') == 'yes'
-        
-        # Validate dates (optional)
-        
-        # Query totals and optionally invoice details
+
         with DB_ENGINE.connect() as conn:
-            # Get totals
+            # Get totals for the account
             result = conn.execute(text("""
                 SELECT 
                     SUM(grand_total) as total_sales,
                     SUM(COALESCE((invoice_data::json->>'tax_amount')::numeric, 0)) as total_tax
                 FROM user_invoices
-                WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
-            """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchone()
+                WHERE account_id = :aid AND invoice_date BETWEEN :from_date AND :to_date
+            """), {"aid": account_id, "from_date": from_date, "to_date": to_date}).fetchone()
             total_sales = result[0] or 0.0
             total_tax = result[1] or 0.0
-            
-            # If detailed list requested, fetch invoices
+
             invoices = []
             if include_details:
                 inv_result = conn.execute(text("""
@@ -50,10 +50,10 @@ def tax_certificate():
                         grand_total,
                         COALESCE((invoice_data::json->>'tax_amount')::numeric, 0) as tax_amount
                     FROM user_invoices
-                    WHERE user_id = :user_id AND invoice_date BETWEEN :from_date AND :to_date
+                    WHERE account_id = :aid AND invoice_date BETWEEN :from_date AND :to_date
                     ORDER BY invoice_date DESC
-                """), {"user_id": user_id, "from_date": from_date, "to_date": to_date}).fetchall()
-                
+                """), {"aid": account_id, "from_date": from_date, "to_date": to_date}).fetchall()
+
                 for row in inv_result:
                     invoices.append({
                         'number': row[0],
@@ -62,20 +62,18 @@ def tax_certificate():
                         'total': float(row[3]),
                         'tax': float(row[4])
                     })
-        
-        # Get user profile for company details
+
+        # user_profile, PDF generation
         user_profile = get_user_profile_cached(user_id)
         company_name = user_profile.get('company_name', 'Your Company')
         company_address = user_profile.get('company_address', '')
         company_tax_id = user_profile.get('company_tax_id', '')
         company_ntn = user_profile.get('seller_ntn', '')
         currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
-        
-        # Generate a certificate number
+
         certificate_number = f"TAX-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         issue_date = datetime.now().strftime('%d-%b-%Y')
-        
-        # Render the template
+
         html = render_template('tax_certificate_summary.html',
                                company_name=company_name,
                                company_address=company_address,
@@ -88,15 +86,11 @@ def tax_certificate():
                                total_sales=total_sales,
                                total_tax=total_tax,
                                currency_symbol=currency_symbol,
-                               tax_law_reference="Income Tax Ordinance, 2001",  # Make configurable later
+                               tax_law_reference="Income Tax Ordinance, 2001",
                                include_details=include_details,
                                invoices=invoices)
-        
-        # Generate PDF
-        from app.services.pdf_engine import generate_pdf
+
         pdf_bytes = generate_pdf(html)
-        
-        # Return as download
         response = make_response(send_file(
             io.BytesIO(pdf_bytes),
             as_attachment=True,
@@ -104,24 +98,25 @@ def tax_certificate():
             mimetype='application/pdf'
         ))
         return response
-    
-    # GET: show form
+
     return render_template('tax_certificate_form.html', nonce=g.nonce)
 
+
 @reports_bp.route('/sales/csv', methods=['GET'])
+@role_required('owner', 'accountant')
 def sales_csv():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    user_id = session['user_id']
+    account_id = session['account_id']
     from_date = request.args.get('from')
     to_date = request.args.get('to')
 
     query = """
         SELECT invoice_number, invoice_date, client_name, grand_total
         FROM user_invoices
-        WHERE user_id = :uid
+        WHERE account_id = :aid
     """
-    params = {"uid": user_id}
+    params = {"aid": account_id}
     if from_date and to_date:
         query += " AND invoice_date BETWEEN :from AND :to"
         params["from"] = from_date
@@ -144,26 +139,27 @@ def sales_csv():
     response.headers['Content-Disposition'] = 'attachment; filename=sales_report.csv'
     return response
 
-    
 
 @reports_bp.route('/stock/movements')
+@role_required('owner', 'accountant')
 def stock_movements():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    user_id = session['user_id']
+    account_id = session['account_id']
 
     from_date = request.args.get('from')
     to_date = request.args.get('to')
     product_id = request.args.get('product_id')
 
+    # Join with inventory_items to filter by account_id
     query = """
         SELECT sm.id, i.name as product_name, i.sku, sm.movement_type, sm.quantity,
                sm.reference_id, sm.notes, sm.created_at
         FROM stock_movements sm
         JOIN inventory_items i ON sm.product_id = i.id
-        WHERE sm.user_id = :uid
+        WHERE i.account_id = :aid
     """
-    params = {"uid": user_id}
+    params = {"aid": account_id}
     if from_date and to_date:
         query += " AND sm.created_at::date BETWEEN :from AND :to"
         params["from"] = from_date
@@ -176,12 +172,12 @@ def stock_movements():
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text(query), params).fetchall()
 
-        # Get products for filter dropdown
+        # Get products for filter dropdown – also by account_id
         products = conn.execute(text("""
             SELECT id, name FROM inventory_items 
-            WHERE user_id = :uid AND is_active = TRUE 
+            WHERE account_id = :aid AND is_active = TRUE 
             ORDER BY name
-        """), {"uid": user_id}).fetchall()
+        """), {"aid": account_id}).fetchall()
 
     if 'csv' in request.args:
         import csv
@@ -214,7 +210,7 @@ def stock_movements():
                            products=products,
                            nonce=g.nonce)
 
-# new PEL Enhanced
+# new P$L Enhanced
 @reports_bp.route('/profit_loss', methods=['GET', 'POST'])
 @role_required('owner', 'accountant')
 def profit_loss():
