@@ -107,6 +107,11 @@ def dashboard():
     from sqlalchemy import text
 
     with DB_ENGINE.connect() as conn:
+        # Query counts
+        product_count = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid"), {"aid": account_id}).scalar() or 0
+        invoice_count = conn.execute(text("SELECT COUNT(*) FROM user_invoices WHERE account_id = :aid"), {"aid": account_id}).scalar() or 0
+        show_wizard = (product_count == 0 and invoice_count == 0 and session.get('role') == 'owner')
+    
         # 1. Revenue from paid invoices
         revenue = conn.execute(text("""
             SELECT COALESCE(SUM(grand_total), 0) FROM user_invoices
@@ -260,5 +265,6 @@ def dashboard():
         low_stock_items=low_stock_items,
         out_of_stock_items=out_of_stock_items,
         expiry_alerts=expiry_list,
+        show_wizard=show_wizard,
         nonce=g.nonce
     )

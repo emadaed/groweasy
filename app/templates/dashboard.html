@@ -149,6 +149,60 @@
         </div>
     </div>
     {% endif %}
+    <!-- Onboarding Wizard Modal -->
+    {% if show_wizard %}
+    <div class="modal fade" id="onboardingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">🚀 Welcome to Groweasy!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="lead">Let's get your business up and running in 3 simple steps.</p>
+                    <div class="row g-4 mt-2">
+                        <div class="col-md-4 text-center">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <i class="fas fa-building fa-3x text-primary mb-3"></i>
+                                    <h5>1. Company Settings</h5>
+                                    <p>Add your logo, tax details, and business info.</p>
+                                    <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-primary">Go to Settings</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <i class="fas fa-boxes fa-3x text-success mb-3"></i>
+                                    <h5>2. Add Your First Product</h5>
+                                    <p>Create an inventory item to start selling.</p>
+                                    <a href="{{ url_for('inventory.inventory') }}" class="btn btn-outline-success">Add Product</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <i class="fas fa-file-invoice-dollar fa-3x text-warning mb-3"></i>
+                                    <h5>3. Create Your First Invoice</h5>
+                                    <p>Generate a professional invoice for a client.</p>
+                                    <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-outline-warning">Create Invoice</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-4 mb-0">
+                        <i class="fas fa-lightbulb"></i> <strong>Pro tip:</strong> Once you add a product or create an invoice, this wizard won't appear again.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Skip for now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <!-- AI Tip Card -->
     {% if ai_tip %}
     <div class="row mb-4">
@@ -220,4 +274,12 @@
     background: #555;
 }
 </style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if show_wizard %}
+        var myModal = new bootstrap.Modal(document.getElementById('onboardingModal'));
+        myModal.show();
+        {% endif %}
+    });
+</script>
 {% endblock %}
