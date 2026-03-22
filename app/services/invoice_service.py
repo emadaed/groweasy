@@ -76,6 +76,7 @@ class InvoiceService:
                     qty_sold = Decimal(str(item['qty']))  # safe conversion from float
                     success = InventoryManager.update_stock_delta(
                         self.user_id,
+                        self.account_id,
                         item['product_id'],
                         -qty_sold,                             # Decimal negative
                         movement_type,
