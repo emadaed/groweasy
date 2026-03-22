@@ -274,7 +274,7 @@
     background: #555;
 }
 </style>
-<script>
+<script nonce="{{ g.nonce }}">
     document.addEventListener('DOMContentLoaded', function() {
         {% if show_wizard %}
         var myModal = new bootstrap.Modal(document.getElementById('onboardingModal'));
