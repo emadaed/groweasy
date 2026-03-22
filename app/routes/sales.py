@@ -161,6 +161,7 @@ def download_document(document_number):
         return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
+    account_id = session['account_id'] 
     document_type = request.args.get('type', 'invoice')  # 'invoice' or 'purchase_order'
 
     try:
