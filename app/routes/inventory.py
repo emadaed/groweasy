@@ -369,67 +369,67 @@ def bulk_upload():
                                nonce=g.nonce)
 
     elif action == 'confirm':
-        # Retrieve stored CSV data from session
-        stored = session.get('bulk_upload_data')
-        if not stored:
-            flash('❌ No upload data found. Please upload again.', 'error')
-            return redirect(url_for('inventory.bulk_upload'))
-
-        # Process the full CSV
-        stream = io.StringIO(stored['file_content'])
-        reader = csv.DictReader(stream)
-        results = {'success': 0, 'failure': 0, 'errors': []}
-        user_id = session['user_id']
-        account_id = session['account_id']
-
-        for row_num, row in enumerate(reader, start=2):
-            product_data = {
-                'name': row.get('name', '').strip(),
-                'sku': row.get('sku', '').strip(),
-                'barcode': row.get('barcode', '').strip() or None,
-                'category': row.get('category', '').strip() or None,
-                'description': row.get('description', '').strip() or None,
-                'current_stock': _safe_float(row.get('current_stock'), 0.0),
-                'min_stock_level': _safe_int(row.get('min_stock_level'), 5),
-                'cost_price': _safe_float(row.get('cost_price'), 0.0),
-                'selling_price': _safe_float(row.get('selling_price'), 0.0),
-                'supplier': row.get('supplier', '').strip() or None,
-                'location': row.get('location', '').strip() or None,
-                'unit_type': row.get('unit_type', 'piece').strip(),
-                'is_perishable': str(row.get('is_perishable', '')).lower() in ('yes', 'true', '1'),
-                'expiry_date': row.get('expiry_date', '').strip() or None,
-                'batch_number': row.get('batch_number', '').strip() or None,
-                'pack_size': _safe_float(row.get('pack_size'), 1.0),
-                'weight_kg': _safe_float(row.get('weight_kg'), None),
-            }
-
-            if not product_data['name'] or not product_data['sku']:
-                results['failure'] += 1
-                results['errors'].append(f"Row {row_num}: Missing name or SKU")
-                continue
-
-            product_id = InventoryManager.add_product(user_id, account_id, product_data)
-            if product_id:
-                results['success'] += 1
-            else:
-                results['failure'] += 1
-                results['errors'].append(f"Row {row_num}: SKU '{product_data['sku']}' may already exist or invalid data")
-
-        # Clear session data
-        session.pop('bulk_upload_data', None)
-
-        if results['success'] > 0:
-            flash(f"✅ Successfully imported {results['success']} product(s).", 'success')
-        if results['failure'] > 0:
-            flash(f"⚠️ {results['failure']} product(s) failed. See details below.", 'warning')
-        if results['errors']:
-            session['bulk_upload_errors'] = results['errors']
-
-        return redirect(url_for('inventory.bulk_upload_results'))
-
-    else:
-        flash('❌ Invalid action.', 'error')
+    stored = session.get('bulk_upload_data')
+    if not stored:
+        flash('❌ No upload data found. Please upload again.', 'error')
         return redirect(url_for('inventory.bulk_upload'))
+
+    stream = io.StringIO(stored['file_content'])
+    reader = csv.DictReader(stream)
+    results = {'success': 0, 'failure': 0, 'errors': []}
+    user_id = session['user_id']
+    account_id = session['account_id']
+
+    for row_num, row in enumerate(reader, start=2):
+        # Clean up keys (strip spaces)
+        cleaned_row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
+
+        product_data = {
+            'name': cleaned_row.get('name', ''),
+            'sku': cleaned_row.get('sku', ''),
+            'barcode': cleaned_row.get('barcode', '') or None,
+            'category': cleaned_row.get('category', '') or None,
+            'description': cleaned_row.get('description', '') or None,
+            'current_stock': _safe_float(cleaned_row.get('current_stock'), 0.0),
+            'min_stock_level': _safe_int(cleaned_row.get('min_stock_level'), 5),
+            'cost_price': _safe_float(cleaned_row.get('cost_price'), 0.0),
+            'selling_price': _safe_float(cleaned_row.get('selling_price'), 0.0),
+            'supplier': cleaned_row.get('supplier', '') or None,
+            'location': cleaned_row.get('location', '') or None,
+            'unit_type': cleaned_row.get('unit_type', 'piece').strip(),
+            'is_perishable': str(cleaned_row.get('is_perishable', '')).lower() in ('yes', 'true', '1'),
+            'expiry_date': cleaned_row.get('expiry_date', '') or None,
+            'batch_number': cleaned_row.get('batch_number', '') or None,
+            'pack_size': _safe_float(cleaned_row.get('pack_size'), 1.0),
+            'weight_kg': _safe_float(cleaned_row.get('weight_kg'), None),
+        }
+
+        # Validate required fields
+        if not product_data['name'] or not product_data['sku']:
+            results['failure'] += 1
+            results['errors'].append(f"Row {row_num}: Missing name or SKU")
+            continue
+
+        print(f"Attempting to add product: {product_data['name']}, SKU: {product_data['sku']}")
+        product_id = InventoryManager.add_product(user_id, account_id, product_data)
+        print(f"Result: product_id = {product_id}")
+
+        if product_id:
+            results['success'] += 1
+        else:
+            results['failure'] += 1
+            results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']}) – duplicate or invalid data")
+
+    session.pop('bulk_upload_data', None)
+
+    if results['success'] > 0:
+        flash(f"✅ Successfully imported {results['success']} product(s).", 'success')
+    if results['failure'] > 0:
+        flash(f"⚠️ {results['failure']} product(s) failed. See details below.", 'warning')
+    if results['errors']:
+        session['bulk_upload_errors'] = results['errors']
+
+    return redirect(url_for('inventory.bulk_upload_results'))
 
 @inventory_bp.route('/bulk_upload_results')
 def bulk_upload_results():
