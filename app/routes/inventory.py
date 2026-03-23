@@ -309,7 +309,8 @@ def bulk_upload():
             return redirect(url_for('inventory.bulk_upload'))
 
         # Read CSV and validate
-        stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
+        file_content = file.stream.read().decode('utf-8-sig')
+        stream = io.StringIO(file_content)
         reader = csv.DictReader(stream)
         if not reader.fieldnames:
             flash('❌ CSV is empty or malformed.', 'error')
@@ -358,7 +359,7 @@ def bulk_upload():
 
         # Store the full data and validation in session for later import
         session['bulk_upload_data'] = {
-            'file_content': file.stream.read().decode('utf-8-sig'),  # store full CSV for later
+            'file_content': file_content,  # store full CSV for later
             'validation_errors': validation_errors,
             'row_count': row_num - 1  # total rows in file (excluding header)
         }
@@ -377,11 +378,6 @@ def bulk_upload():
         stream = io.StringIO(stored['file_content'])
         reader = csv.DictReader(stream)
         print(f"CSV fieldnames: {reader.fieldnames}")
-        row_count = sum(1 for _ in reader)
-        print(f"Total rows in CSV: {row_count}")
-        # Reset the reader
-        stream.seek(0)
-        reader = csv.DictReader(stream)
         results = {'success': 0, 'failure': 0, 'errors': []}
         user_id = session['user_id']
         account_id = session['account_id']
