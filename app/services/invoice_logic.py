@@ -106,7 +106,7 @@ def prepare_invoice_data(form_data, files=None):
         'buyer_strn': form_data.get('buyer_strn', ''),
         'invoice_type': form_data.get('invoice_type', 'S'),
         'logo_b64': logo_b64
-    }
+    },
     invoice_data = {
         ...
         'status': 'Pending',
