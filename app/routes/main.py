@@ -105,6 +105,7 @@ def dashboard():
     account_id = session['account_id']
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
+    from app.context_processors import CURRENCY_SYMBOLS
 
     with DB_ENGINE.connect() as conn:
         # Query counts for wizard
@@ -243,10 +244,29 @@ def dashboard():
         # 12. Net profit
         net_profit = revenue - cogs - expenses
 
-    # Prepare summary data
+        # 13. Monthly revenue for chart (MUST BE INSIDE THE CONNECTION)
+        monthly_revenue = conn.execute(text("""
+            SELECT
+                DATE_TRUNC('month', invoice_date) as month,
+                COALESCE(SUM(grand_total), 0) as total
+            FROM user_invoices
+            WHERE account_id = :aid AND status = 'paid'
+            GROUP BY month
+            ORDER BY month DESC
+            LIMIT 6
+        """), {"aid": account_id}).fetchall()
+
+        months = []
+        revenues = []
+        for row in reversed(monthly_revenue):
+            months.append(row[0].strftime('%b %Y'))
+            revenues.append(float(row[1]))
+
+    # Now that we've exited the connection block, all data is available
     user_profile = get_user_profile_cached(session['user_id'])
-    from app.context_processors import CURRENCY_SYMBOLS
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+
+    # Prepare summary data
     data = {
         "revenue": revenue,
         "net_profit": net_profit,
@@ -255,7 +275,7 @@ def dashboard():
         "costs": expenses
     }
 
-    # EMAIL ALERTS (only for owner, only once per dashboard load)
+    # Email alerts (only for owner, only once per dashboard load)
     if session.get('role') == 'owner':
         with DB_ENGINE.connect() as conn:
             owner_emails = [row[0] for row in conn.execute(text("""
@@ -266,25 +286,6 @@ def dashboard():
             overdue_sent = send_overdue_invoice_reminders(account_id, owner_emails)
             if overdue_sent:
                 flash(f"📧 Sent {overdue_sent} invoice reminder(s).", "info")
-
-    # Monthly revenue for last 6 months
-    monthly_revenue = conn.execute(text("""
-        SELECT
-            DATE_TRUNC('month', invoice_date) as month,
-            COALESCE(SUM(grand_total), 0) as total
-        FROM user_invoices
-        WHERE account_id = :aid AND status = 'paid'
-        GROUP BY month
-        ORDER BY month DESC
-        LIMIT 6
-    """), {"aid": account_id}).fetchall()
-
-    months = []
-    revenues = []
-    for row in reversed(monthly_revenue):  # chronological order
-        months.append(row[0].strftime('%b %Y'))
-        revenues.append(float(row[1]))
-    
 
     return render_template(
         "dashboard.html",
