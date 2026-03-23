@@ -5,6 +5,7 @@ from app.services.db import DB_ENGINE
 from app.services.email import send_email
 
 def send_overdue_invoice_reminders(account_id, owner_emails):
+    print(f"Checking overdue invoices for account {account_id}")
     """
     Find unpaid invoices with due_date < today and last_reminder_sent > 7 days ago.
     Send a reminder to the client (if client_email exists) and update last_reminder_sent.
@@ -29,6 +30,7 @@ def send_overdue_invoice_reminders(account_id, owner_emails):
               AND due_date < :today
               AND (last_reminder_sent IS NULL OR last_reminder_sent < :cutoff)
         """), {"aid": account_id, "today": today, "cutoff": cutoff}).fetchall()
+        print(f"Found {len(rows)} overdue invoices")
 
     if not rows:
         return 0
@@ -57,5 +59,6 @@ Groweasy
                     SET last_reminder_sent = NOW()
                     WHERE id = :id
                 """), {"id": inv_id})
+                print(f"Sent reminder for invoice {inv_num} to {client_email}")            
 
     return sent_count
