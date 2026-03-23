@@ -151,77 +151,63 @@ class InventoryManager:
     @staticmethod
     def update_stock_delta(user_id, account_id, product_id, quantity_delta, movement_type, reference_id=None, notes=None):
         try:
-            with DB_ENGINE.begin() as conn:
-                logger.info(f"update_stock_delta: user={user_id}, prod={product_id}, delta={quantity_delta}")
+            # Use a fresh connection with a transaction
+            with DB_ENGINE.connect() as conn:
+                with conn.begin():
+                    # Log incoming values
+                    logger.info(f"update_stock_delta: user={user_id}, prod={product_id}, delta={quantity_delta}")
 
-                result = conn.execute(text('''
-                    SELECT name, current_stock, min_stock_level FROM inventory_items
-                    WHERE id = :product_id AND account_id = :aid AND is_active = TRUE
-                    FOR UPDATE
-                '''), {"product_id": product_id, "aid": account_id}).fetchone()
-                
-                if not result:
-                    logger.warning(f"Product not found or inactive: id={product_id}, account={account_id}")
-                    return False
+                    # Lock row and fetch current
+                    result = conn.execute(text('''
+                        SELECT name, current_stock, min_stock_level FROM inventory_items
+                        WHERE id = :product_id AND account_id = :aid AND is_active = TRUE
+                        FOR UPDATE
+                    '''), {"product_id": product_id, "aid": account_id}).fetchone()
 
-                product_name, current_stock, min_stock_level = result
-                if not isinstance(current_stock, Decimal):
-                    current_stock = Decimal(str(current_stock))
+                    if not result:
+                        logger.warning(f"Product not found or inactive: id={product_id}, account={account_id}")
+                        return False
 
-                if isinstance(quantity_delta, (int, float)):
-                    quantity_delta = Decimal(str(quantity_delta))
-                elif isinstance(quantity_delta, str):
-                    quantity_delta = Decimal(quantity_delta)
+                    product_name, current_stock, min_stock_level = result
+                    if not isinstance(current_stock, Decimal):
+                        current_stock = Decimal(str(current_stock))
 
-                new_stock = current_stock + quantity_delta
-                if new_stock < 0:
-                    logger.warning(f"Negative stock prevented for product {product_id}")
-                    return False
+                    if isinstance(quantity_delta, (int, float)):
+                        quantity_delta = Decimal(str(quantity_delta))
+                    elif isinstance(quantity_delta, str):
+                        quantity_delta = Decimal(quantity_delta)
 
-                conn.execute(text('''
-                    UPDATE inventory_items SET current_stock = :new_stock WHERE id = :product_id
-                '''), {"new_stock": new_stock, "product_id": product_id}),
-                # After updating stock, check for low stock alert
-                if new_stock <= min_stock_level:
-                    # Fetch owners' emails for this account
-                    with DB_ENGINE.connect() as conn:
-                        owners = conn.execute(text("""
-                            SELECT u.email FROM users u
-                            WHERE u.account_id = :aid AND u.role = 'owner'
-                        """), {"aid": account_id}).fetchall()
-                    owner_emails = [o[0] for o in owners]
-                    if owner_emails:
-                        subject = f"Low Stock Alert: {product_name}"
-                        body = f"""
-                Dear Owner,
+                    new_stock = current_stock + quantity_delta
+                    if new_stock < 0:
+                        logger.warning(f"Negative stock prevented for product {product_id}")
+                        return False
 
-                The stock of "{product_name}" has dropped to {new_stock} units.
-                Minimum stock level is {min_stock_level}. Please reorder soon.
+                    # Apply update
+                    conn.execute(text('''
+                        UPDATE inventory_items SET current_stock = :new_stock WHERE id = :product_id
+                    '''), {"new_stock": new_stock, "product_id": product_id})
 
-                Best regards,
-                Groweasy
-                """
-                        send_email(owner_emails, subject, body)
-                conn.execute(text('''
-                    INSERT INTO stock_movements
-                    (user_id, product_id, movement_type, quantity, reference_id, notes)
-                    VALUES (:user_id, :product_id, :movement_type, :quantity, :reference_id, :notes)
-                '''), {
-                    "user_id": user_id,
-                    "product_id": product_id,
-                    "movement_type": movement_type,
-                    "quantity": quantity_delta,
-                    "reference_id": reference_id,
-                    "notes": notes
-                })
+                    # Log movement
+                    conn.execute(text('''
+                        INSERT INTO stock_movements
+                        (user_id, product_id, movement_type, quantity, reference_id, notes)
+                        VALUES (:user_id, :product_id, :movement_type, :quantity, :reference_id, :notes)
+                    '''), {
+                        "user_id": user_id,
+                        "product_id": product_id,
+                        "movement_type": movement_type,
+                        "quantity": quantity_delta,
+                        "reference_id": reference_id,
+                        "notes": notes
+                    })
 
-                logger.info(f"Stock updated: {current_stock} → {new_stock} ({movement_type})")
-                return True
+                    logger.info(f"Stock updated: {current_stock} → {new_stock} ({movement_type})")
+                    return True
 
         except Exception as e:
             logger.error(f"Stock delta update failed: {e}", exc_info=True)
             return False
-
+    
     @staticmethod
     def delete_product(user_id, account_id, product_id, reason=None):
         try:
