@@ -291,71 +291,145 @@ def download_inventory_report():
 def bulk_upload():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
+
     if request.method == 'GET':
         return render_template('bulk_upload.html', nonce=g.nonce)
 
-    if 'file' not in request.files:
-        flash('❌ No file selected.', 'error')
-        return redirect(request.url)
-    file = request.files['file']
-    if file.filename == '':
-        flash('❌ Empty file name.', 'error')
-        return redirect(request.url)
-    if not file.filename.lower().endswith('.csv'):
-        flash('❌ Only CSV files are allowed.', 'error')
-        return redirect(request.url)
+    # Handle POST: either preview or confirm
+    action = request.form.get('action')
+    if action == 'preview':
+        # Process uploaded file, validate, store in session, show preview
+        file = request.files.get('file')
+        if not file or file.filename == '':
+            flash('❌ No file selected.', 'error')
+            return redirect(url_for('inventory.bulk_upload'))
 
-    stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
-    reader = csv.DictReader(stream)
-    required_headers = {'name', 'sku'}
-    if not required_headers.issubset(reader.fieldnames or []):
-        flash('❌ CSV must contain at least "name" and "sku" columns.', 'error')
-        return redirect(request.url)
+        if not file.filename.lower().endswith('.csv'):
+            flash('❌ Only CSV files are allowed.', 'error')
+            return redirect(url_for('inventory.bulk_upload'))
 
-    results = {'success': 0, 'failure': 0, 'errors': []}
-    user_id = session['user_id']
-    account_id = session['account_id']
+        # Read CSV and validate
+        stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
+        reader = csv.DictReader(stream)
+        if not reader.fieldnames:
+            flash('❌ CSV is empty or malformed.', 'error')
+            return redirect(url_for('inventory.bulk_upload'))
 
-    for row_num, row in enumerate(reader, start=2):
-        product_data = {
-            'name': row.get('name', '').strip(),
-            'sku': row.get('sku', '').strip(),
-            'barcode': row.get('barcode', '').strip() or None,
-            'category': row.get('category', '').strip() or None,
-            'description': row.get('description', '').strip() or None,
-            'current_stock': _safe_float(row.get('current_stock'), 0.0),
-            'min_stock_level': _safe_int(row.get('min_stock_level'), 5),
-            'cost_price': _safe_float(row.get('cost_price'), 0.0),
-            'selling_price': _safe_float(row.get('selling_price'), 0.0),
-            'supplier': row.get('supplier', '').strip() or None,
-            'location': row.get('location', '').strip() or None,
-            'unit_type': row.get('unit_type', 'piece').strip(),
-            'is_perishable': str(row.get('is_perishable', '')).lower() in ('yes', 'true', '1'),
-            'expiry_date': row.get('expiry_date', '').strip() or None,
-            'batch_number': row.get('batch_number', '').strip() or None,
-            'pack_size': _safe_float(row.get('pack_size'), 1.0),
-            'weight_kg': _safe_float(row.get('weight_kg'), None),
+        # Validate headers
+        required_headers = {'name', 'sku'}
+        if not required_headers.issubset(reader.fieldnames):
+            flash('❌ CSV must contain at least "name" and "sku" columns.', 'error')
+            return redirect(url_for('inventory.bulk_upload'))
+
+        # Parse rows (limit for preview)
+        preview_rows = []
+        validation_errors = []
+        row_num = 1  # start after header
+        for row in reader:
+            row_num += 1
+            # Basic validation
+            errors = []
+            if not row.get('name', '').strip():
+                errors.append('Missing name')
+            if not row.get('sku', '').strip():
+                errors.append('Missing SKU')
+            # Add more validations as needed (e.g., numeric fields)
+            # Check duplicate SKU in this file
+            existing_skus = [r.get('sku') for r in preview_rows if r.get('sku')]
+            if row.get('sku') in existing_skus:
+                errors.append('Duplicate SKU in file')
+            # Check against DB for existing SKU
+            with DB_ENGINE.connect() as conn:
+                existing = conn.execute(
+                    text("SELECT id FROM inventory_items WHERE account_id = :aid AND sku = :sku"),
+                    {"aid": session['account_id'], "sku": row.get('sku')}
+                ).first()
+                if existing:
+                    errors.append('SKU already exists in inventory')
+
+            preview_rows.append({
+                'row_num': row_num,
+                'data': row,
+                'errors': errors,
+                'valid': len(errors) == 0
+            })
+            if len(preview_rows) >= 10:  # limit preview to 10 rows
+                break
+
+        # Store the full data and validation in session for later import
+        session['bulk_upload_data'] = {
+            'file_content': file.stream.read().decode('utf-8-sig'),  # store full CSV for later
+            'validation_errors': validation_errors,
+            'row_count': row_num - 1  # total rows in file (excluding header)
         }
 
-        if not product_data['name'] or not product_data['sku']:
-            results['failure'] += 1
-            results['errors'].append(f"Row {row_num}: Missing name or SKU")
-            continue
+        return render_template('bulk_upload_preview.html',
+                               preview_rows=preview_rows,
+                               total_rows=row_num - 1,
+                               nonce=g.nonce)
 
-        product_id = InventoryManager.add_product(user_id, account_id, product_data)
-        if product_id:
-            results['success'] += 1
-        else:
-            results['failure'] += 1
-            results['errors'].append(f"Row {row_num}: SKU '{product_data['sku']}' may already exist or invalid data")
+    elif action == 'confirm':
+        # Retrieve stored CSV data from session
+        stored = session.get('bulk_upload_data')
+        if not stored:
+            flash('❌ No upload data found. Please upload again.', 'error')
+            return redirect(url_for('inventory.bulk_upload'))
 
-    if results['success'] > 0:
-        flash(f"✅ Successfully imported {results['success']} product(s).", 'success')
-    if results['failure'] > 0:
-        flash(f"⚠️ {results['failure']} product(s) failed. See details below.", 'warning')
-    if results['errors']:
-        session['bulk_upload_errors'] = results['errors']
-    return redirect(url_for('inventory.bulk_upload_results'))
+        # Process the full CSV
+        stream = io.StringIO(stored['file_content'])
+        reader = csv.DictReader(stream)
+        results = {'success': 0, 'failure': 0, 'errors': []}
+        user_id = session['user_id']
+        account_id = session['account_id']
+
+        for row_num, row in enumerate(reader, start=2):
+            product_data = {
+                'name': row.get('name', '').strip(),
+                'sku': row.get('sku', '').strip(),
+                'barcode': row.get('barcode', '').strip() or None,
+                'category': row.get('category', '').strip() or None,
+                'description': row.get('description', '').strip() or None,
+                'current_stock': _safe_float(row.get('current_stock'), 0.0),
+                'min_stock_level': _safe_int(row.get('min_stock_level'), 5),
+                'cost_price': _safe_float(row.get('cost_price'), 0.0),
+                'selling_price': _safe_float(row.get('selling_price'), 0.0),
+                'supplier': row.get('supplier', '').strip() or None,
+                'location': row.get('location', '').strip() or None,
+                'unit_type': row.get('unit_type', 'piece').strip(),
+                'is_perishable': str(row.get('is_perishable', '')).lower() in ('yes', 'true', '1'),
+                'expiry_date': row.get('expiry_date', '').strip() or None,
+                'batch_number': row.get('batch_number', '').strip() or None,
+                'pack_size': _safe_float(row.get('pack_size'), 1.0),
+                'weight_kg': _safe_float(row.get('weight_kg'), None),
+            }
+
+            if not product_data['name'] or not product_data['sku']:
+                results['failure'] += 1
+                results['errors'].append(f"Row {row_num}: Missing name or SKU")
+                continue
+
+            product_id = InventoryManager.add_product(user_id, account_id, product_data)
+            if product_id:
+                results['success'] += 1
+            else:
+                results['failure'] += 1
+                results['errors'].append(f"Row {row_num}: SKU '{product_data['sku']}' may already exist or invalid data")
+
+        # Clear session data
+        session.pop('bulk_upload_data', None)
+
+        if results['success'] > 0:
+            flash(f"✅ Successfully imported {results['success']} product(s).", 'success')
+        if results['failure'] > 0:
+            flash(f"⚠️ {results['failure']} product(s) failed. See details below.", 'warning')
+        if results['errors']:
+            session['bulk_upload_errors'] = results['errors']
+
+        return redirect(url_for('inventory.bulk_upload_results'))
+
+    else:
+        flash('❌ Invalid action.', 'error')
+        return redirect(url_for('inventory.bulk_upload'))
 
 @inventory_bp.route('/bulk_upload_results')
 def bulk_upload_results():
