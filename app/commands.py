@@ -5,13 +5,13 @@ from flask.cli import with_appcontext
 from datetime import datetime, timedelta
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
-from app.services.email import send_email
 
 def register_commands(app):
     @app.cli.command('send-invoice-reminders')
     @with_appcontext
     def send_invoice_reminders():
         """Send reminders for overdue invoices."""
+        from app.services.email import send_email
         today = datetime.now().date()
         # Find unpaid invoices with due_date < today and no reminder sent in the last 7 days (optional)
         with DB_ENGINE.connect() as conn:
