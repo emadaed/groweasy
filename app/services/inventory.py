@@ -1,4 +1,5 @@
 # app/services/inventory.py
+from app.services.email import send_email
 from decimal import Decimal
 from app.services.db import DB_ENGINE
 from sqlalchemy import text
@@ -154,16 +155,16 @@ class InventoryManager:
                 logger.info(f"update_stock_delta: user={user_id}, prod={product_id}, delta={quantity_delta}")
 
                 result = conn.execute(text('''
-                    SELECT name, current_stock FROM inventory_items
+                    SELECT name, current_stock, min_stock_level FROM inventory_items
                     WHERE id = :product_id AND account_id = :aid AND is_active = TRUE
                     FOR UPDATE
                 '''), {"product_id": product_id, "aid": account_id}).fetchone()
-
+                
                 if not result:
                     logger.warning(f"Product not found or inactive: id={product_id}, account={account_id}")
                     return False
 
-                product_name, current_stock = result
+                product_name, current_stock, min_stock_level = result
                 if not isinstance(current_stock, Decimal):
                     current_stock = Decimal(str(current_stock))
 
@@ -179,8 +180,28 @@ class InventoryManager:
 
                 conn.execute(text('''
                     UPDATE inventory_items SET current_stock = :new_stock WHERE id = :product_id
-                '''), {"new_stock": new_stock, "product_id": product_id})
+                '''), {"new_stock": new_stock, "product_id": product_id}),
+                # After updating stock, check for low stock alert
+                if new_stock <= min_stock_level:
+                    # Fetch owners' emails for this account
+                    with DB_ENGINE.connect() as conn:
+                        owners = conn.execute(text("""
+                            SELECT u.email FROM users u
+                            WHERE u.account_id = :aid AND u.role = 'owner'
+                        """), {"aid": account_id}).fetchall()
+                    owner_emails = [o[0] for o in owners]
+                    if owner_emails:
+                        subject = f"Low Stock Alert: {product_name}"
+                        body = f"""
+                Dear Owner,
 
+                The stock of "{product_name}" has dropped to {new_stock} units.
+                Minimum stock level is {min_stock_level}. Please reorder soon.
+
+                Best regards,
+                Groweasy
+                """
+                        send_email(owner_emails, subject, body)
                 conn.execute(text('''
                     INSERT INTO stock_movements
                     (user_id, product_id, movement_type, quantity, reference_id, notes)

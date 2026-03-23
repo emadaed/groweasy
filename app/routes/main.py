@@ -102,16 +102,16 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
-    account_id = session['account_id']          # use account_id
+    account_id = session['account_id']
     from app.services.db import DB_ENGINE
     from sqlalchemy import text
 
     with DB_ENGINE.connect() as conn:
-        # Query counts
+        # Query counts for wizard
         product_count = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid"), {"aid": account_id}).scalar() or 0
         invoice_count = conn.execute(text("SELECT COUNT(*) FROM user_invoices WHERE account_id = :aid"), {"aid": account_id}).scalar() or 0
         show_wizard = (product_count == 0 and invoice_count == 0 and session.get('role') == 'owner')
-    
+
         # 1. Revenue from paid invoices
         revenue = conn.execute(text("""
             SELECT COALESCE(SUM(grand_total), 0) FROM user_invoices
@@ -244,7 +244,7 @@ def dashboard():
         net_profit = revenue - cogs - expenses
 
     # Prepare summary data
-    user_profile = get_user_profile_cached(session['user_id'])   # user profile still per user
+    user_profile = get_user_profile_cached(session['user_id'])
     data = {
         "revenue": revenue,
         "net_profit": net_profit,
@@ -252,6 +252,18 @@ def dashboard():
         "tax_liability": tax,
         "costs": expenses
     }
+
+    # EMAIL ALERTS (only for owner, only once per dashboard load)
+    if session.get('role') == 'owner':
+        with DB_ENGINE.connect() as conn:
+            owner_emails = [row[0] for row in conn.execute(text("""
+                SELECT email FROM users WHERE account_id = :aid AND role = 'owner'
+            """), {"aid": account_id})]
+        if owner_emails:
+            from app.services.email_alerts import send_overdue_invoice_reminders
+            overdue_sent = send_overdue_invoice_reminders(account_id, owner_emails)
+            if overdue_sent:
+                flash(f"📧 Sent {overdue_sent} invoice reminder(s).", "info")
 
     return render_template(
         "dashboard.html",
