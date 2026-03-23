@@ -286,7 +286,7 @@ def download_inventory_report():
     )
 
 @inventory_bp.route('/bulk_upload', methods=['GET', 'POST'])
-@limiter.limit("10 per hour")
+@limiter.limit("5 per hour")
 @role_required('owner', 'assistant')
 def bulk_upload():
     if 'user_id' not in session:
@@ -295,10 +295,8 @@ def bulk_upload():
     if request.method == 'GET':
         return render_template('bulk_upload.html', nonce=g.nonce)
 
-    # Handle POST: either preview or confirm
     action = request.form.get('action')
     if action == 'preview':
-        # Process uploaded file, validate, store in session, show preview
         file = request.files.get('file')
         if not file or file.filename == '':
             flash('❌ No file selected.', 'error')
@@ -308,32 +306,35 @@ def bulk_upload():
             flash('❌ Only CSV files are allowed.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
-        # Read CSV and validate
-        stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
+        # Read the entire file content as text
+        file_content = file.stream.read().decode('utf-8-sig')
+
+        # Create a reader to parse the CSV
+        import csv
+        from io import StringIO
+        stream = StringIO(file_content)
         reader = csv.DictReader(stream)
-        if not reader.fieldnames:
+        fieldnames = reader.fieldnames
+        if not fieldnames:
             flash('❌ CSV is empty or malformed.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
         # Validate headers
         required_headers = {'name', 'sku'}
-        if not required_headers.issubset(reader.fieldnames):
+        if not required_headers.issubset(fieldnames):
             flash('❌ CSV must contain at least "name" and "sku" columns.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
-        # Parse rows (limit for preview)
+        # Preview first 10 rows (with validation)
         preview_rows = []
-        validation_errors = []
-        row_num = 1  # start after header
+        row_num = 1  # after header
         for row in reader:
             row_num += 1
-            # Basic validation
             errors = []
             if not row.get('name', '').strip():
                 errors.append('Missing name')
             if not row.get('sku', '').strip():
                 errors.append('Missing SKU')
-            # Add more validations as needed (e.g., numeric fields)
             # Check duplicate SKU in this file
             existing_skus = [r.get('sku') for r in preview_rows if r.get('sku')]
             if row.get('sku') in existing_skus:
@@ -353,13 +354,12 @@ def bulk_upload():
                 'errors': errors,
                 'valid': len(errors) == 0
             })
-            if len(preview_rows) >= 10:  # limit preview to 10 rows
+            if len(preview_rows) >= 10:
                 break
 
-        # Store the full data and validation in session for later import
+        # Store the raw CSV content in session (as string)
         session['bulk_upload_data'] = {
-            'file_content': file.stream.read().decode('utf-8-sig'),  # store full CSV for later
-            'validation_errors': validation_errors,
+            'file_content': file_content,
             'row_count': row_num - 1  # total rows in file (excluding header)
         }
 
@@ -374,18 +374,15 @@ def bulk_upload():
             flash('❌ No upload data found. Please upload again.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
-        stream = io.StringIO(stored['file_content'])
+        # Create a fresh reader directly from the stored CSV string
+        import csv
+        from io import StringIO
+        stream = StringIO(stored['file_content'])
         reader = csv.DictReader(stream)
-        print(f"CSV fieldnames: {reader.fieldnames}")
-        row_count = sum(1 for _ in reader)
-        print(f"Total rows in CSV: {row_count}")
-        # Reset the reader
-        stream.seek(0)
-        reader = csv.DictReader(stream)
+
         results = {'success': 0, 'failure': 0, 'errors': []}
         user_id = session['user_id']
         account_id = session['account_id']
-        print(f"Bulk confirm: account_id = {account_id}, user_id = {user_id}")
 
         for row_num, row in enumerate(reader, start=2):
             # Clean keys and values
@@ -416,15 +413,13 @@ def bulk_upload():
                 results['errors'].append(f"Row {row_num}: Missing name or SKU")
                 continue
 
-            print(f"Row {row_num}: Adding {product_data['name']} (SKU: {product_data['sku']})")
+            # Try to add product
             product_id = InventoryManager.add_product(user_id, account_id, product_data)
-            print(f"Row {row_num}: Result = {product_id}")
-
             if product_id:
                 results['success'] += 1
             else:
                 results['failure'] += 1
-                results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']})")
+                results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']}) – duplicate or invalid data")
 
         session.pop('bulk_upload_data', None)
 
@@ -436,6 +431,10 @@ def bulk_upload():
             session['bulk_upload_errors'] = results['errors']
 
         return redirect(url_for('inventory.bulk_upload_results'))
+
+    else:
+        flash('❌ Invalid action.', 'error')
+        return redirect(url_for('inventory.bulk_upload'))
 
 @inventory_bp.route('/bulk_upload_results')
 def bulk_upload_results():
