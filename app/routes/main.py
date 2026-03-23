@@ -245,6 +245,8 @@ def dashboard():
 
     # Prepare summary data
     user_profile = get_user_profile_cached(session['user_id'])
+    from app.context_processors import CURRENCY_SYMBOLS
+    currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     data = {
         "revenue": revenue,
         "net_profit": net_profit,
@@ -265,6 +267,25 @@ def dashboard():
             if overdue_sent:
                 flash(f"📧 Sent {overdue_sent} invoice reminder(s).", "info")
 
+    # Monthly revenue for last 6 months
+    monthly_revenue = conn.execute(text("""
+        SELECT
+            DATE_TRUNC('month', invoice_date) as month,
+            COALESCE(SUM(grand_total), 0) as total
+        FROM user_invoices
+        WHERE account_id = :aid AND status = 'paid'
+        GROUP BY month
+        ORDER BY month DESC
+        LIMIT 6
+    """), {"aid": account_id}).fetchall()
+
+    months = []
+    revenues = []
+    for row in reversed(monthly_revenue):  # chronological order
+        months.append(row[0].strftime('%b %Y'))
+        revenues.append(float(row[1]))
+    
+
     return render_template(
         "dashboard.html",
         user_email=session.get('email', 'User'),
@@ -278,5 +299,8 @@ def dashboard():
         out_of_stock_items=out_of_stock_items,
         expiry_alerts=expiry_list,
         show_wizard=show_wizard,
+        months=months,
+        revenues=revenues,
+        currency_symbol=currency_symbol,
         nonce=g.nonce
     )

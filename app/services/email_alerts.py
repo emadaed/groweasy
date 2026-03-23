@@ -19,7 +19,7 @@ def send_overdue_invoice_reminders(account_id, owner_emails):
                 id, 
                 invoice_number, 
                 client_name, 
-                invoice_data->>'client_email' AS client_email,
+                invoice_data::jsonb->>'client_email' AS client_email,
                 due_date, 
                 grand_total
             FROM user_invoices
