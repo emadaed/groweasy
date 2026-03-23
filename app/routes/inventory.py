@@ -286,7 +286,7 @@ def download_inventory_report():
     )
 
 @inventory_bp.route('/bulk_upload', methods=['GET', 'POST'])
-@limiter.limit("5 per hour")
+@limiter.limit("10 per hour")
 @role_required('owner', 'assistant')
 def bulk_upload():
     if 'user_id' not in session:
