@@ -1,13 +1,13 @@
 # app/services/email.py
 from flask import current_app
 from flask_mail import Message
-from app import mail
 
 def send_email(recipients, subject, body):
-    """Send an email to a list of recipients."""
     if not recipients:
         return False
     try:
+        # Get the mail extension from the current app
+        mail = current_app.extensions['mail']
         msg = Message(subject, recipients=recipients)
         msg.body = body
         mail.send(msg)
