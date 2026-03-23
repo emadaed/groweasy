@@ -17,7 +17,6 @@ from app.services.cache import init_cache
 from app.services.middleware import init_middleware
 from config import Config
 from flask import request, abort
-from app.commands import register_commands
 
 # 1. Define the function FIRST
 def block_automation():
@@ -73,7 +72,7 @@ def create_app():
     limiter.init_app(app)
     compress.init_app(app)
     register_context_processors(app)
-    register_commands(app)
+    ##register_commands(app)
     init_middleware(app)
     ##init_assets(app)
 
