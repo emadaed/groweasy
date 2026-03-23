@@ -376,6 +376,12 @@ def bulk_upload():
 
         stream = io.StringIO(stored['file_content'])
         reader = csv.DictReader(stream)
+        print(f"CSV fieldnames: {reader.fieldnames}")
+        row_count = sum(1 for _ in reader)
+        print(f"Total rows in CSV: {row_count}")
+        # Reset the reader
+        stream.seek(0)
+        reader = csv.DictReader(stream)
         results = {'success': 0, 'failure': 0, 'errors': []}
         user_id = session['user_id']
         account_id = session['account_id']
