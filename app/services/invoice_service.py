@@ -153,30 +153,26 @@ class InvoiceService:
 
 
     def get_invoice_by_number(self, invoice_number):
-        """Fetches a saved invoice from the user_invoices table"""
         import json
         from sqlalchemy import text
         from app.services.db import DB_ENGINE
-        
-        #  app stores the full invoice data as JSON in the 'invoice_data' column
+
         query = text("""
             SELECT invoice_data FROM user_invoices 
-            WHERE invoice_number = :inv_num AND user_id = :user_id
+            WHERE invoice_number = :inv_num AND account_id = :aid
         """)
-        
+
         try:
             with DB_ENGINE.connect() as conn:
                 result = conn.execute(query, {
                     "inv_num": invoice_number, 
-                    "user_id": self.user_id
+                    "aid": self.account_id
                 }).fetchone()
-                
+
                 if result and result[0]:
-                    # The data is stored as a string or JSONB, we parse it to a dict
                     if isinstance(result[0], str):
                         return json.loads(result[0])
-                    return result[0] # Already a dict
-                
+                    return result[0]
                 return None
         except Exception as e:
             logger.error(f"Error fetching invoice from DB: {e}")
