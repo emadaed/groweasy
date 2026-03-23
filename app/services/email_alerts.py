@@ -15,7 +15,13 @@ def send_overdue_invoice_reminders(account_id, owner_emails):
 
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text("""
-            SELECT id, invoice_number, client_name, client_email, due_date, grand_total
+            SELECT 
+                id, 
+                invoice_number, 
+                client_name, 
+                invoice_data->>'client_email' AS client_email,
+                due_date, 
+                grand_total
             FROM user_invoices
             WHERE account_id = :aid
               AND status != 'paid'
@@ -45,7 +51,6 @@ Groweasy
 """
         if send_email([client_email], subject, body):
             sent_count += 1
-            # Update last_reminder_sent
             with DB_ENGINE.begin() as conn:
                 conn.execute(text("""
                     UPDATE user_invoices
