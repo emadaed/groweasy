@@ -379,9 +379,10 @@ def bulk_upload():
         results = {'success': 0, 'failure': 0, 'errors': []}
         user_id = session['user_id']
         account_id = session['account_id']
+        print(f"Bulk confirm: account_id = {account_id}, user_id = {user_id}")
 
         for row_num, row in enumerate(reader, start=2):
-            # Clean up keys (strip spaces)
+            # Clean keys and values
             cleaned_row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
 
             product_data = {
@@ -404,21 +405,20 @@ def bulk_upload():
                 'weight_kg': _safe_float(cleaned_row.get('weight_kg'), None),
             }
 
-            # Validate required fields
             if not product_data['name'] or not product_data['sku']:
                 results['failure'] += 1
                 results['errors'].append(f"Row {row_num}: Missing name or SKU")
                 continue
 
-            print(f"Attempting to add product: {product_data['name']}, SKU: {product_data['sku']}")
+            print(f"Row {row_num}: Adding {product_data['name']} (SKU: {product_data['sku']})")
             product_id = InventoryManager.add_product(user_id, account_id, product_data)
-            print(f"Result: product_id = {product_id}")
+            print(f"Row {row_num}: Result = {product_id}")
 
             if product_id:
                 results['success'] += 1
             else:
                 results['failure'] += 1
-                results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']}) – duplicate or invalid data")
+                results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']})")
 
         session.pop('bulk_upload_data', None)
 
