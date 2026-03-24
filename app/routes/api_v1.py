@@ -215,23 +215,23 @@ def list_invoices():
     invoices = get_invoices(account_id, limit=limit, offset=offset)
     return jsonify(invoices)
 
-@api_v1_bp.route('/invoices/<int:invoice_id>', methods=['GET'])
+@api_v1_bp.route('/invoices/<string:invoice_number>', methods=['GET'])
 @limiter.limit("100 per minute")
 @require_auth
-def get_invoice(invoice_id):
-    """Get a single invoice by ID."""
+def get_invoice(invoice_number):
+    """Get a single invoice by its number."""
     account_id = g.api_account_id
-    from app.services.auth import get_invoice
-    invoice = get_invoice(account_id, invoice_id)
+    from app.services.auth import get_invoice_by_number
+    invoice = get_invoice_by_number(account_id, invoice_number)
     if not invoice:
         return jsonify({"error": "Invoice not found"}), 404
     return jsonify(invoice)
 
-@api_v1_bp.route('/invoices/<int:invoice_id>/status', methods=['PATCH'])
+@api_v1_bp.route('/invoices/<string:invoice_number>/status', methods=['PATCH'])
 @csrf.exempt
 @limiter.limit("10 per minute")
 @require_auth
-def update_invoice_status(invoice_id):
+def update_invoice_status(invoice_number):
     """Update invoice status (e.g., mark as paid)."""
     account_id = g.api_account_id
     data = request.get_json()
@@ -240,13 +240,15 @@ def update_invoice_status(invoice_id):
     new_status = data.get('status')
     if not new_status:
         return jsonify({"error": "status is required"}), 400
-    allowed_statuses = ['paid', 'pending', 'cancelled', 'unpaid']  # adjust as needed
+    allowed_statuses = ['paid', 'pending', 'cancelled', 'unpaid']
     if new_status not in allowed_statuses:
         return jsonify({"error": f"Invalid status. Allowed: {allowed_statuses}"}), 400
 
-    from app.services.auth import update_invoice_status
-    success = update_invoice_status(account_id, invoice_id, new_status)
+    from app.services.auth import update_invoice_status_by_number
+    success = update_invoice_status_by_number(account_id, invoice_number, new_status)
     if success:
         return jsonify({"message": "Invoice status updated"}), 200
     else:
         return jsonify({"error": "Invoice not found or no change"}), 404
+
+

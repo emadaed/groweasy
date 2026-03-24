@@ -424,3 +424,36 @@ def update_invoice_status(account_id, invoice_id, status):
             WHERE id = :id AND account_id = :aid
         """), {"status": status, "id": invoice_id, "aid": account_id})
         return result.rowcount > 0
+
+def get_invoice_by_number(account_id, invoice_number):
+    """Fetch a single invoice by its invoice number."""
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id, invoice_number, client_name, invoice_date, due_date,
+                   grand_total, status, created_at, invoice_data
+            FROM user_invoices
+            WHERE invoice_number = :inv_num AND account_id = :aid
+        """), {"inv_num": invoice_number, "aid": account_id}).first()
+    if row:
+        return {
+            'id': row[0],
+            'invoice_number': row[1],
+            'client_name': row[2],
+            'invoice_date': row[3].isoformat() if row[3] else None,
+            'due_date': row[4].isoformat() if row[4] else None,
+            'grand_total': float(row[5]),
+            'status': row[6],
+            'created_at': row[7].isoformat() if row[7] else None,
+            'invoice_data': row[8]  # raw JSON for full details
+        }
+    return None
+
+def update_invoice_status_by_number(account_id, invoice_number, status):
+    """Update the status of an invoice using its invoice number."""
+    with DB_ENGINE.begin() as conn:
+        result = conn.execute(text("""
+            UPDATE user_invoices
+            SET status = :status, updated_at = CURRENT_TIMESTAMP
+            WHERE invoice_number = :inv_num AND account_id = :aid
+        """), {"status": status, "inv_num": invoice_number, "aid": account_id})
+        return result.rowcount > 0
