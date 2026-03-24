@@ -365,3 +365,62 @@ def delete_customer(account_id, customer_id):
         """), {"cid": customer_id, "aid": account_id})
         return result.rowcount > 0
 
+def get_invoices(account_id, limit=100, offset=0):
+    """Fetch invoices for the account, optionally with pagination."""
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT id, invoice_number, client_name, invoice_date, due_date,
+                   grand_total, status, created_at, invoice_data
+            FROM user_invoices
+            WHERE account_id = :aid
+            ORDER BY invoice_date DESC
+            LIMIT :limit OFFSET :offset
+        """), {"aid": account_id, "limit": limit, "offset": offset}).fetchall()
+    invoices = []
+    for row in rows:
+        # Parse invoice_data for extra fields if needed
+        invoices.append({
+            'id': row[0],
+            'invoice_number': row[1],
+            'client_name': row[2],
+            'invoice_date': row[3].isoformat() if row[3] else None,
+            'due_date': row[4].isoformat() if row[4] else None,
+            'grand_total': float(row[5]),
+            'status': row[6],
+            'created_at': row[7].isoformat() if row[7] else None,
+            # You can also include data from invoice_data if needed
+        })
+    return invoices
+
+def get_invoice(account_id, invoice_id):
+    """Fetch a single invoice by its ID."""
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id, invoice_number, client_name, invoice_date, due_date,
+                   grand_total, status, created_at, invoice_data
+            FROM user_invoices
+            WHERE id = :id AND account_id = :aid
+        """), {"id": invoice_id, "aid": account_id}).first()
+    if row:
+        return {
+            'id': row[0],
+            'invoice_number': row[1],
+            'client_name': row[2],
+            'invoice_date': row[3].isoformat() if row[3] else None,
+            'due_date': row[4].isoformat() if row[4] else None,
+            'grand_total': float(row[5]),
+            'status': row[6],
+            'created_at': row[7].isoformat() if row[7] else None,
+            'invoice_data': row[8]  # raw JSON for full details
+        }
+    return None
+
+def update_invoice_status(account_id, invoice_id, status):
+    """Update the status of an invoice."""
+    with DB_ENGINE.begin() as conn:
+        result = conn.execute(text("""
+            UPDATE user_invoices
+            SET status = :status, updated_at = CURRENT_TIMESTAMP
+            WHERE id = :id AND account_id = :aid
+        """), {"status": status, "id": invoice_id, "aid": account_id})
+        return result.rowcount > 0

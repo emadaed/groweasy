@@ -59,6 +59,7 @@ def get_inventory_item(product_id):
     return jsonify(product)
 
 @api_v1_bp.route('/inventory', methods=['POST'])
+@csrf.exempt
 @limiter.limit("10 per minute")
 @require_auth
 def create_inventory_item():
@@ -137,6 +138,7 @@ def get_customer(customer_id):
     return jsonify(customer)
 
 @api_v1_bp.route('/customers', methods=['POST'])
+@csrf.exempt
 @limiter.limit("10 per minute")
 @require_auth
 def create_customer():
@@ -165,6 +167,7 @@ def create_customer():
         return jsonify({"error": "Could not create customer"}), 400
 
 @api_v1_bp.route('/customers/<int:customer_id>', methods=['PUT'])
+@csrf.exempt
 @limiter.limit("10 per minute")
 @require_auth
 def update_customer(customer_id):
@@ -184,6 +187,7 @@ def update_customer(customer_id):
         return jsonify({"error": "Customer not found or no changes made"}), 404
 
 @api_v1_bp.route('/customers/<int:customer_id>', methods=['DELETE'])
+@csrf.exempt
 @limiter.limit("10 per minute")
 @require_auth
 def delete_customer(customer_id):
@@ -195,3 +199,53 @@ def delete_customer(customer_id):
         return jsonify({"message": "Customer deleted"}), 200
     else:
         return jsonify({"error": "Customer not found"}), 404
+
+
+# ========== INVOICES ==========
+@api_v1_bp.route('/invoices', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def list_invoices():
+    """List all invoices for the account."""
+    account_id = g.api_account_id
+    limit = request.args.get('limit', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+    from app.services.auth import get_invoices
+    invoices = get_invoices(account_id, limit=limit, offset=offset)
+    return jsonify(invoices)
+
+@api_v1_bp.route('/invoices/<int:invoice_id>', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def get_invoice(invoice_id):
+    """Get a single invoice by ID."""
+    account_id = g.api_account_id
+    from app.services.auth import get_invoice
+    invoice = get_invoice(account_id, invoice_id)
+    if not invoice:
+        return jsonify({"error": "Invoice not found"}), 404
+    return jsonify(invoice)
+
+@api_v1_bp.route('/invoices/<int:invoice_id>/status', methods=['PATCH'])
+@csrf.exempt
+@limiter.limit("10 per minute")
+@require_auth
+def update_invoice_status(invoice_id):
+    """Update invoice status (e.g., mark as paid)."""
+    account_id = g.api_account_id
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON data"}), 400
+    new_status = data.get('status')
+    if not new_status:
+        return jsonify({"error": "status is required"}), 400
+    allowed_statuses = ['paid', 'pending', 'cancelled', 'unpaid']  # adjust as needed
+    if new_status not in allowed_statuses:
+        return jsonify({"error": f"Invalid status. Allowed: {allowed_statuses}"}), 400
+
+    from app.services.auth import update_invoice_status
+    success = update_invoice_status(account_id, invoice_id, new_status)
+    if success:
+        return jsonify({"message": "Invoice status updated"}), 200
+    else:
+        return jsonify({"error": "Invoice not found or no change"}), 404
