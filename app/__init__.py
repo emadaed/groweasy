@@ -50,6 +50,10 @@ def create_app():
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
     mail.init_app(app)
+
+    #OpenAPI Documentation
+    from flasgger import Swagger
+    swagger = Swagger(app)
     
     # --- Security: Initialize CSRF Protection ---
     csrf.init_app(app)

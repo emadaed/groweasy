@@ -3,6 +3,7 @@ import secrets
 import hashlib
 from sqlalchemy import text
 from app.services.db import DB_ENGINE
+from datetime import datetime, timedelta
 
 def hash_key(key):
     """Hash a raw API key (sha256) for storage."""
@@ -13,15 +14,15 @@ def generate_api_key():
     return secrets.token_urlsafe(32)
 
 def create_api_key(account_id, name):
-    """Create a new API key for an account."""
     raw_key = generate_api_key()
     key_hash = hash_key(raw_key)
+    expires_at = datetime.now() + timedelta(days=365)  # 1 year
     with DB_ENGINE.begin() as conn:
         conn.execute(text("""
-            INSERT INTO api_keys (account_id, name, key_hash)
-            VALUES (:account_id, :name, :key_hash)
-        """), {"account_id": account_id, "name": name, "key_hash": key_hash})
-    return raw_key  # return the raw key to show to the user (once)
+            INSERT INTO api_keys (account_id, name, key_hash, expires_at)
+            VALUES (:account_id, :name, :key_hash, :expires_at)
+        """), {"account_id": account_id, "name": name, "key_hash": key_hash, "expires_at": expires_at})
+    return raw_key
 
 def get_api_keys(account_id):
     """List all active API keys for an account."""
@@ -42,24 +43,25 @@ def revoke_api_key(account_id, key_id):
             WHERE id = :key_id AND account_id = :account_id
         """), {"key_id": key_id, "account_id": account_id})
 
+from datetime import datetime
+
 def validate_api_key(raw_key):
-    """
-    Validate the API key. If valid, return account_id and update last_used_at.
-    Returns (account_id, error_message) tuple.
-    """
     key_hash = hash_key(raw_key)
     with DB_ENGINE.connect() as conn:
         row = conn.execute(text("""
-            SELECT account_id, is_active FROM api_keys
+            SELECT account_id, is_active, expires_at FROM api_keys
             WHERE key_hash = :key_hash
         """), {"key_hash": key_hash}).first()
         if not row:
             return None, "Invalid API key"
         if not row.is_active:
             return None, "API key revoked"
+        if row.expires_at and row.expires_at < datetime.now():
+            return None, "API key expired"
         # Update last_used_at
         conn.execute(text("""
             UPDATE api_keys SET last_used_at = NOW()
             WHERE key_hash = :key_hash
         """), {"key_hash": key_hash})
         return row.account_id, None
+    

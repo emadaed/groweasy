@@ -5,14 +5,27 @@ from app.services.db import DB_ENGINE
 from app.services.api_keys import validate_api_key
 from app.services.inventory import InventoryManager
 from app.decorators import role_required
-from app.extensions import limiter
-from app.extensions import csrf
+from app.extensions import limiter, csrf
+import functools
 
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
+#=============API Logs============
+
+def log_api_call(account_id, endpoint, method, status_code, ip):
+    with DB_ENGINE.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO api_logs (account_id, endpoint, method, status_code, ip_address)
+            VALUES (:aid, :endpoint, :method, :status, :ip)
+        """), {"aid": account_id, "endpoint": endpoint, "method": method, "status": status_code, "ip": ip})
+
+# Helper for consistent error responses
+def error_response(message, code, status_code=400):
+    """Return a standard error response."""
+    return jsonify({"error": message, "code": code}), status_code
+
 # Helper to get account_id from API key or session
 def get_account_id():
-    """Try to get account_id from Bearer token, or fall back to session (for web)."""
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
         raw_key = auth_header[7:]
@@ -25,20 +38,26 @@ def get_account_id():
     else:
         return None, "Unauthorized"
 
-# Decorator to enforce API key or session
+# Authentication decorator
 def require_auth(f):
-    from functools import wraps
-    @wraps(f)
+    @functools.wraps(f)
     def decorated(*args, **kwargs):
         account_id, error = get_account_id()
         if not account_id:
-            return jsonify({"error": error or "Unauthorized"}), 401
-        # Attach account_id to request so route can use it
+            return error_response(error or "Unauthorized", "UNAUTHORIZED", 401)
         g.api_account_id = account_id
         return f(*args, **kwargs)
     return decorated
 
-# --- Inventory Endpoints ---
+@api_v1_bp.after_request
+def log_request(response):
+    if hasattr(g, 'api_account_id') and g.api_account_id:
+        account_id = g.api_account_id
+        # Skip logging for static files? not needed
+        log_api_call(account_id, request.path, request.method, response.status_code, request.remote_addr)
+    return response
+
+# ========== INVENTORY ==========
 @api_v1_bp.route('/inventory', methods=['GET'])
 @limiter.limit("100 per minute")
 @require_auth
@@ -56,7 +75,7 @@ def get_inventory_item(product_id):
     account_id = g.api_account_id
     product = InventoryManager.get_product_details(account_id, product_id)
     if not product:
-        return jsonify({"error": "Product not found"}), 404
+        return error_response("Product not found", "NOT_FOUND", 404)
     return jsonify(product)
 
 @api_v1_bp.route('/inventory', methods=['POST'])
@@ -64,29 +83,22 @@ def get_inventory_item(product_id):
 @limiter.limit("10 per minute")
 @require_auth
 def create_inventory_item():
-    """Create a new product (requires product data in JSON)."""
-    if 'user_id' not in session:  # Only authenticated web users can create via API? Or we could use API key only?
-        # We'll require that the request also comes from a logged‑in user or the API key must be associated with an account.
-        # Since we already have account_id, we can create, but we need user_id for audit (stock_movements).
-        # For API, we can use a placeholder user (e.g., the owner of the account).
-        # Let's fetch the first owner user_id for the account.
-        with DB_ENGINE.connect() as conn:
-            row = conn.execute(text("""
-                SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
-            """), {"aid": g.api_account_id}).first()
-            if not row:
-                return jsonify({"error": "No owner found for account"}), 400
-            user_id = row[0]
-    else:
-        user_id = session['user_id']
-
+    """Create a new product."""
+    account_id = g.api_account_id
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Missing JSON data"}), 400
-
-    # Minimal validation
+        return error_response("Missing JSON data", "BAD_REQUEST", 400)
     if not data.get('name') or not data.get('sku'):
-        return jsonify({"error": "name and sku are required"}), 400
+        return error_response("name and sku are required", "MISSING_FIELD", 400)
+
+    # Get an owner user_id for the account
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
+        """), {"aid": account_id}).first()
+        if not row:
+            return error_response("No owner found for account", "INTERNAL_ERROR", 400)
+        user_id = row[0]
 
     product_data = {
         'name': data['name'],
@@ -108,19 +120,17 @@ def create_inventory_item():
         'weight_kg': float(data.get('weight_kg')) if data.get('weight_kg') else None,
     }
 
-    product_id = InventoryManager.add_product(user_id, g.api_account_id, product_data)
+    product_id = InventoryManager.add_product(user_id, account_id, product_data)
     if product_id:
         return jsonify({"id": product_id, "message": "Product created"}), 201
     else:
-        return jsonify({"error": "Product could not be created (duplicate SKU?)"}), 400
-
+        return error_response("Product could not be created (duplicate SKU?)", "DUPLICATE_SKU", 400)
 
 # ========== CUSTOMERS ==========
 @api_v1_bp.route('/customers', methods=['GET'])
 @limiter.limit("100 per minute")
 @require_auth
 def list_customers():
-    """List all customers for the account."""
     account_id = g.api_account_id
     from app.services.auth import get_customers
     customers = get_customers(account_id)
@@ -130,12 +140,11 @@ def list_customers():
 @limiter.limit("100 per minute")
 @require_auth
 def get_customer(customer_id):
-    """Get a single customer by ID."""
     account_id = g.api_account_id
     from app.services.auth import get_customer
     customer = get_customer(account_id, customer_id)
     if not customer:
-        return jsonify({"error": "Customer not found"}), 404
+        return error_response("Customer not found", "NOT_FOUND", 404)
     return jsonify(customer)
 
 @api_v1_bp.route('/customers', methods=['POST'])
@@ -143,21 +152,20 @@ def get_customer(customer_id):
 @limiter.limit("10 per minute")
 @require_auth
 def create_customer():
-    """Create a new customer."""
     account_id = g.api_account_id
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Missing JSON data"}), 400
+        return error_response("Missing JSON data", "BAD_REQUEST", 400)
     if not data.get('name'):
-        return jsonify({"error": "name is required"}), 400
+        return error_response("name is required", "MISSING_FIELD", 400)
 
-    # Get an owner user_id for the account (for audit trail)
+    # Get an owner user_id
     with DB_ENGINE.connect() as conn:
         row = conn.execute(text("""
             SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
         """), {"aid": account_id}).first()
         if not row:
-            return jsonify({"error": "No owner found for account"}), 400
+            return error_response("No owner found for account", "INTERNAL_ERROR", 400)
         user_id = row[0]
 
     from app.services.auth import save_customer
@@ -165,49 +173,45 @@ def create_customer():
     if customer_id:
         return jsonify({"id": customer_id, "message": "Customer created"}), 201
     else:
-        return jsonify({"error": "Could not create customer"}), 400
+        return error_response("Could not create customer", "DATABASE_ERROR", 400)
 
 @api_v1_bp.route('/customers/<int:customer_id>', methods=['PUT'])
 @csrf.exempt
 @limiter.limit("10 per minute")
 @require_auth
 def update_customer(customer_id):
-    """Update an existing customer."""
     account_id = g.api_account_id
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Missing JSON data"}), 400
+        return error_response("Missing JSON data", "BAD_REQUEST", 400)
     if not data.get('name'):
-        return jsonify({"error": "name is required"}), 400
+        return error_response("name is required", "MISSING_FIELD", 400)
 
     from app.services.auth import update_customer
     success = update_customer(account_id, customer_id, data)
     if success:
         return jsonify({"message": "Customer updated"}), 200
     else:
-        return jsonify({"error": "Customer not found or no changes made"}), 404
+        return error_response("Customer not found", "NOT_FOUND", 404)
 
 @api_v1_bp.route('/customers/<int:customer_id>', methods=['DELETE'])
 @csrf.exempt
 @limiter.limit("10 per minute")
 @require_auth
 def delete_customer(customer_id):
-    """Delete a customer."""
     account_id = g.api_account_id
     from app.services.auth import delete_customer
     success = delete_customer(account_id, customer_id)
     if success:
         return jsonify({"message": "Customer deleted"}), 200
     else:
-        return jsonify({"error": "Customer not found"}), 404
-
+        return error_response("Customer not found", "NOT_FOUND", 404)
 
 # ========== INVOICES ==========
 @api_v1_bp.route('/invoices', methods=['GET'])
 @limiter.limit("100 per minute")
 @require_auth
 def list_invoices():
-    """List all invoices for the account."""
     account_id = g.api_account_id
     limit = request.args.get('limit', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
@@ -219,12 +223,11 @@ def list_invoices():
 @limiter.limit("100 per minute")
 @require_auth
 def get_invoice(invoice_number):
-    """Get a single invoice by its number."""
     account_id = g.api_account_id
     from app.services.auth import get_invoice_by_number
     invoice = get_invoice_by_number(account_id, invoice_number)
     if not invoice:
-        return jsonify({"error": "Invoice not found"}), 404
+        return error_response("Invoice not found", "NOT_FOUND", 404)
     return jsonify(invoice)
 
 @api_v1_bp.route('/invoices/<string:invoice_number>/status', methods=['PATCH'])
@@ -232,31 +235,29 @@ def get_invoice(invoice_number):
 @limiter.limit("10 per minute")
 @require_auth
 def update_invoice_status(invoice_number):
-    """Update invoice status (e.g., mark as paid)."""
     account_id = g.api_account_id
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Missing JSON data"}), 400
+        return error_response("Missing JSON data", "BAD_REQUEST", 400)
     new_status = data.get('status')
     if not new_status:
-        return jsonify({"error": "status is required"}), 400
+        return error_response("status is required", "MISSING_FIELD", 400)
     allowed_statuses = ['paid', 'pending', 'cancelled', 'unpaid']
     if new_status not in allowed_statuses:
-        return jsonify({"error": f"Invalid status. Allowed: {allowed_statuses}"}), 400
+        return error_response(f"Invalid status. Allowed: {allowed_statuses}", "INVALID_STATUS", 400)
 
     from app.services.auth import update_invoice_status_by_number
     success = update_invoice_status_by_number(account_id, invoice_number, new_status)
     if success:
         return jsonify({"message": "Invoice status updated"}), 200
     else:
-        return jsonify({"error": "Invoice not found or no change"}), 404
+        return error_response("Invoice not found or no change", "NOT_FOUND", 404)
 
 # ========== EXPENSES ==========
 @api_v1_bp.route('/expenses', methods=['GET'])
 @limiter.limit("100 per minute")
 @require_auth
 def list_expenses():
-    """List all expenses for the account."""
     account_id = g.api_account_id
     limit = request.args.get('limit', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
@@ -269,21 +270,20 @@ def list_expenses():
 @limiter.limit("10 per minute")
 @require_auth
 def create_expense():
-    """Create a new expense."""
     account_id = g.api_account_id
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Missing JSON data"}), 400
+        return error_response("Missing JSON data", "BAD_REQUEST", 400)
     if not data.get('description') or data.get('amount') is None:
-        return jsonify({"error": "description and amount are required"}), 400
+        return error_response("description and amount are required", "MISSING_FIELD", 400)
 
-    # Get a user_id for the account (owner)
+    # Get an owner user_id
     with DB_ENGINE.connect() as conn:
         row = conn.execute(text("""
             SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
         """), {"aid": account_id}).first()
         if not row:
-            return jsonify({"error": "No owner found for account"}), 400
+            return error_response("No owner found for account", "INTERNAL_ERROR", 400)
         user_id = row[0]
 
     from app.services.auth import create_expense_api
@@ -291,14 +291,13 @@ def create_expense():
     if expense_id:
         return jsonify({"id": expense_id, "message": "Expense created"}), 201
     else:
-        return jsonify({"error": "Could not create expense"}), 400
+        return error_response("Could not create expense", "DATABASE_ERROR", 400)
 
 # ========== PURCHASE ORDERS ==========
 @api_v1_bp.route('/purchase_orders', methods=['GET'])
 @limiter.limit("100 per minute")
 @require_auth
 def list_purchase_orders():
-    """List all purchase orders for the account."""
     account_id = g.api_account_id
     limit = request.args.get('limit', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
@@ -310,12 +309,11 @@ def list_purchase_orders():
 @limiter.limit("100 per minute")
 @require_auth
 def get_purchase_order(po_number):
-    """Get a single purchase order by its number."""
     account_id = g.api_account_id
     from app.services.purchases import get_purchase_order_by_number_api
     order = get_purchase_order_by_number_api(account_id, po_number)
     if not order:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return error_response("Purchase order not found", "NOT_FOUND", 404)
     return jsonify(order)
 
 # ========== STOCK MOVEMENTS ==========
@@ -323,7 +321,6 @@ def get_purchase_order(po_number):
 @limiter.limit("100 per minute")
 @require_auth
 def list_stock_movements():
-    """List stock movements for the account, optionally filtered by product."""
     account_id = g.api_account_id
     product_id = request.args.get('product_id', type=int)
     limit = request.args.get('limit', default=100, type=int)
@@ -331,3 +328,7 @@ def list_stock_movements():
     from app.services.inventory import InventoryManager
     movements = InventoryManager.get_stock_movements(account_id, product_id, limit, offset)
     return jsonify(movements)
+
+
+
+
