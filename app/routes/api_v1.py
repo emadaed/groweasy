@@ -6,6 +6,7 @@ from app.services.api_keys import validate_api_key
 from app.services.inventory import InventoryManager
 from app.decorators import role_required
 from app.extensions import limiter
+from app.extensions import csrf
 
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
