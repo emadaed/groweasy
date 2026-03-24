@@ -213,26 +213,6 @@ def save_user_invoice(user_id, account_id, invoice_data):
             })
     return True
 
-def get_customers(account_id):
-    with DB_ENGINE.connect() as conn:
-        customers = conn.execute(text('''
-            SELECT id, name, email, phone, address, tax_id, total_spent, invoice_count
-            FROM customers WHERE account_id = :aid ORDER BY name
-        '''), {"aid": account_id}).fetchall()
-    result = []
-    for customer in customers:
-        result.append({
-            'id': customer[0],
-            'name': customer[1],
-            'email': customer[2],
-            'phone': customer[3],
-            'address': customer[4],
-            'tax_id': customer[5],
-            'total_spent': float(customer[6]) if customer[6] else 0,
-            'invoice_count': customer[7]
-        })
-    return result
-
 def save_expense(user_id, account_id, expense_data):
     with DB_ENGINE.begin() as conn:
         conn.execute(text('''
@@ -297,3 +277,70 @@ def change_user_password(user_id, new_password):
         conn.execute(text("UPDATE users SET password_hash = :hash WHERE id = :id"),
                      {"id": user_id, "hash": hash_password(new_password)})
     return True
+
+def get_customer(account_id, customer_id):
+    """Fetch a single customer by ID."""
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id, name, email, phone, address, tax_id, total_spent, invoice_count
+            FROM customers
+            WHERE id = :cid AND account_id = :aid
+        """), {"cid": customer_id, "aid": account_id}).first()
+    if row:
+        return {
+            'id': row[0],
+            'name': row[1],
+            'email': row[2],
+            'phone': row[3],
+            'address': row[4],
+            'tax_id': row[5],
+            'total_spent': float(row[6]) if row[6] else 0,
+            'invoice_count': row[7]
+        }
+    return None
+
+def save_customer(user_id, account_id, data):
+    """Create a new customer."""
+    with DB_ENGINE.begin() as conn:
+        result = conn.execute(text("""
+            INSERT INTO customers (user_id, account_id, name, email, phone, address, tax_id)
+            VALUES (:user_id, :aid, :name, :email, :phone, :address, :tax_id)
+            RETURNING id
+        """), {
+            "user_id": user_id,
+            "aid": account_id,
+            "name": data.get('name'),
+            "email": data.get('email'),
+            "phone": data.get('phone'),
+            "address": data.get('address'),
+            "tax_id": data.get('tax_id')
+        })
+        return result.scalar()
+
+def update_customer(account_id, customer_id, data):
+    """Update an existing customer."""
+    with DB_ENGINE.begin() as conn:
+        result = conn.execute(text("""
+            UPDATE customers
+            SET name = :name, email = :email, phone = :phone, address = :address, tax_id = :tax_id,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = :cid AND account_id = :aid
+        """), {
+            "name": data.get('name'),
+            "email": data.get('email'),
+            "phone": data.get('phone'),
+            "address": data.get('address'),
+            "tax_id": data.get('tax_id'),
+            "cid": customer_id,
+            "aid": account_id
+        })
+        return result.rowcount > 0
+
+def delete_customer(account_id, customer_id):
+    """Delete a customer (soft delete? Hard delete for now)."""
+    with DB_ENGINE.begin() as conn:
+        result = conn.execute(text("""
+            DELETE FROM customers WHERE id = :cid AND account_id = :aid
+        """), {"cid": customer_id, "aid": account_id})
+        return result.rowcount > 0
+

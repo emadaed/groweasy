@@ -112,4 +112,86 @@ def create_inventory_item():
     else:
         return jsonify({"error": "Product could not be created (duplicate SKU?)"}), 400
 
-# Add similar endpoints for other resources (invoices, customers, etc.)
+
+# ========== CUSTOMERS ==========
+@api_v1_bp.route('/customers', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def list_customers():
+    """List all customers for the account."""
+    account_id = g.api_account_id
+    from app.services.auth import get_customers
+    customers = get_customers(account_id)
+    return jsonify(customers)
+
+@api_v1_bp.route('/customers/<int:customer_id>', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def get_customer(customer_id):
+    """Get a single customer by ID."""
+    account_id = g.api_account_id
+    from app.services.auth import get_customer
+    customer = get_customer(account_id, customer_id)
+    if not customer:
+        return jsonify({"error": "Customer not found"}), 404
+    return jsonify(customer)
+
+@api_v1_bp.route('/customers', methods=['POST'])
+@limiter.limit("10 per minute")
+@require_auth
+def create_customer():
+    """Create a new customer."""
+    account_id = g.api_account_id
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON data"}), 400
+    if not data.get('name'):
+        return jsonify({"error": "name is required"}), 400
+
+    # Get an owner user_id for the account (for audit trail)
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
+        """), {"aid": account_id}).first()
+        if not row:
+            return jsonify({"error": "No owner found for account"}), 400
+        user_id = row[0]
+
+    from app.services.auth import save_customer
+    customer_id = save_customer(user_id, account_id, data)
+    if customer_id:
+        return jsonify({"id": customer_id, "message": "Customer created"}), 201
+    else:
+        return jsonify({"error": "Could not create customer"}), 400
+
+@api_v1_bp.route('/customers/<int:customer_id>', methods=['PUT'])
+@limiter.limit("10 per minute")
+@require_auth
+def update_customer(customer_id):
+    """Update an existing customer."""
+    account_id = g.api_account_id
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON data"}), 400
+    if not data.get('name'):
+        return jsonify({"error": "name is required"}), 400
+
+    from app.services.auth import update_customer
+    success = update_customer(account_id, customer_id, data)
+    if success:
+        return jsonify({"message": "Customer updated"}), 200
+    else:
+        return jsonify({"error": "Customer not found or no changes made"}), 404
+
+@api_v1_bp.route('/customers/<int:customer_id>', methods=['DELETE'])
+@limiter.limit("10 per minute")
+@require_auth
+def delete_customer(customer_id):
+    """Delete a customer."""
+    account_id = g.api_account_id
+    from app.services.auth import delete_customer
+    success = delete_customer(account_id, customer_id)
+    if success:
+        return jsonify({"message": "Customer deleted"}), 200
+    else:
+        return jsonify({"error": "Customer not found"}), 404
