@@ -59,7 +59,7 @@
 
                                 <!-- 🆕 FBR Tax Fields (Moved from accordion) -->
                                 <hr>
-                                <h6 class="text-primary">🛒️ FBR Tax Information (Pakistan)</h6>
+                                <h6 class="text-primary">🛒️ Tax Information (Pakistan)</h6>
 
                                 <div class="mb-3">
                                     <label class="form-label">Seller NTN</label>
@@ -96,6 +96,7 @@
                         </div>
                     </div>
                 </div>
+                
 
                 <!-- Security Settings -->
                 <div class="col-md-6">
@@ -140,6 +141,11 @@
                             <div class="card-body">
                                 <a href="{{ url_for('settings.devices') }}" class="btn btn-primary">Manage Devices</a>
                                 <p class="small text-muted mt-2">View and revoke access from other devices</p>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('users.api_keys') }}">
+                                        <i class="fas fa-key"></i> API Keys
+                                    </a>
+                                </li>
                             </div>
                         </div>
                     </div>

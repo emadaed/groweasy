@@ -209,3 +209,34 @@ def revoke_invite(invite_id):
         )
     flash("✅ Invite revoked.", 'success')
     return redirect(url_for('users.list_users'))
+
+@users_bp.route('/api_keys', methods=['GET'])
+@role_required('owner')
+def api_keys():
+    account_id = session['account_id']
+    from app.services.api_keys import get_api_keys
+    keys = get_api_keys(account_id)
+    return render_template('users/api_keys.html', keys=keys, nonce=g.nonce)
+
+@users_bp.route('/api_keys/create', methods=['POST'])
+@role_required('owner')
+def create_api_key():
+    account_id = session['account_id']
+    name = request.form.get('name')
+    if not name:
+        flash("Please provide a name for the API key.", "error")
+        return redirect(url_for('users.api_keys'))
+    from app.services.api_keys import create_api_key
+    raw_key = create_api_key(account_id, name)
+    # Show the raw key only once
+    flash(f"Your new API key is: {raw_key}. Copy it now, it won't be shown again.", "success")
+    return redirect(url_for('users.api_keys'))
+
+@users_bp.route('/api_keys/revoke/<int:key_id>', methods=['POST'])
+@role_required('owner')
+def revoke_api_key(key_id):
+    account_id = session['account_id']
+    from app.services.api_keys import revoke_api_key
+    revoke_api_key(account_id, key_id)
+    flash("API key revoked.", "success")
+    return redirect(url_for('users.api_keys'))

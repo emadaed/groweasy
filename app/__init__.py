@@ -103,6 +103,8 @@ def create_app():
 ##    app.register_blueprint(ai_bp)
     from app.routes.reports import reports_bp
     app.register_blueprint(reports_bp)
+    from app.routes.api_v1 import api_v1_bp
+    app.register_blueprint(api_v1_bp)
 ##    from app.routes.common import common_bp
 ##    app.register_blueprint(common_bp)
 
