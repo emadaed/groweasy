@@ -125,3 +125,46 @@ def get_purchase_order(account_id, po_number):
     except Exception as e:
         logger.error(f"Error fetching PO: {e}")
         return None
+
+def get_purchase_orders_api(account_id, limit=100, offset=0):
+    """Return a list of POs with basic info."""
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT id, po_number, supplier_name, order_date, delivery_date, grand_total, status, created_at
+            FROM purchase_orders
+            WHERE account_id = :aid
+            ORDER BY order_date DESC
+            LIMIT :limit OFFSET :offset
+        """), {"aid": account_id, "limit": limit, "offset": offset}).fetchall()
+    return [{
+        'id': r[0],
+        'po_number': r[1],
+        'supplier_name': r[2],
+        'order_date': r[3].isoformat() if r[3] else None,
+        'delivery_date': r[4].isoformat() if r[4] else None,
+        'grand_total': float(r[5]),
+        'status': r[6],
+        'created_at': r[7].isoformat() if r[7] else None
+    } for r in rows]
+
+def get_purchase_order_by_number_api(account_id, po_number):
+    """Fetch a single PO by its number."""
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id, po_number, supplier_name, order_date, delivery_date, grand_total, status, created_at, order_data
+            FROM purchase_orders
+            WHERE account_id = :aid AND po_number = :po_number
+        """), {"aid": account_id, "po_number": po_number}).first()
+    if row:
+        return {
+            'id': row[0],
+            'po_number': row[1],
+            'supplier_name': row[2],
+            'order_date': row[3].isoformat() if row[3] else None,
+            'delivery_date': row[4].isoformat() if row[4] else None,
+            'grand_total': float(row[5]),
+            'status': row[6],
+            'created_at': row[7].isoformat() if row[7] else None,
+            'order_data': row[8]  # full JSON if needed
+        }
+    return None

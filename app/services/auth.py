@@ -457,3 +457,45 @@ def update_invoice_status_by_number(account_id, invoice_number, status):
             WHERE invoice_number = :inv_num AND account_id = :aid
         """), {"status": status, "inv_num": invoice_number, "aid": account_id})
         return result.rowcount > 0
+
+def get_expenses_api(account_id, limit=100, offset=0):
+    """Fetch expenses for the account."""
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT id, description, amount, tax_amount, tax_rate, category, expense_date, notes, created_at
+            FROM expenses
+            WHERE account_id = :aid
+            ORDER BY expense_date DESC
+            LIMIT :limit OFFSET :offset
+        """), {"aid": account_id, "limit": limit, "offset": offset}).fetchall()
+    return [{
+        'id': r[0],
+        'description': r[1],
+        'amount': float(r[2]),
+        'tax_amount': float(r[3]) if r[3] else 0.0,
+        'tax_rate': float(r[4]) if r[4] else 0.0,
+        'category': r[5],
+        'expense_date': r[6].isoformat() if r[6] else None,
+        'notes': r[7],
+        'created_at': r[8].isoformat() if r[8] else None
+    } for r in rows]
+
+def create_expense_api(account_id, user_id, data):
+    """Create a new expense."""
+    with DB_ENGINE.begin() as conn:
+        result = conn.execute(text("""
+            INSERT INTO expenses (user_id, account_id, description, amount, tax_amount, tax_rate, category, expense_date, notes)
+            VALUES (:user_id, :aid, :desc, :amount, :tax_amount, :tax_rate, :category, :date, :notes)
+            RETURNING id
+        """), {
+            "user_id": user_id,
+            "aid": account_id,
+            "desc": data.get('description'),
+            "amount": data.get('amount', 0),
+            "tax_amount": data.get('tax_amount', 0),
+            "tax_rate": data.get('tax_rate', 0),
+            "category": data.get('category'),
+            "date": data.get('expense_date'),
+            "notes": data.get('notes')
+        })
+        return result.scalar()

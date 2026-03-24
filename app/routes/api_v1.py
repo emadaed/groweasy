@@ -251,4 +251,83 @@ def update_invoice_status(invoice_number):
     else:
         return jsonify({"error": "Invoice not found or no change"}), 404
 
+# ========== EXPENSES ==========
+@api_v1_bp.route('/expenses', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def list_expenses():
+    """List all expenses for the account."""
+    account_id = g.api_account_id
+    limit = request.args.get('limit', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+    from app.services.auth import get_expenses_api
+    expenses = get_expenses_api(account_id, limit, offset)
+    return jsonify(expenses)
 
+@api_v1_bp.route('/expenses', methods=['POST'])
+@csrf.exempt
+@limiter.limit("10 per minute")
+@require_auth
+def create_expense():
+    """Create a new expense."""
+    account_id = g.api_account_id
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON data"}), 400
+    if not data.get('description') or data.get('amount') is None:
+        return jsonify({"error": "description and amount are required"}), 400
+
+    # Get a user_id for the account (owner)
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
+        """), {"aid": account_id}).first()
+        if not row:
+            return jsonify({"error": "No owner found for account"}), 400
+        user_id = row[0]
+
+    from app.services.auth import create_expense_api
+    expense_id = create_expense_api(account_id, user_id, data)
+    if expense_id:
+        return jsonify({"id": expense_id, "message": "Expense created"}), 201
+    else:
+        return jsonify({"error": "Could not create expense"}), 400
+
+# ========== PURCHASE ORDERS ==========
+@api_v1_bp.route('/purchase_orders', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def list_purchase_orders():
+    """List all purchase orders for the account."""
+    account_id = g.api_account_id
+    limit = request.args.get('limit', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+    from app.services.purchases import get_purchase_orders_api
+    orders = get_purchase_orders_api(account_id, limit, offset)
+    return jsonify(orders)
+
+@api_v1_bp.route('/purchase_orders/<string:po_number>', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def get_purchase_order(po_number):
+    """Get a single purchase order by its number."""
+    account_id = g.api_account_id
+    from app.services.purchases import get_purchase_order_by_number_api
+    order = get_purchase_order_by_number_api(account_id, po_number)
+    if not order:
+        return jsonify({"error": "Purchase order not found"}), 404
+    return jsonify(order)
+
+# ========== STOCK MOVEMENTS ==========
+@api_v1_bp.route('/stock_movements', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def list_stock_movements():
+    """List stock movements for the account, optionally filtered by product."""
+    account_id = g.api_account_id
+    product_id = request.args.get('product_id', type=int)
+    limit = request.args.get('limit', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+    from app.services.inventory import get_stock_movements
+    movements = get_stock_movements(account_id, product_id, limit, offset)
+    return jsonify(movements)

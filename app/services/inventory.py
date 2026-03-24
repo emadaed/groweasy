@@ -353,3 +353,35 @@ class InventoryManager:
         except Exception as e:
             logger.error(f"Error generating inventory report data: {e}")
             return []
+
+    @staticmethod
+    def get_stock_movements(account_id, product_id=None, limit=100, offset=0):
+        """Get stock movements for the account, optionally filtered by product."""
+        with DB_ENGINE.connect() as conn:
+            base_query = """
+                SELECT sm.id, sm.product_id, i.name as product_name, i.sku,
+                       sm.movement_type, sm.quantity, sm.reference_id, sm.notes, sm.created_at
+                FROM stock_movements sm
+                JOIN inventory_items i ON sm.product_id = i.id
+                WHERE i.account_id = :aid
+            """
+            params = {"aid": account_id}
+            if product_id:
+                base_query += " AND sm.product_id = :pid"
+                params["pid"] = product_id
+            base_query += " ORDER BY sm.created_at DESC LIMIT :limit OFFSET :offset"
+            params["limit"] = limit
+            params["offset"] = offset
+            rows = conn.execute(text(base_query), params).fetchall()
+
+        return [{
+            'id': r[0],
+            'product_id': r[1],
+            'product_name': r[2],
+            'sku': r[3] or '—',
+            'movement_type': r[4],
+            'quantity': r[5],
+            'reference_id': r[6],
+            'notes': r[7],
+            'created_at': r[8].isoformat() if r[8] else None
+        } for r in rows]
