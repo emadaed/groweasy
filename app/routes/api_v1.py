@@ -328,6 +328,6 @@ def list_stock_movements():
     product_id = request.args.get('product_id', type=int)
     limit = request.args.get('limit', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
-    from app.services.inventory import get_stock_movements
-    movements = get_stock_movements(account_id, product_id, limit, offset)
+    from app.services.inventory import InventoryManager
+    movements = InventoryManager.get_stock_movements(account_id, product_id, limit, offset)
     return jsonify(movements)
