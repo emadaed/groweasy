@@ -278,6 +278,27 @@ def change_user_password(user_id, new_password):
                      {"id": user_id, "hash": hash_password(new_password)})
     return True
 
+
+def get_customers(account_id):
+    with DB_ENGINE.connect() as conn:
+        customers = conn.execute(text('''
+            SELECT id, name, email, phone, address, tax_id, total_spent, invoice_count
+            FROM customers WHERE account_id = :aid ORDER BY name
+        '''), {"aid": account_id}).fetchall()
+    result = []
+    for customer in customers:
+        result.append({
+            'id': customer[0],
+            'name': customer[1],
+            'email': customer[2],
+            'phone': customer[3],
+            'address': customer[4],
+            'tax_id': customer[5],
+            'total_spent': float(customer[6]) if customer[6] else 0,
+            'invoice_count': customer[7]
+        })
+    return result
+
 def get_customer(account_id, customer_id):
     """Fetch a single customer by ID."""
     with DB_ENGINE.connect() as conn:
