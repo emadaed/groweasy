@@ -51,9 +51,7 @@ def create_app():
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
     mail.init_app(app)
 
-    #OpenAPI Documentation
-    from flasgger import Swagger
-    swagger = Swagger(app)
+    #OpenAPI Documentation before return    
     
     # --- Security: Initialize CSRF Protection ---
     csrf.init_app(app)
@@ -128,42 +126,58 @@ def create_app():
                 .replace('\n', '\\n')
                 .replace('\r', '\\r'))
     
-    
+    from flasgger import Swagger
+    swagger = Swagger(app, template={
+        "swagger": "2.0",
+        "info": {
+            "title": "Groweasy API",
+            "description": "API for Groweasy ERP system",
+            "version": "1.0.0"
+        },
+        "securityDefinitions": {
+            "Bearer": {
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header",
+                "description": "Enter your API key in the format: Bearer <key>"
+            }
+        }
+    })
     return app
 
 # STOCK VALIDATION
-def validate_stock_availability(user_id, invoice_items, invoice_type='S'):
-    """Validate stock availability BEFORE invoice processing"""
-    if invoice_type == 'P':  # Purchase order - NO validation needed
-        return {'success': True, 'message': 'Purchase order - no stock check needed'}
-    try:
-        with DB_ENGINE.begin() as conn:
-            for item in invoice_items:
-                if item.get('product_id'):
-                    product_id = item['product_id']
-                    requested_qty = int(item.get('qty', 1))
-
-                    result = conn.execute(text("""
-                        SELECT name, current_stock
-                        FROM inventory_items
-                        WHERE id = :product_id AND user_id = :user_id
-                    """), {"product_id": product_id, "user_id": user_id}).fetchone()
-
-                    if not result:
-                        return {'success': False, 'message': "Product not found in inventory"}
-
-                    product_name, current_stock = result
-                    if current_stock < requested_qty:
-                        return {
-                            'success': False,
-                            'message': f"Only {current_stock} units available for '{product_name}'"
-                        }
-
-            return {'success': True, 'message': 'Stock available'}
-
-    except Exception as e:
-        print(f"Stock validation error: {e}")
-        return {'success': False, 'message': 'Stock validation failed'}
+##def validate_stock_availability(user_id, invoice_items, invoice_type='S'):
+##    """Validate stock availability BEFORE invoice processing"""
+##    if invoice_type == 'P':  # Purchase order - NO validation needed
+##        return {'success': True, 'message': 'Purchase order - no stock check needed'}
+##    try:
+##        with DB_ENGINE.begin() as conn:
+##            for item in invoice_items:
+##                if item.get('product_id'):
+##                    product_id = item['product_id']
+##                    requested_qty = int(item.get('qty', 1))
+##
+##                    result = conn.execute(text("""
+##                        SELECT name, current_stock
+##                        FROM inventory_items
+##                        WHERE id = :product_id AND user_id = :user_id
+##                    """), {"product_id": product_id, "user_id": user_id}).fetchone()
+##
+##                    if not result:
+##                        return {'success': False, 'message': "Product not found in inventory"}
+##
+##                    product_name, current_stock = result
+##                    if current_stock < requested_qty:
+##                        return {
+##                            'success': False,
+##                            'message': f"Only {current_stock} units available for '{product_name}'"
+##                        }
+##
+##            return {'success': True, 'message': 'Stock available'}
+##
+##    except Exception as e:
+##        print(f"Stock validation error: {e}")
+##        return {'success': False, 'message': 'Stock validation failed'}
 
 
 # --- Helper functions (Outside the create_app function) ---move it app/utils/qr.py
