@@ -24,6 +24,31 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
         if request.path.startswith('/static/'):
             return response
 
+        # ----- SPECIAL CSP FOR SWAGGER UI -----
+        if request.path.startswith('/apidocs/'):
+            csp = [
+                "default-src 'self'",
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com",
+                "img-src 'self' data: blob: https:",
+                "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io https://cdn.jsdelivr.net",
+                "frame-ancestors 'none'",
+                "form-action 'self'",
+                "base-uri 'self'"
+            ]
+            response.headers['Content-Security-Policy'] = '; '.join(csp)
+            # Add other security headers (same for all responses)
+            response.headers['X-Frame-Options'] = 'DENY'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-XSS-Protection'] = '1; mode=block'
+            response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=()'
+            if not request.host.startswith('localhost') and not request.host.startswith('127.0.0.1'):
+                response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            return response
+        # ----- END SWAGGER SPECIAL
+        
         nonce = getattr(g, 'nonce', None)
 
         if nonce:
