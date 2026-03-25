@@ -28,7 +28,7 @@ def get_api_keys(account_id):
     """List all active API keys for an account."""
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text("""
-            SELECT id, name, created_at, last_used_at, is_active
+            SELECT id, name, created_at, last_used_at, expires_at, is_active
             FROM api_keys
             WHERE account_id = :account_id AND is_active = TRUE
             ORDER BY created_at DESC
