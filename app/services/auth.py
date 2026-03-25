@@ -4,6 +4,7 @@ from sqlalchemy import text
 import hashlib
 import json
 from datetime import datetime
+from app.services.webhooks import fire_webhook
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()

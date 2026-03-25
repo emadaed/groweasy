@@ -206,7 +206,9 @@ def update_stock_by_sku(sku):
 
     success = InventoryManager.update_stock_delta(user_id, account_id, product_id, delta, 'api_adjustment', notes=f"Stock adjustment via API (delta={delta})")
     if success:
-        return jsonify({"message": "Stock updated", "new_stock": current_stock + delta}), 200
+        from decimal import Decimal
+        new_stock = Decimal(str(current_stock)) + Decimal(str(delta))
+        return jsonify({"message": "Stock updated", "new_stock": float(new_stock)}), 200
     else:
         return error_response("Stock update failed (negative stock?)", "STOCK_ERROR", 400)
     
