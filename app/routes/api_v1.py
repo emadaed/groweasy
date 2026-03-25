@@ -62,7 +62,21 @@ def log_request(response):
 @limiter.limit("100 per minute")
 @require_auth
 def list_inventory():
-    """List all inventory items for the account."""
+    """
+    List all inventory items for the account
+    ---
+    tags:
+      - Inventory
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: A list of inventory items
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/InventoryItem'
+    """
     account_id = g.api_account_id
     items = InventoryManager.get_inventory_items(account_id)
     return jsonify(items)
@@ -126,6 +140,76 @@ def create_inventory_item():
     else:
         return error_response("Product could not be created (duplicate SKU?)", "DUPLICATE_SKU", 400)
 
+@api_v1_bp.route('/inventory/<string:sku>/stock', methods=['PATCH'])
+@csrf.exempt
+@limiter.limit("10 per minute")
+@require_auth
+def update_stock_by_sku(sku):
+    """
+    Update stock quantity by delta (positive or negative).
+    ---
+    tags:
+      - Inventory
+    security:
+      - Bearer: []
+    parameters:
+      - name: sku
+        in: path
+        type: string
+        required: true
+        description: Product SKU
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            delta:
+              type: number
+              description: Quantity to add (positive) or remove (negative)
+    responses:
+      200:
+        description: Stock updated
+      400:
+        description: Bad request
+      404:
+        description: Product not found
+    """
+    account_id = g.api_account_id
+    data = request.get_json()
+    if not data:
+        return error_response("Missing JSON data", "BAD_REQUEST", 400)
+    delta = data.get('delta')
+    if delta is None:
+        return error_response("delta is required", "MISSING_FIELD", 400)
+    try:
+        delta = float(delta)
+    except ValueError:
+        return error_response("delta must be a number", "INVALID_DATA", 400)
+
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id, name, current_stock, min_stock_level FROM inventory_items
+            WHERE sku = :sku AND account_id = :aid AND is_active = TRUE
+        """), {"sku": sku, "aid": account_id}).first()
+        if not row:
+            return error_response("Product not found", "NOT_FOUND", 404)
+        product_id, product_name, current_stock, min_stock_level = row
+
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
+        """), {"aid": account_id}).first()
+        if not row:
+            return error_response("No owner found", "INTERNAL_ERROR", 400)
+        user_id = row[0]
+
+    success = InventoryManager.update_stock_delta(user_id, account_id, product_id, delta, 'api_adjustment', notes=f"Stock adjustment via API (delta={delta})")
+    if success:
+        return jsonify({"message": "Stock updated", "new_stock": current_stock + delta}), 200
+    else:
+        return error_response("Stock update failed (negative stock?)", "STOCK_ERROR", 400)
+    
 # ========== CUSTOMERS ==========
 @api_v1_bp.route('/customers', methods=['GET'])
 @limiter.limit("100 per minute")
@@ -253,6 +337,124 @@ def update_invoice_status(invoice_number):
     else:
         return error_response("Invoice not found or no change", "NOT_FOUND", 404)
 
+@api_v1_bp.route('/invoices', methods=['POST'])
+@csrf.exempt
+@limiter.limit("10 per minute")
+@require_auth
+def create_invoice():
+    """
+    Create a new invoice.
+    ---
+    tags:
+      - Invoices
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - client_name
+            - items
+          properties:
+            client_name:
+              type: string
+            client_email:
+              type: string
+            client_phone:
+              type: string
+            client_address:
+              type: string
+            invoice_date:
+              type: string
+              format: date
+            due_date:
+              type: string
+              format: date
+            tax_rate:
+              type: number
+              default: 0
+            discount_rate:
+              type: number
+              default: 0
+            delivery_charge:
+              type: number
+              default: 0
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  product_id:
+                    type: integer
+                  qty:
+                    type: number
+                  price:
+                    type: number
+                  name:
+                    type: string
+                  unit_type:
+                    type: string
+    responses:
+      201:
+        description: Invoice created
+      400:
+        description: Bad request
+    """
+    account_id = g.api_account_id
+    data = request.get_json()
+    if not data:
+        return error_response("Missing JSON data", "BAD_REQUEST", 400)
+
+    if not data.get('client_name'):
+        return error_response("client_name is required", "MISSING_FIELD", 400)
+    if not data.get('items') or not isinstance(data['items'], list) or len(data['items']) == 0:
+        return error_response("items list is required with at least one item", "MISSING_FIELD", 400)
+
+    # Get an owner user_id for the account
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
+        """), {"aid": account_id}).first()
+        if not row:
+            return error_response("No owner found", "INTERNAL_ERROR", 400)
+        user_id = row[0]
+
+    # Build form data
+    from werkzeug.datastructures import MultiDict
+    from datetime import datetime
+
+    form_data = MultiDict({
+        'client_name': data['client_name'],
+        'client_email': data.get('client_email', ''),
+        'client_phone': data.get('client_phone', ''),
+        'client_address': data.get('client_address', ''),
+        'invoice_date': data.get('invoice_date', datetime.now().strftime('%Y-%m-%d')),
+        'due_date': data.get('due_date', ''),
+        'tax_rate': str(data.get('tax_rate', 0)),
+        'discount_rate': str(data.get('discount_rate', 0)),
+        'delivery_charge': str(data.get('delivery_charge', 0)),
+        'invoice_type': 'S'
+    })
+
+    for i, item in enumerate(data['items']):
+        form_data.add(f'item_name[]', item.get('name', f'Product {item["product_id"]}'))
+        form_data.add(f'item_qty[]', str(item['qty']))
+        form_data.add(f'item_price[]', str(item['price']))
+        form_data.add(f'item_id[]', str(item['product_id']))
+        form_data.add(f'item_unit_type[]', item.get('unit_type', 'piece'))
+
+    from app.services.invoice_service import InvoiceService
+    service = InvoiceService(user_id)
+    invoice_data, errors = service.create_invoice(form_data, files=None)
+
+    if errors:
+        return error_response(f"Invoice creation failed: {errors}", "INVOICE_ERROR", 400)
+    else:
+        return jsonify({"message": "Invoice created", "invoice_number": invoice_data['invoice_number']}), 201
+    
 # ========== EXPENSES ==========
 @api_v1_bp.route('/expenses', methods=['GET'])
 @limiter.limit("100 per minute")
@@ -330,5 +532,23 @@ def list_stock_movements():
     return jsonify(movements)
 
 
-
+# Add at the bottom of the file
+api_v1_bp.swag = {
+    'definitions': {
+        'InventoryItem': {
+            'type': 'object',
+            'properties': {
+                'id': {'type': 'integer'},
+                'name': {'type': 'string'},
+                'sku': {'type': 'string'},
+                'current_stock': {'type': 'number'},
+                'cost_price': {'type': 'number'},
+                'selling_price': {'type': 'number'},
+                'category': {'type': 'string'},
+                'supplier': {'type': 'string'},
+                'location': {'type': 'string'}
+            }
+        }
+    }
+}
 
