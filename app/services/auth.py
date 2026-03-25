@@ -456,7 +456,20 @@ def update_invoice_status_by_number(account_id, invoice_number, status):
             SET status = :status, updated_at = CURRENT_TIMESTAMP
             WHERE invoice_number = :inv_num AND account_id = :aid
         """), {"status": status, "inv_num": invoice_number, "aid": account_id})
-        return result.rowcount > 0
+        success = result.rowcount > 0
+
+    # Fire webhook if status changed to 'paid'
+    if success and status == 'paid':
+        # Optionally fetch additional invoice data (e.g., grand_total) to include in payload
+        invoice = get_invoice_by_number(account_id, invoice_number)
+        if invoice:
+            fire_webhook(account_id, 'invoice.paid', {
+                'invoice_number': invoice_number,
+                'status': status,
+                'grand_total': invoice['grand_total'],
+                'client_name': invoice['client_name']
+            })
+    return success
 
 def get_expenses_api(account_id, limit=100, offset=0):
     """Fetch expenses for the account."""

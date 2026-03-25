@@ -240,3 +240,33 @@ def revoke_api_key(key_id):
     revoke_api_key(account_id, key_id)
     flash("API key revoked.", "success")
     return redirect(url_for('users.api_keys'))
+
+from app.services.webhooks import create_webhook, get_webhooks, delete_webhook
+
+@users_bp.route('/webhooks', methods=['GET'])
+@role_required('owner')
+def list_webhooks():
+    account_id = session['account_id']
+    webhooks = get_webhooks(account_id)
+    return render_template('users/webhooks.html', webhooks=webhooks, nonce=g.nonce)
+
+@users_bp.route('/webhooks', methods=['POST'])
+@role_required('owner')
+def add_webhook():
+    account_id = session['account_id']
+    url = request.form.get('url')
+    events = request.form.getlist('events')  # from checkboxes
+    if not url or not events:
+        flash("URL and at least one event are required", "error")
+        return redirect(url_for('users.list_webhooks'))
+    create_webhook(account_id, url, events)
+    flash("Webhook added", "success")
+    return redirect(url_for('users.list_webhooks'))
+
+@users_bp.route('/webhooks/<int:webhook_id>/delete', methods=['POST'])
+@role_required('owner')
+def delete_webhook_route(webhook_id):
+    account_id = session['account_id']
+    delete_webhook(account_id, webhook_id)
+    flash("Webhook deleted", "success")
+    return redirect(url_for('users.list_webhooks'))

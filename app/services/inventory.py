@@ -5,6 +5,7 @@ from app.services.db import DB_ENGINE
 from sqlalchemy import text
 from datetime import datetime
 import logging
+from app.services.webhooks import fire_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +61,21 @@ class InventoryManager:
                         "quantity": product_data.get('current_stock', 0)
                     })
 
-                logger.info(f"Product added with full details: {product_data['name']} (ID: {result[0] if result else 'None'})")
-                return result[0] if result else None
+                product_id = result[0] if result else None
+
+                # --- WEBHOOK TRIGGER ---
+                if product_id:
+                    from app.services.webhooks import fire_webhook
+                    fire_webhook(account_id, 'product.created', {
+                        'product_id': product_id,
+                        'name': product_data['name'],
+                        'sku': product_data.get('sku'),
+                        'category': product_data.get('category'),
+                        'current_stock': product_data.get('current_stock', 0)
+                    })
+             
+                logger.info(f"Product added with full details: {product_data['name']} (ID: {product_id})")
+                return product_id
 
         except Exception as e:
             logger.error(f"Error adding product: {e}")
@@ -206,6 +220,13 @@ class InventoryManager:
                     """
                             from app.services.email import send_email
                             send_email(owner_emails, subject, body)
+                        # ----- WEBHOOK TRIGGER -----
+                        fire_webhook(account_id, 'stock.low', {
+                            'product_id': product_id,
+                            'product_name': product_name,
+                            'current_stock': float(new_stock),
+                            'min_stock_level': min_stock_level
+                        })
 
                     # Log movement
                     conn.execute(text('''
