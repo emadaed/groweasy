@@ -14,6 +14,7 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
         """Generate a unique nonce for each request"""
         if not request.path.startswith('/static/'):
             g.nonce = secrets.token_urlsafe(16)
+            print(f"Nonce set for {request.path}: {g.nonce}")
         else:
             g.nonce = None
 
@@ -67,12 +68,14 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
         else:
             csp = [
                 "default-src 'self'",
-                "script-src 'self'",
-                "style-src 'self' 'unsafe-inline'",
+                "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
                 "img-src 'self' data: blob: https:",
-                "font-src 'self'",
-                "connect-src 'self'",
-                "frame-ancestors 'none'"
+                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
+                "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io https://cdn.jsdelivr.net",
+                "frame-ancestors 'none'",
+                "form-action 'self'",
+                "base-uri 'self'"
             ]
         if not nonce:
             print(f"⚠️ No nonce for {request.path} – using fallback CSP")
