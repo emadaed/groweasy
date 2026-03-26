@@ -53,34 +53,21 @@ def inventory_reports():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     try:
-        from app.services.reports import InventoryReports
+        from app.services.reports import InventoryReports        
         account_id = session['account_id']
-        bcg_matrix = []
-        turnover = []
-        profitability = []
-        slow_movers = []
-        try:
-            bcg_matrix = InventoryReports.get_bcg_matrix(account_id)
-        except:
-            pass
-        try:
-            turnover = InventoryReports.get_stock_turnover(account_id, days=30)
-        except:
-            pass
-        try:
-            profitability = InventoryReports.get_profitability_analysis(account_id)
-        except:
-            pass
-        try:
-            slow_movers = InventoryReports.get_slow_movers(account_id, days_threshold=90)
-        except:
-            pass
+
+        # Get all report data
+        bcg_matrix = InventoryReports.get_bcg_matrix(account_id)
+        turnover = InventoryReports.get_stock_turnover(account_id, days=30)
+        profitability = InventoryReports.get_profitability_analysis(account_id)
+        slow_movers = InventoryReports.get_slow_movers(account_id, days_threshold=90)
+
         return render_template("inventory_reports.html",
-                             bcg_matrix=bcg_matrix,
-                             turnover=turnover[:10],
-                             profitability=profitability[:10],
-                             slow_movers=slow_movers,
-                             nonce=g.nonce)
+                               bcg_matrix=bcg_matrix,
+                               turnover=turnover[:10],
+                               profitability=profitability[:10],
+                               slow_movers=slow_movers,
+                               nonce=g.nonce)
     except Exception as e:
         current_app.logger.error(f"Inventory reports error: {e}")
         flash("Reports temporarily unavailable", "info")
