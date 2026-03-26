@@ -534,7 +534,7 @@ def list_stock_movements():
     return jsonify(movements)
 
 
-# Add at the bottom of the file
+# Swagger definitions
 api_v1_bp.swag = {
     'definitions': {
         'InventoryItem': {
@@ -550,7 +550,32 @@ api_v1_bp.swag = {
                 'supplier': {'type': 'string'},
                 'location': {'type': 'string'}
             }
+        },
+        'Customer': {
+            'type': 'object',
+            'properties': {
+                'id': {'type': 'integer'},
+                'name': {'type': 'string'},
+                'email': {'type': 'string'},
+                'phone': {'type': 'string'},
+                'address': {'type': 'string'},
+                'tax_id': {'type': 'string'},
+                'total_spent': {'type': 'number'},
+                'invoice_count': {'type': 'integer'}
+            }
+        },
+        'Invoice': {
+            'type': 'object',
+            'properties': {
+                'id': {'type': 'integer'},
+                'invoice_number': {'type': 'string'},
+                'client_name': {'type': 'string'},
+                'invoice_date': {'type': 'string', 'format': 'date'},
+                'due_date': {'type': 'string', 'format': 'date'},
+                'grand_total': {'type': 'number'},
+                'status': {'type': 'string'},
+                'created_at': {'type': 'string', 'format': 'date-time'}
+            }
         }
     }
 }
-
