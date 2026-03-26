@@ -49,9 +49,7 @@ def create_app():
     app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-    mail.init_app(app)
-
-    #OpenAPI Documentation before return    
+    mail.init_app(app)       
     
     # --- Security: Initialize CSRF Protection ---
     csrf.init_app(app)
@@ -127,13 +125,25 @@ def create_app():
                 .replace('\r', '\\r'))
     
     from flasgger import Swagger
-    swagger = Swagger(app, template={
-        "swagger": "2.0",
-        "info": {
-            "title": "Groweasy API",
-            "description": "API for Groweasy ERP system",
-            "version": "1.0.0"
-        },
+    swagger_config = {
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": 'apispec_1',
+                "route": '/apispec_1.json',
+                "rule_filter": lambda rule: True,
+                "model_filter": lambda tag: True,
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/apidocs/",
+        "title": "Groweasy API",
+        "description": "API for Groweasy ERP system",
+        "version": "1.0.0",
+        "termsOfService": "",
+        "contact": {},
+        "license": {},
         "securityDefinitions": {
             "Bearer": {
                 "type": "apiKey",
@@ -141,44 +151,53 @@ def create_app():
                 "in": "header",
                 "description": "Enter your API key in the format: Bearer <key>"
             }
+        },
+        "definitions": {
+            "InventoryItem": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "name": {"type": "string"},
+                    "sku": {"type": "string"},
+                    "current_stock": {"type": "number"},
+                    "cost_price": {"type": "number"},
+                    "selling_price": {"type": "number"},
+                    "category": {"type": "string"},
+                    "supplier": {"type": "string"},
+                    "location": {"type": "string"}
+                }
+            },
+            "Customer": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "name": {"type": "string"},
+                    "email": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "address": {"type": "string"},
+                    "tax_id": {"type": "string"},
+                    "total_spent": {"type": "number"},
+                    "invoice_count": {"type": "integer"}
+                }
+            },
+            "Invoice": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "invoice_number": {"type": "string"},
+                    "client_name": {"type": "string"},
+                    "invoice_date": {"type": "string", "format": "date"},
+                    "due_date": {"type": "string", "format": "date"},
+                    "grand_total": {"type": "number"},
+                    "status": {"type": "string"},
+                    "created_at": {"type": "string", "format": "date-time"}
+                }
+            }
         }
-    })
+    }
+
+    swagger = Swagger(app, config=swagger_config)
     return app
-
-# STOCK VALIDATION
-##def validate_stock_availability(user_id, invoice_items, invoice_type='S'):
-##    """Validate stock availability BEFORE invoice processing"""
-##    if invoice_type == 'P':  # Purchase order - NO validation needed
-##        return {'success': True, 'message': 'Purchase order - no stock check needed'}
-##    try:
-##        with DB_ENGINE.begin() as conn:
-##            for item in invoice_items:
-##                if item.get('product_id'):
-##                    product_id = item['product_id']
-##                    requested_qty = int(item.get('qty', 1))
-##
-##                    result = conn.execute(text("""
-##                        SELECT name, current_stock
-##                        FROM inventory_items
-##                        WHERE id = :product_id AND user_id = :user_id
-##                    """), {"product_id": product_id, "user_id": user_id}).fetchone()
-##
-##                    if not result:
-##                        return {'success': False, 'message': "Product not found in inventory"}
-##
-##                    product_name, current_stock = result
-##                    if current_stock < requested_qty:
-##                        return {
-##                            'success': False,
-##                            'message': f"Only {current_stock} units available for '{product_name}'"
-##                        }
-##
-##            return {'success': True, 'message': 'Stock available'}
-##
-##    except Exception as e:
-##        print(f"Stock validation error: {e}")
-##        return {'success': False, 'message': 'Stock validation failed'}
-
 
 # --- Helper functions (Outside the create_app function) ---move it app/utils/qr.py
 
