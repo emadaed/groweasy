@@ -13,8 +13,7 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
     def set_nonce():
         """Generate a unique nonce for each request"""
         if not request.path.startswith('/static/'):
-            g.nonce = secrets.token_urlsafe(16)
-            print(f"Nonce set for {request.path}: {g.nonce}")
+            g.nonce = secrets.token_urlsafe(16)           
         else:
             g.nonce = None
 
