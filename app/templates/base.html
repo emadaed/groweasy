@@ -309,11 +309,12 @@
                 <li class="nav-item dropdown">
                     <a href="#" class="nav-item dropdown-toggle" data-bs-toggle="dropdown">
                         <i class="bi bi-bar-chart"></i>
-                        <span>Reports</span>
+                        <span> Reports</span>
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ url_for('reports.stock_movements') }}"><i class="bi bi-truck me-2"></i>Stock Movements</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('reports.tax_certificate') }}"><i class="bi bi-file-pdf me-2"></i>Tax Certificate</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('inventory.inventory_reports') }}"><i class="bi bi-graph-up-arrow me-2"></i>Inventory Analytics</a></li>
                     </ul>
                 </li>
                 {% if session.role == 'owner' %}
