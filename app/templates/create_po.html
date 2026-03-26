@@ -81,6 +81,7 @@
                         <tr>
                             <th>Select</th>
                             <th>Name</th>
+                             <th>SKU</th>    
                             <th>Stock</th>
                             <th>Cost Price</th>
                         </tr>
@@ -88,8 +89,9 @@
                     <tbody>
                         {% for item in inventory_items %}
                         <tr>
-                            <td><input type="checkbox" class="item-check" data-id="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.cost_price }}"></td>
+                            <td><input type="checkbox" class="item-check" data-id="{{ item.id }}" data-name="{{ item.name }}" data-sku="{{ item.sku }}" data-price="{{ item.cost_price }}"></td>
                             <td>{{ item.name }}</td>
+                            <td>{{ item.sku }}</td>   <!-- new -->
                             <td>{{ item.current_stock }}</td>
                             <td>{{ item.cost_price }}</td>
                         </tr>
