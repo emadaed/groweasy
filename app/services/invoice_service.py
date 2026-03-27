@@ -110,7 +110,13 @@ class InvoiceService:
             
             # Check if plan allows purchase orders
             if self.account_id:
-                if not has_feature(self.account_id, 'purchase_orders'):
+                from app.services.account import has_feature, get_account
+                
+                # Stronger check - also directly verify Pro plan
+                account = get_account(self.account_id)
+                if account and account.get('subscription_plan') == 'pro':
+                    pass  # Pro always allowed
+                elif not has_feature(self.account_id, 'purchase_orders'):
                     self.errors.append("Your plan does not include purchase orders. Upgrade to Growth or Pro.")
                     return None, self.errors
 
