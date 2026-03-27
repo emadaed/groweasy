@@ -200,26 +200,26 @@ class InventoryManager:
                     conn.execute(text('''
                         UPDATE inventory_items SET current_stock = :new_stock WHERE id = :product_id
                     '''), {"new_stock": new_stock, "product_id": product_id}),
-                    # After successful stock update, check if new_stock <= min_stock_level
-                    if new_stock <= min_stock_level:
-                        # Fetch owner emails for this account
-                        with DB_ENGINE.connect() as conn2:  # fresh connection to avoid locking
-                            owner_emails = [row[0] for row in conn2.execute(text("""
-                                SELECT email FROM users WHERE account_id = :aid AND role = 'owner'
-                            """), {"aid": account_id})]
-                        if owner_emails:
-                            subject = f"Low Stock Alert: {product_name}"
-                            body = f"""
-                    Dear Owner,
-
-                    The stock of "{product_name}" has dropped to {new_stock} units.
-                    Minimum stock level is {min_stock_level}. Please reorder soon.
-
-                    Best regards,
-                    Groweasy
-                    """
-                            from app.services.email import send_email
-                            send_email(owner_emails, subject, body)
+##                    # After successful stock update, check if new_stock <= min_stock_level
+##                    if new_stock <= min_stock_level:
+##                        # Fetch owner emails for this account
+##                        with DB_ENGINE.connect() as conn2:  # fresh connection to avoid locking
+##                            owner_emails = [row[0] for row in conn2.execute(text("""
+##                                SELECT email FROM users WHERE account_id = :aid AND role = 'owner'
+##                            """), {"aid": account_id})]
+##                        if owner_emails:
+##                            subject = f"Low Stock Alert: {product_name}"
+##                            body = f"""
+##                    Dear Owner,
+##
+##                    The stock of "{product_name}" has dropped to {new_stock} units.
+##                    Minimum stock level is {min_stock_level}. Please reorder soon.
+##
+##                    Best regards,
+##                    Groweasy
+##                    """
+##                            from app.services.email import send_email
+##                            send_email(owner_emails, subject, body)
                         # ----- WEBHOOK TRIGGER -----
                         fire_webhook(account_id, 'stock.low', {
                             'product_id': product_id,
