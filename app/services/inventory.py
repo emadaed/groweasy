@@ -220,13 +220,13 @@ class InventoryManager:
 ##                    """
 ##                            from app.services.email import send_email
 ##                            send_email(owner_emails, subject, body)
-                        # ----- WEBHOOK TRIGGER -----
-                        fire_webhook(account_id, 'stock.low', {
-                            'product_id': product_id,
-                            'product_name': product_name,
-                            'current_stock': float(new_stock),
-                            'min_stock_level': min_stock_level
-                        })
+                    # ----- WEBHOOK TRIGGER -----
+                    fire_webhook(account_id, 'stock.low', {
+                        'product_id': product_id,
+                        'product_name': product_name,
+                        'current_stock': float(new_stock),
+                        'min_stock_level': min_stock_level
+                    })
 
                     # Log movement
                     conn.execute(text('''
