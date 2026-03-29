@@ -291,16 +291,16 @@ def dashboard():
     }
 
     # Email alerts (only for owner, only once per dashboard load)
-    if session.get('role') == 'owner':
-        with DB_ENGINE.connect() as conn:
-            owner_emails = [row[0] for row in conn.execute(text("""
-                SELECT email FROM users WHERE account_id = :aid AND role = 'owner'
-            """), {"aid": account_id})]
-        if owner_emails:
-            from app.services.email_alerts import send_overdue_invoice_reminders
-            overdue_sent = send_overdue_invoice_reminders(account_id, owner_emails)
-            if overdue_sent:
-                flash(f"📧 Sent {overdue_sent} invoice reminder(s).", "info")
+##    if session.get('role') == 'owner':
+##        with DB_ENGINE.connect() as conn:
+##            owner_emails = [row[0] for row in conn.execute(text("""
+##                SELECT email FROM users WHERE account_id = :aid AND role = 'owner'
+##            """), {"aid": account_id})]
+##        if owner_emails:
+##            from app.services.email_alerts import send_overdue_invoice_reminders
+##            overdue_sent = send_overdue_invoice_reminders(account_id, owner_emails)
+##            if overdue_sent:
+##                flash(f"📧 Sent {overdue_sent} invoice reminder(s).", "info")
 
     return render_template(
         "dashboard.html",
