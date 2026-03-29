@@ -30,6 +30,10 @@ class InventoryManager:
 
                     # Inactive product – reactivate and update all fields
                     logger.info(f"Reactivating product ID {product_id} with SKU {product_data['sku']}")
+
+                    # Convert new_stock to Decimal for arithmetic
+                    new_stock = Decimal(str(product_data.get('current_stock', 0)))
+
                     conn.execute(text("""
                         UPDATE inventory_items
                         SET name = :name,
@@ -68,11 +72,10 @@ class InventoryManager:
                         "barcode": product_data.get('barcode'),
                         "pack_size": product_data.get('pack_size', 1.0),
                         "weight_kg": product_data.get('weight_kg'),
-                        "current_stock": product_data.get('current_stock', 0)
+                        "current_stock": new_stock
                     })
 
                     # Log stock movement if quantity changed
-                    new_stock = product_data.get('current_stock', 0)
                     if new_stock != old_stock:
                         conn.execute(text("""
                             INSERT INTO stock_movements
@@ -90,7 +93,7 @@ class InventoryManager:
                         'name': product_data['name'],
                         'sku': product_data.get('sku'),
                         'category': product_data.get('category'),
-                        'current_stock': new_stock
+                        'current_stock': float(new_stock)   # keep webhook payload as float
                     })
 
                     logger.info(f"Product reactivated: {product_data['name']} (ID: {product_id})")
