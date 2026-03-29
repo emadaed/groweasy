@@ -109,7 +109,10 @@ def dashboard():
 
     with DB_ENGINE.connect() as conn:
         # Query counts for wizard
-        product_count = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid"), {"aid": account_id}).scalar() or 0
+        product_count = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items
+            WHERE account_id = :aid AND is_active = TRUE
+        """), {"aid": account_id}).scalar() or 0
         invoice_count = conn.execute(text("SELECT COUNT(*) FROM user_invoices WHERE account_id = :aid"), {"aid": account_id}).scalar() or 0
         show_wizard = (product_count == 0 and invoice_count == 0 and session.get('role') == 'owner')
 
@@ -128,7 +131,7 @@ def dashboard():
         # 3. Inventory value
         inventory_value = conn.execute(text("""
             SELECT COALESCE(SUM(current_stock * cost_price), 0) FROM inventory_items
-            WHERE account_id = :aid
+            WHERE account_id = :aid AND is_active = TRUE
         """), {"aid": account_id}).scalar() or 0
 
         # 4. Tax liability from JSON
@@ -152,23 +155,26 @@ def dashboard():
 
         low_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
-            WHERE account_id = :aid AND current_stock <= min_stock_level AND current_stock > 0
+            WHERE account_id = :aid AND is_active = TRUE
+              AND current_stock <= min_stock_level AND current_stock > 0
         """), {"aid": account_id}).scalar() or 0
 
         out_of_stock_items = conn.execute(text("""
             SELECT COUNT(*) FROM inventory_items
-            WHERE account_id = :aid AND current_stock = 0
+            WHERE account_id = :aid AND is_active = TRUE AND current_stock = 0
         """), {"aid": account_id}).scalar() or 0
 
         # 6. Deadstock (no sales in last 90 days)
         deadstock_items = conn.execute(text("""
             SELECT i.id, i.name, i.sku
             FROM inventory_items i
-            WHERE i.account_id = :aid AND i.id NOT IN (
-                SELECT DISTINCT product_id FROM invoice_items ii
-                JOIN user_invoices ui ON ii.invoice_id = ui.id
-                WHERE ui.account_id = :aid AND ui.invoice_date > NOW() - INTERVAL '90 days'
-            )
+            WHERE i.account_id = :aid
+              AND i.is_active = TRUE
+              AND i.id NOT IN (
+                  SELECT DISTINCT product_id FROM invoice_items ii
+                  JOIN user_invoices ui ON ii.invoice_id = ui.id
+                  WHERE ui.account_id = :aid AND ui.invoice_date > NOW() - INTERVAL '90 days'
+              )
         """), {"aid": account_id}).fetchall()
         deadstock = [{"id": r.id, "name": r.name, "sku": r.sku or '—'} for r in deadstock_items]
 
@@ -176,7 +182,9 @@ def dashboard():
         reorder_rows = conn.execute(text("""
             SELECT id, name, sku, current_stock, min_stock_level
             FROM inventory_items
-            WHERE account_id = :aid AND current_stock <= min_stock_level
+            WHERE account_id = :aid
+              AND is_active = TRUE
+              AND current_stock <= min_stock_level
             ORDER BY current_stock ASC
         """), {"aid": account_id}).fetchall()
         reorder_items = [{
@@ -191,7 +199,11 @@ def dashboard():
         basket_rows = conn.execute(text("""
             SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
             FROM invoice_items a
+            JOIN inventory_items i1 ON a.product_id = i1.id
+                AND i1.account_id = :aid AND i1.is_active = TRUE
             JOIN invoice_items b ON a.invoice_id = b.invoice_id AND a.product_id < b.product_id
+            JOIN inventory_items i2 ON b.product_id = i2.id
+                AND i2.account_id = :aid AND i2.is_active = TRUE
             JOIN user_invoices ui ON a.invoice_id = ui.id
             WHERE ui.account_id = :aid
             GROUP BY prod1, prod2
@@ -222,7 +234,10 @@ def dashboard():
         expiry_rows = conn.execute(text("""
             SELECT id, name, sku, expiry_date
             FROM inventory_items
-            WHERE account_id = :aid AND expiry_date <= NOW() + INTERVAL '30 days' AND expiry_date > NOW()
+            WHERE account_id = :aid
+              AND is_active = TRUE
+              AND expiry_date <= NOW() + INTERVAL '30 days'
+              AND expiry_date > NOW()
             ORDER BY expiry_date ASC
         """), {"aid": account_id}).fetchall()
         expiry_list = [{

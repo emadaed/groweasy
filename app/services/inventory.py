@@ -15,57 +15,136 @@ class InventoryManager:
     def add_product(user_id, account_id, product_data):
         try:
             with DB_ENGINE.begin() as conn:
-                result = conn.execute(text('''
-                    INSERT INTO inventory_items
-                    (user_id, account_id, name, sku, category, description, current_stock,
-                     min_stock_level, cost_price, selling_price, supplier, location,
-                     unit_type, is_perishable, expiry_date, batch_number, barcode,
-                     pack_size, weight_kg)
-                    VALUES 
-                    (:user_id, :account_id, :name, :sku, :category, :description, :current_stock,
-                     :min_stock_level, :cost_price, :selling_price, :supplier, :location,
-                     :unit_type, :is_perishable, :expiry_date, :batch_number, :barcode,
-                     :pack_size, :weight_kg)
-                    RETURNING id
-                '''), {
-                    "user_id": user_id,
-                    "account_id": account_id,
-                    "name": product_data['name'],
-                    "sku": product_data.get('sku'),
-                    "category": product_data.get('category'),
-                    "description": product_data.get('description'),
-                    "current_stock": product_data.get('current_stock', 0),
-                    "min_stock_level": product_data.get('min_stock_level', 5),
-                    "cost_price": product_data.get('cost_price', 0.0),
-                    "selling_price": product_data.get('selling_price', 0.0),
-                    "supplier": product_data.get('supplier'),
-                    "location": product_data.get('location'),
-                    "unit_type": product_data.get('unit_type', 'piece'),
-                    "is_perishable": product_data.get('is_perishable', False),
-                    "expiry_date": product_data.get('expiry_date'),
-                    "batch_number": product_data.get('batch_number'),
-                    "barcode": product_data.get('barcode'),
-                    "pack_size": product_data.get('pack_size', 1.0),
-                    "weight_kg": product_data.get('weight_kg'),
-                }).fetchone()
+                # Check if product exists (active or inactive) with same user and sku
+                existing = conn.execute(text("""
+                    SELECT id, is_active, current_stock FROM inventory_items
+                    WHERE user_id = :user_id AND sku = :sku
+                """), {"user_id": user_id, "sku": product_data.get('sku')}).fetchone()
 
-                if result and product_data.get('current_stock', 0) > 0:
-                    product_id = result[0]
-                    conn.execute(text('''
-                        INSERT INTO stock_movements
-                        (user_id, product_id, movement_type, quantity, notes)
-                        VALUES (:user_id, :product_id, 'initial', :quantity, 'Initial stock')
-                    '''), {
-                        "user_id": user_id,
-                        "product_id": product_id,
-                        "quantity": product_data.get('current_stock', 0)
+                if existing:
+                    product_id, is_active, old_stock = existing
+                    if is_active:
+                        # Already active – skip insertion, return existing id
+                        logger.info(f"Product with SKU {product_data['sku']} already active, returning existing ID {product_id}")
+                        return product_id
+
+                    # Inactive product – reactivate and update all fields
+                    logger.info(f"Reactivating product ID {product_id} with SKU {product_data['sku']}")
+                    conn.execute(text("""
+                        UPDATE inventory_items
+                        SET name = :name,
+                            category = :category,
+                            description = :description,
+                            min_stock_level = :min_stock_level,
+                            cost_price = :cost_price,
+                            selling_price = :selling_price,
+                            supplier = :supplier,
+                            location = :location,
+                            unit_type = :unit_type,
+                            is_perishable = :is_perishable,
+                            expiry_date = :expiry_date,
+                            batch_number = :batch_number,
+                            barcode = :barcode,
+                            pack_size = :pack_size,
+                            weight_kg = :weight_kg,
+                            current_stock = :current_stock,
+                            is_active = TRUE,
+                            updated_at = NOW()
+                        WHERE id = :id
+                    """), {
+                        "id": product_id,
+                        "name": product_data['name'],
+                        "category": product_data.get('category'),
+                        "description": product_data.get('description'),
+                        "min_stock_level": product_data.get('min_stock_level', 5),
+                        "cost_price": product_data.get('cost_price', 0.0),
+                        "selling_price": product_data.get('selling_price', 0.0),
+                        "supplier": product_data.get('supplier'),
+                        "location": product_data.get('location'),
+                        "unit_type": product_data.get('unit_type', 'piece'),
+                        "is_perishable": product_data.get('is_perishable', False),
+                        "expiry_date": product_data.get('expiry_date'),
+                        "batch_number": product_data.get('batch_number'),
+                        "barcode": product_data.get('barcode'),
+                        "pack_size": product_data.get('pack_size', 1.0),
+                        "weight_kg": product_data.get('weight_kg'),
+                        "current_stock": product_data.get('current_stock', 0)
                     })
 
-                product_id = result[0] if result else None
+                    # Log stock movement if quantity changed
+                    new_stock = product_data.get('current_stock', 0)
+                    if new_stock != old_stock:
+                        conn.execute(text("""
+                            INSERT INTO stock_movements
+                            (user_id, product_id, movement_type, quantity, notes)
+                            VALUES (:user_id, :product_id, 'reactivation', :quantity, 'Reactivated with stock update')
+                        """), {
+                            "user_id": user_id,
+                            "product_id": product_id,
+                            "quantity": new_stock - old_stock
+                        })
 
-                # --- WEBHOOK TRIGGER ---
-                if product_id:
-                    from app.services.webhooks import fire_webhook
+                    # Fire webhook (reactivation)
+                    fire_webhook(account_id, 'product.created', {
+                        'product_id': product_id,
+                        'name': product_data['name'],
+                        'sku': product_data.get('sku'),
+                        'category': product_data.get('category'),
+                        'current_stock': new_stock
+                    })
+
+                    logger.info(f"Product reactivated: {product_data['name']} (ID: {product_id})")
+                    return product_id
+
+                else:
+                    # Insert new product
+                    result = conn.execute(text('''
+                        INSERT INTO inventory_items
+                        (user_id, account_id, name, sku, category, description, current_stock,
+                         min_stock_level, cost_price, selling_price, supplier, location,
+                         unit_type, is_perishable, expiry_date, batch_number, barcode,
+                         pack_size, weight_kg)
+                        VALUES 
+                        (:user_id, :account_id, :name, :sku, :category, :description, :current_stock,
+                         :min_stock_level, :cost_price, :selling_price, :supplier, :location,
+                         :unit_type, :is_perishable, :expiry_date, :batch_number, :barcode,
+                         :pack_size, :weight_kg)
+                        RETURNING id
+                    '''), {
+                        "user_id": user_id,
+                        "account_id": account_id,
+                        "name": product_data['name'],
+                        "sku": product_data.get('sku'),
+                        "category": product_data.get('category'),
+                        "description": product_data.get('description'),
+                        "current_stock": product_data.get('current_stock', 0),
+                        "min_stock_level": product_data.get('min_stock_level', 5),
+                        "cost_price": product_data.get('cost_price', 0.0),
+                        "selling_price": product_data.get('selling_price', 0.0),
+                        "supplier": product_data.get('supplier'),
+                        "location": product_data.get('location'),
+                        "unit_type": product_data.get('unit_type', 'piece'),
+                        "is_perishable": product_data.get('is_perishable', False),
+                        "expiry_date": product_data.get('expiry_date'),
+                        "batch_number": product_data.get('batch_number'),
+                        "barcode": product_data.get('barcode'),
+                        "pack_size": product_data.get('pack_size', 1.0),
+                        "weight_kg": product_data.get('weight_kg'),
+                    }).fetchone()
+
+                    product_id = result[0]
+                    if product_data.get('current_stock', 0) > 0:
+                        conn.execute(text('''
+                            INSERT INTO stock_movements
+                            (user_id, product_id, movement_type, quantity, notes)
+                            VALUES (:user_id, :product_id, 'initial', :quantity, 'Initial stock')
+                        '''), {
+                            "user_id": user_id,
+                            "product_id": product_id,
+                            "quantity": product_data.get('current_stock', 0)
+                        })
+
+                    # Fire webhook for new product
                     fire_webhook(account_id, 'product.created', {
                         'product_id': product_id,
                         'name': product_data['name'],
@@ -73,12 +152,12 @@ class InventoryManager:
                         'category': product_data.get('category'),
                         'current_stock': product_data.get('current_stock', 0)
                     })
-             
-                logger.info(f"Product added with full details: {product_data['name']} (ID: {product_id})")
-                return product_id
+
+                    logger.info(f"Product added: {product_data['name']} (ID: {product_id})")
+                    return product_id
 
         except Exception as e:
-            logger.error(f"Error adding product: {e}")
+            logger.error(f"Error adding product: {e}", exc_info=True)
             return None
 
     @staticmethod
