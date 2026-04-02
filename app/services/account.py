@@ -7,7 +7,7 @@ from datetime import datetime
 PLAN_LIMITS = {
     'starter': {
         'invoice_limit': 100,
-        'inventory_limit': None,
+        'inventory_limit': 2000,
         'user_limit': 1,
         'has_purchase_orders': False,
         'has_ai_insights': False,

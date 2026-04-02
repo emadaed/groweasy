@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://groweasy.up.railway.app/sitemap.xml
