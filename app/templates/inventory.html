@@ -64,7 +64,7 @@
             {% set inventory_summary.total = inventory_summary.total + 1 %}
             {% if item.current_stock == 0 %}
                 {% set inventory_summary.out_of_stock = inventory_summary.out_of_stock + 1 %}
-            {% elif item.current_stock > 0 and item.current_stock <= item.min_stock_level %}
+         {% elif item.current_stock > 0 and item.min_stock_level is not none and item.current_stock <= item.min_stock_level %}
                 {% set inventory_summary.low_stock = inventory_summary.low_stock + 1 %}
             {% elif item.current_stock > 0 %}
                 {% set inventory_summary.in_stock = inventory_summary.in_stock + 1 %}
@@ -142,6 +142,13 @@
                                 <span class="badge {% if item.current_stock == 0 %}bg-danger{% elif item.current_stock <= item.min_stock_level %}bg-warning{% else %}bg-success{% endif %}">
                                     {{ item.current_stock }}
                                 </span>
+                                <!-- Location breakdown button - FIXED: using 'item' not 'product' -->
+                                {% if item.location_breakdown %}
+                                    <button class="btn btn-sm btn-link" data-bs-toggle="modal" 
+                                            data-bs-target="#locationModal{{ item.id }}">
+                                        📍 View locations
+                                    </button>
+                                {% endif %}
                             </td>
                             <td>{{ item.min_stock_level }}</td>
                             <td>{{ currency_symbol }}{{ "%.2f"|format(item.cost_price or 0) }}</td>
@@ -170,6 +177,43 @@
                                 </div>
                             </td>
                         </tr>
+                        
+                        <!-- Location Modal - MOVED OUTSIDE the table row but still in loop -->
+                        {% if item.location_breakdown %}
+                        <div class="modal fade" id="locationModal{{ item.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">{{ item.name }} - Stock by Location</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Location</th>
+                                                    <th>Quantity</th>
+                                                    <th>Reserved</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for loc in item.location_breakdown.locations %}
+                                                <tr>
+                                                    <td>{{ loc.location_name }}</td>
+                                                    <td>{{ loc.quantity }}</td>
+                                                    <td>{{ loc.reserved }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -185,8 +229,7 @@
             {% endif %}
         </div>
     </div>
-</div>
-
+ </div>
 <!-- ====================== UPDATED ADD PRODUCT MODAL ====================== -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -269,6 +312,7 @@
                             </div>
                         </div>
                     </div>
+                    
 
                     <!-- Prices -->
                     <div class="row">

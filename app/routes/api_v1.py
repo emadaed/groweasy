@@ -533,3 +533,89 @@ def list_stock_movements():
     movements = InventoryManager.get_stock_movements(account_id, product_id, limit, offset)
     return jsonify(movements)
 
+
+# ========== LOCATION MANAGEMENT ==========
+
+@api_v1_bp.route('/locations', methods=['GET'])
+@require_auth
+def list_locations():
+    """Get all locations for the account"""
+    account_id = g.api_account_id
+    from app.services.location_inventory import LocationInventoryManager
+    locations = LocationInventoryManager.get_account_locations(account_id)
+    return jsonify(locations)
+
+@api_v1_bp.route('/locations', methods=['POST'])
+@csrf.exempt
+@require_auth
+def create_location():
+    """Create a new location"""
+    account_id = g.api_account_id
+    data = request.get_json()
+    
+    if not data.get('location_code') or not data.get('location_name'):
+        return error_response("location_code and location_name required", "MISSING_FIELD", 400)
+    
+    from app.services.location_inventory import LocationInventoryManager
+    location_id = LocationInventoryManager.create_location(account_id, data)
+    
+    if location_id:
+        return jsonify({"id": location_id, "message": "Location created"}), 201
+    else:
+        return error_response("Failed to create location", "DATABASE_ERROR", 400)
+
+@api_v1_bp.route('/products/<int:product_id>/locations', methods=['GET'])
+@require_auth
+def get_product_locations(product_id):
+    """Get stock breakdown by location for a product"""
+    account_id = g.api_account_id
+    
+    # Verify product belongs to account
+    product = InventoryManager.get_product_details(account_id, product_id)
+    if not product:
+        return error_response("Product not found", "NOT_FOUND", 404)
+    
+    from app.services.location_inventory import LocationInventoryManager
+    breakdown = LocationInventoryManager.get_product_location_breakdown(product_id)
+    return jsonify(breakdown)
+
+@api_v1_bp.route('/transfer', methods=['POST'])
+@csrf.exempt
+@require_auth
+def transfer_stock():
+    """Transfer stock between locations"""
+    account_id = g.api_account_id
+    data = request.get_json()
+    
+    required = ['product_id', 'from_location_id', 'to_location_id', 'quantity']
+    for field in required:
+        if field not in data:
+            return error_response(f"{field} is required", "MISSING_FIELD", 400)
+    
+    # Get user_id (owner)
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1
+        """), {"aid": account_id}).first()
+        if not row:
+            return error_response("No owner found", "INTERNAL_ERROR", 400)
+        user_id = row[0]
+    
+    from app.services.location_inventory import LocationInventoryManager
+    transfer_number = LocationInventoryManager.transfer_between_locations(
+        account_id=account_id,
+        product_id=data['product_id'],
+        from_location_id=data['from_location_id'],
+        to_location_id=data['to_location_id'],
+        quantity=Decimal(str(data['quantity'])),
+        user_id=user_id,
+        notes=data.get('notes')
+    )
+    
+    if transfer_number:
+        return jsonify({
+            "message": "Transfer completed",
+            "transfer_number": transfer_number
+        }), 200
+    else:
+        return error_response("Transfer failed (insufficient stock?)", "TRANSFER_ERROR", 400)

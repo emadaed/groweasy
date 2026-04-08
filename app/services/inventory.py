@@ -162,7 +162,50 @@ class InventoryManager:
         except Exception as e:
             logger.error(f"Error adding product: {e}", exc_info=True)
             return None
+# Add to existing InventoryManager class
 
+    @staticmethod
+    def add_product_with_location(user_id, account_id, product_data, location_data=None):
+        """
+        Add product with optional location assignment
+        location_data: {'location_id': 1, 'quantity': 50} or [{'location_id':1,'quantity':30}, ...]
+        """
+        try:
+            # First add product using existing method
+            product_id = InventoryManager.add_product(user_id, account_id, product_data)
+            
+            if not product_id:
+                return None
+            
+            # If location data provided, add stock to locations
+            if location_data:
+                from app.services.location_inventory import LocationInventoryManager
+                
+                if isinstance(location_data, list):
+                    for loc in location_data:
+                        LocationInventoryManager.add_product_to_location(
+                            product_id, loc['location_id'], loc['quantity'], user_id
+                        )
+                else:
+                    LocationInventoryManager.add_product_to_location(
+                        product_id, location_data['location_id'], 
+                        location_data['quantity'], user_id
+                    )
+            
+            return product_id
+        except Exception as e:
+            logger.error(f"Error adding product with location: {e}")
+            return None
+
+    @staticmethod
+    def get_product_details_with_locations(account_id, product_id):
+        """Get product details including location breakdown"""
+        product = InventoryManager.get_product_details(account_id, product_id)
+        if product:
+            from app.services.location_inventory import LocationInventoryManager
+            product['location_breakdown'] = LocationInventoryManager.get_product_location_breakdown(product_id)
+        return product
+    
     @staticmethod
     def update_product(user_id, product_id, product_data):
         try:
@@ -405,7 +448,7 @@ class InventoryManager:
                 '''), {"aid": account_id})
                 items = []
                 for row in result:
-                    items.append({
+                    item = {
                         'id': row.id,
                         'name': row.name,
                         'sku': row.sku or 'N/A',
@@ -416,12 +459,16 @@ class InventoryManager:
                         'selling_price': float(row.selling_price) if row.selling_price else 0.0,
                         'supplier': row.supplier or '',
                         'location': row.location or ''
-                    })
+                    }
+                    # Add location breakdown
+                    from app.services.location_inventory import LocationInventoryManager
+                    item['location_breakdown'] = LocationInventoryManager.get_product_location_breakdown(row.id)
+                    items.append(item)
                 return items
         except Exception as e:
             logger.error(f"Error fetching inventory: {e}")
             return []
-
+        
     @staticmethod
     def get_inventory_report(account_id):
         try:
