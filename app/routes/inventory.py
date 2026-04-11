@@ -33,7 +33,7 @@ def inventory():
 
     account_id = session['account_id']
     from app.context_processors import CURRENCY_SYMBOLS
-    from app.services.auth import get_user_profile_cached
+    from app.services.cache import get_user_profile_cached
     
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
