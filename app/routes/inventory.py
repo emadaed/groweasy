@@ -32,6 +32,12 @@ def inventory():
         return redirect(url_for('auth.login'))
 
     account_id = session['account_id']
+    from app.context_processors import CURRENCY_SYMBOLS
+    from app.services.auth import get_user_profile_cached
+    
+    user_profile = get_user_profile_cached(session['user_id'])
+    currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+    
     with DB_ENGINE.connect() as conn:
         items = conn.execute(text("""
             SELECT id, name, sku, category, current_stock, min_stock_level,
@@ -40,11 +46,15 @@ def inventory():
             WHERE account_id = :aid AND is_active = TRUE
             ORDER BY name
         """), {"aid": account_id}).fetchall()
-    inventory_items = [dict(row._mapping) for row in items]
+    
+    # Use the updated get_inventory_items method that includes location breakdown
+    inventory_items = InventoryManager.get_inventory_items(account_id)
     low_stock_alerts = InventoryManager.get_low_stock_alerts(account_id)
+    
     return render_template("inventory.html",
                          inventory_items=inventory_items,
                          low_stock_alerts=low_stock_alerts,
+                         currency_symbol=currency_symbol,
                          nonce=g.nonce)
 
 @inventory_bp.route("/inventory_reports")

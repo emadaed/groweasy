@@ -543,3 +543,4 @@ class InventoryManager:
             'notes': r[7],
             'created_at': r[8].isoformat() if r[8] else None
         } for r in rows]
+    
