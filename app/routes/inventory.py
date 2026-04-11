@@ -83,6 +83,40 @@ def inventory_reports():
         flash("Reports temporarily unavailable", "info")
         return redirect(url_for('inventory.inventory'))
 
+@inventory_bp.route("/inventory/dashboard")
+@role_required('owner', 'assistant')
+def inventory_dashboard():
+    """Location Dashboard View"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    from app.services.auth import get_api_key_for_user
+    api_key = get_api_key_for_user(session['user_id'])
+    
+    return render_template("inventory_dashboard.html", 
+                         api_key=api_key,
+                         nonce=g.nonce)
+
+@inventory_bp.route("/inventory/catalog")
+@role_required('owner', 'assistant')
+def inventory_catalog():
+    """Product Catalog View"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    from app.context_processors import CURRENCY_SYMBOLS
+    from app.services.cache import get_user_profile_cached
+    from app.services.auth import get_api_key_for_user
+    
+    user_profile = get_user_profile_cached(session['user_id'])
+    currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+    api_key = get_api_key_for_user(session['user_id'])
+    
+    return render_template("inventory_catalog.html",
+                         currency_symbol=currency_symbol,
+                         api_key=api_key,
+                         nonce=g.nonce)
+
 @inventory_bp.route("/add_product", methods=['POST'])
 @role_required('owner', 'assistant')
 def add_product():

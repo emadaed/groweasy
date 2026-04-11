@@ -33,6 +33,16 @@ def verify_user(email, password):
         return result[0]
     return None
 
+def get_api_key_for_user(user_id):
+    """Get API key for a user"""
+    with DB_ENGINE.connect() as conn:
+        result = conn.execute(text("""
+            SELECT api_key FROM api_keys WHERE user_id = :uid AND is_active = TRUE
+        """), {"uid": user_id}).first()
+        if result:
+            return result[0]
+    return None
+
 def update_user_profile(user_id, company_name=None, company_address=None, company_phone=None,
                        company_tax_id=None, seller_ntn=None, seller_strn=None, preferred_currency=None):
     with DB_ENGINE.begin() as conn:

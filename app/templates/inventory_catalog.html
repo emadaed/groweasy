@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-box-seam"></i> Product Catalog</h2>
+            <p class="text-muted">Browse and manage your inventory</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary" onclick="window.location.href='/inventory/dashboard'">
+                <i class="bi bi-building"></i> Location Dashboard
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                <i class="bi bi-plus-circle"></i> Add Product
+            </button>
+            <a href="{{ url_for('inventory.bulk_upload') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-cloud-upload"></i> Bulk Import
+            </a>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search by name or SKU...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="locationFilter">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="stockFilter">
+                        <option value="">All Stock Levels</option>
+                        <option value="low">Low Stock (≤ Min Level)</option>
+                        <option value="out">Out of Stock</option>
+                        <option value="in">In Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="sortBy">
+                        <option value="name">Sort by Name</option>
+                        <option value="stock">Sort by Stock</option>
+                        <option value="price">Sort by Price</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Grid (Card View) -->
+    <div class="row" id="productGrid">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading products...</p>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav>
+                <ul class="pagination justify-content-center" id="pagination">
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- Product Card Modal (View Details) -->
+<div class="modal fade" id="productDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailProductName"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Product Details</h6>
+                        <table class="table table-sm">
+                            <tr><th>SKU:</th><td id="detailSku"></td></tr>
+                            <tr><th>Category:</th><td id="detailCategory"></td></tr>
+                            <tr><th>Supplier:</th><td id="detailSupplier"></td></tr>
+                            <tr><th>Location:</th><td id="detailLocation"></td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Pricing</h6>
+                        <table class="table table-sm">
+                            <tr><th>Cost Price:</th><td id="detailCostPrice"></td></tr>
+                            <tr><th>Selling Price:</th><td id="detailSellingPrice"></td></tr>
+                            <tr><th>Min Stock:</th><td id="detailMinStock"></td></tr>
+                        </table>
+                    </div>
+                </div>
+                <hr>
+                <h6>Stock by Location</h6>
+                <table class="table table-sm" id="detailLocations">
+                    <thead><tr><th>Location</th><th>Quantity</th><th>Reserved</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="transferFromDetail()">Transfer Stock</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+let allProducts = [];
+let currentPage = 1;
+const itemsPerPage = 20;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    loadLocationFilter();
+});
+
+function loadProducts() {
+    fetch('/api/v1/inventory', {
+        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        allProducts = data;
+        applyFiltersAndRender();
+    })
+    .catch(err => {
+        console.error('Error loading products:', err);
+        document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Error loading products</div>';
+    });
+}
+
+function loadLocationFilter() {
+    fetch('/api/v1/locations', {
+        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const filter = document.getElementById('locationFilter');
+        data.forEach(loc => {
+            filter.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
+        });
+    });
+}
+
+function applyFiltersAndRender() {
+    let filtered = [...allProducts];
+    
+    // Search filter
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    if (searchTerm) {
+        filtered = filtered.filter(p => 
+            p.name.toLowerCase().includes(searchTerm) || 
+            p.sku.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Stock filter
+    const stockFilter = document.getElementById('stockFilter').value;
+    if (stockFilter === 'low') {
+        filtered = filtered.filter(p => p.current_stock <= p.min_stock_level && p.current_stock > 0);
+    } else if (stockFilter === 'out') {
+        filtered = filtered.filter(p => p.current_stock == 0);
+    } else if (stockFilter === 'in') {
+        filtered = filtered.filter(p => p.current_stock > p.min_stock_level);
+    }
+    
+    // Sort
+    const sortBy = document.getElementById('sortBy').value;
+    if (sortBy === 'name') {
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'stock') {
+        filtered.sort((a, b) => b.current_stock - a.current_stock);
+    } else if (sortBy === 'price') {
+        filtered.sort((a, b) => b.selling_price - a.selling_price);
+    }
+    
+    renderProducts(filtered);
+}
+
+function renderProducts(products) {
+    const totalPages = Math.ceil(products.length / itemsPerPage);
+    const start = (currentPage - 1) * itemsPerPage;
+    const pageProducts = products.slice(start, start + itemsPerPage);
+    
+    const grid = document.getElementById('productGrid');
+    
+    if (pageProducts.length === 0) {
+        grid.innerHTML = '<div class="col-12 text-center py-5"><h5>No products found</h5></div>';
+        return;
+    }
+    
+    grid.innerHTML = '';
+    pageProducts.forEach(product => {
+        const stockClass = product.current_stock == 0 ? 'danger' : 
+                          (product.current_stock <= product.min_stock_level ? 'warning' : 'success');
+        
+        const locationCount = product.location_breakdown ? product.location_breakdown.locations.length : 1;
+        const totalStock = product.location_breakdown ? product.location_breakdown.total_stock : product.current_stock;
+        
+        grid.innerHTML += `
+            <div class="col-md-3 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-${stockClass} text-white">
+                        <div class="d-flex justify-content-between">
+                            <strong>${escapeHtml(product.name)}</strong>
+                            <span class="badge bg-light text-dark">${product.sku}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <h3 class="text-${stockClass}">${formatNumber(totalStock)}</h3>
+                            <small class="text-muted">Total Stock</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Locations: ${locationCount}</small>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small>Cost: ${formatCurrency(product.cost_price)}</small>
+                            <small>Sell: ${formatCurrency(product.selling_price)}</small>
+                        </div>
+                        ${product.location_breakdown ? `
+                            <div class="mt-2">
+                                <small class="text-muted">Breakdown:</small>
+                                <div class="small">
+                                    ${product.location_breakdown.locations.slice(0, 2).map(loc => 
+                                        `${loc.location_name}: ${loc.quantity}`
+                                    ).join(' | ')}
+                                    ${product.location_breakdown.locations.length > 2 ? '...' : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewProduct(${product.id})">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="quickTransfer(${product.id})">
+                                <i class="bi bi-arrow-left-right"></i> Transfer
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="adjustStock(${product.id})">
+                                <i class="bi bi-pencil"></i> Adjust
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    
+    pagination.innerHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
+    </li>`;
+    
+    for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+        pagination.innerHTML += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        </li>`;
+    }
+    
+    pagination.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
+    </li>`;
+}
+
+function changePage(page) {
+    currentPage = page;
+    applyFiltersAndRender();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function viewProduct(productId) {
+    const product = allProducts.find(p => p.id == productId);
+    if (!product) return;
+    
+    document.getElementById('detailProductName').textContent = product.name;
+    document.getElementById('detailSku').textContent = product.sku;
+    document.getElementById('detailCategory').textContent = product.category || 'N/A';
+    document.getElementById('detailSupplier').textContent = product.supplier || 'N/A';
+    document.getElementById('detailLocation').textContent = product.location || 'Main';
+    document.getElementById('detailCostPrice').textContent = formatCurrency(product.cost_price);
+    document.getElementById('detailSellingPrice').textContent = formatCurrency(product.selling_price);
+    document.getElementById('detailMinStock').textContent = product.min_stock_level;
+    
+    const tbody = document.querySelector('#detailLocations tbody');
+    tbody.innerHTML = '';
+    if (product.location_breakdown && product.location_breakdown.locations) {
+        product.location_breakdown.locations.forEach(loc => {
+            tbody.innerHTML += `<tr><td>${loc.location_name}</td><td>${loc.quantity}</td><td>${loc.reserved || 0}</td></tr>`;
+        });
+    } else {
+        tbody.innerHTML += `<tr><td colspan="3">No location data</td></tr>`;
+    }
+    
+    new bootstrap.Modal(document.getElementById('productDetailModal')).show();
+}
+
+function quickTransfer(productId) {
+    // Store product ID and open transfer modal
+    sessionStorage.setItem('transferProductId', productId);
+    window.location.href = '/inventory/dashboard';
+}
+
+function adjustStock(productId) {
+    alert('Stock adjustment coming soon for product ID: ' + productId);
+}
+
+// Event listeners for filters
+document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFiltersAndRender(); });
+document.getElementById('locationFilter').addEventListener('change', () => { currentPage = 1; applyFiltersAndRender(); });
+document.getElementById('stockFilter').addEventListener('change', () => { currentPage = 1; applyFiltersAndRender(); });
+document.getElementById('sortBy').addEventListener('change', () => { applyFiltersAndRender(); });
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+function formatCurrency(amount) {
+    return '{{ currency_symbol }}' + (amount || 0).toFixed(2);
+}
+</script>
+{% endblock %}

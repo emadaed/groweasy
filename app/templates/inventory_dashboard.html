@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-building"></i> Location Dashboard</h2>
+            <p class="text-muted">Real-time inventory status across all locations</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" onclick="showProductCatalog()">
+                <i class="bi bi-box-seam"></i> View Product Catalog
+            </button>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#transferModal">
+                <i class="bi bi-arrow-left-right"></i> Transfer Stock
+            </button>
+        </div>
+    </div>
+
+    <!-- Location Summary Cards -->
+    <div class="row mb-4" id="locationCards">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-map"></i> Stock by Location</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="locationStats">
+                        <div class="col text-center">Loading location data...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Transfer Panel -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Quick Transfer</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Product</label>
+                            <select class="form-select" id="quickProductId">
+                                <option value="">Search product...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">From Location</label>
+                            <select class="form-select" id="quickFromLocation"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">To Location</label>
+                            <select class="form-select" id="quickToLocation"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" class="form-control" id="quickQuantity" min="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="executeQuickTransfer()">
+                                <i class="bi bi-arrow-left-right"></i> Transfer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Summary -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Low Stock Alerts</h5>
+                </div>
+                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                    <div id="lowStockList">
+                        <div class="text-center">Loading alerts...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Stock Movements -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-clock-history"></i> Recent Stock Movements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentMovements">
+                                <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-arrow-left-right"></i> Transfer Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Product *</label>
+                    <select class="form-select" id="transferProductId" required>
+                        <option value="">Select product...</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">From Location *</label>
+                        <select class="form-select" id="transferFromLocation" required></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">To Location *</label>
+                        <select class="form-select" id="transferToLocation" required></select>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">Quantity *</label>
+                    <input type="number" class="form-control" id="transferQuantity" min="1" required>
+                    <small class="text-muted" id="availableStock">Available: --</small>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">Notes (Optional)</label>
+                    <textarea class="form-control" id="transferNotes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitTransfer()">Execute Transfer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ nonce }}">
+let locations = [];
+
+// Load all data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadLocations();
+    loadLocationStats();
+    loadLowStockAlerts();
+    loadRecentMovements();
+    loadProductsForSelect();
+});
+
+function loadLocations() {
+    fetch('/api/v1/locations', {
+        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        locations = data;
+        populateLocationSelects();
+    })
+    .catch(err => console.error('Error loading locations:', err));
+}
+
+function populateLocationSelects() {
+    const selects = ['quickFromLocation', 'quickToLocation', 'transferFromLocation', 'transferToLocation'];
+    selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (select) {
+            select.innerHTML = '<option value="">Select location...</option>';
+            locations.forEach(loc => {
+                select.innerHTML += `<option value="${loc.id}">${loc.location_name} (${loc.location_code})</option>`;
+            });
+        }
+    });
+}
+
+function loadLocationStats() {
+    fetch('/api/v1/locations/stats', {
+        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const container = document.getElementById('locationStats');
+        if (data.length === 0) {
+            container.innerHTML = '<div class="col text-center">No locations found. Create your first location.</div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        data.forEach(loc => {
+            container.innerHTML += `
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-${getColorForType(loc.type)} text-white">
+                        <div class="card-body">
+                            <h6 class="card-title">${loc.location_name}</h6>
+                            <h3>${formatNumber(loc.total_value)}</h3>
+                            <small>${loc.product_count} products | ${formatNumber(loc.total_units)} units</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    })
+    .catch(err => console.error('Error loading stats:', err));
+}
+
+function loadLowStockAlerts() {
+    fetch('/api/v1/inventory/low-stock', {
+        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const container = document.getElementById('lowStockList');
+        if (data.length === 0) {
+            container.innerHTML = '<div class="alert alert-success">No low stock items!</div>';
+            return;
+        }
+        
+        container.innerHTML = '<div class="list-group">';
+        data.slice(0, 10).forEach(item => {
+            container.innerHTML += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>${item.name}</strong>
+                        <span class="badge bg-warning">${item.current_stock} / ${item.min_stock_level}</span>
+                    </div>
+                    <small class="text-muted">SKU: ${item.sku || 'N/A'}</small>
+                </div>
+            `;
+        });
+        container.innerHTML += '</div>';
+    })
+    .catch(err => console.error('Error loading alerts:', err));
+}
+
+function loadRecentMovements() {
+    fetch('/api/v1/stock-movements/recent', {
+        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const tbody = document.getElementById('recentMovements');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No movements yet</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        data.forEach(move => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${new Date(move.created_at).toLocaleDateString()}</td>
+                    <td>${move.product_name}</td>
+                    <td>${move.from_location || 'N/A'}</td>
+                    <td>${move.to_location || 'N/A'}</td>
+                    <td>${move.quantity}</td>
+                    <td><span class="badge bg-success">${move.status || 'completed'}</span></td>
+                </tr>
+            `;
+        });
+    })
+    .catch(err => console.error('Error loading movements:', err));
+}
+
+function loadProductsForSelect() {
+    fetch('/api/v1/inventory', {
+        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const selects = ['quickProductId', 'transferProductId'];
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.innerHTML = '<option value="">Search product...</option>';
+                data.slice(0, 100).forEach(product => {
+                    select.innerHTML += `<option value="${product.id}">${product.name} (${product.sku}) - Stock: ${product.current_stock}</option>`;
+                });
+            }
+        });
+    })
+    .catch(err => console.error('Error loading products:', err));
+}
+
+function executeQuickTransfer() {
+    const productId = document.getElementById('quickProductId').value;
+    const fromLocation = document.getElementById('quickFromLocation').value;
+    const toLocation = document.getElementById('quickToLocation').value;
+    const quantity = document.getElementById('quickQuantity').value;
+    
+    if (!productId || !fromLocation || !toLocation || !quantity) {
+        alert('Please fill all fields');
+        return;
+    }
+    
+    submitTransferData(productId, fromLocation, toLocation, quantity, '');
+}
+
+function submitTransfer() {
+    const productId = document.getElementById('transferProductId').value;
+    const fromLocation = document.getElementById('transferFromLocation').value;
+    const toLocation = document.getElementById('transferToLocation').value;
+    const quantity = document.getElementById('transferQuantity').value;
+    const notes = document.getElementById('transferNotes').value;
+    
+    if (!productId || !fromLocation || !toLocation || !quantity) {
+        alert('Please fill all required fields');
+        return;
+    }
+    
+    submitTransferData(productId, fromLocation, toLocation, quantity, notes);
+}
+
+function submitTransferData(productId, fromLocation, toLocation, quantity, notes) {
+    fetch('/api/v1/transfer', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer {{ api_key }}'
+        },
+        body: JSON.stringify({
+            product_id: parseInt(productId),
+            from_location_id: parseInt(fromLocation),
+            to_location_id: parseInt(toLocation),
+            quantity: parseFloat(quantity),
+            notes: notes
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.transfer_number) {
+            alert('Transfer completed successfully!');
+            location.reload();
+        } else {
+            alert('Transfer failed: ' + (data.error || 'Insufficient stock?'));
+        }
+    })
+    .catch(err => {
+        console.error('Transfer error:', err);
+        alert('Transfer failed. Please try again.');
+    });
+}
+
+function showProductCatalog() {
+    window.location.href = '/inventory/catalog';
+}
+
+function getColorForType(type) {
+    const colors = {
+        'warehouse': 'primary',
+        'shop': 'success',
+        'storage': 'info',
+        'bin': 'secondary'
+    };
+    return colors[type] || 'dark';
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+</script>
+{% endblock %}
