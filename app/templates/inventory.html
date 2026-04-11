@@ -139,16 +139,20 @@
                             <td><code>{{ item.sku or 'N/A' }}</code></td>
                             <td>{{ item.category or 'General' }}</td>
                             <td>
-                                <span class="badge {% if item.current_stock == 0 %}bg-danger{% elif item.current_stock <= item.min_stock_level %}bg-warning{% else %}bg-success{% endif %}">
-                                    {{ item.current_stock }}
-                                </span>
-                                <!-- Location breakdown button - FIXED: using 'item' not 'product' -->
-                                {% if item.location_breakdown %}
-                                    <button class="btn btn-sm btn-link" data-bs-toggle="modal" 
-                                            data-bs-target="#locationModal{{ item.id }}">
-                                        📍 View locations
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge {% if item.current_stock == 0 %}bg-danger{% elif item.current_stock <= item.min_stock_level %}bg-warning{% else %}bg-success{% endif %}">
+                                        {{ item.current_stock }}
+                                    </span>
+                                    {% if item.location_breakdown and item.location_breakdown.locations %}
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-info view-location-btn"
+                                            data-product-id="{{ item.id }}"
+                                            data-product-name="{{ item.name }}"
+                                            data-locations='{{ item.location_breakdown.locations|tojson }}'>
+                                        <i class="bi bi-geo-alt"></i> View ({{ item.location_breakdown.locations|length }})
                                     </button>
-                                {% endif %}
+                                    {% endif %}
+                                </div>
                             </td>
                             <td>{{ item.min_stock_level }}</td>
                             <td>{{ currency_symbol }}{{ "%.2f"|format(item.cost_price or 0) }}</td>
@@ -177,43 +181,6 @@
                                 </div>
                             </td>
                         </tr>
-                        
-                        <!-- Location Modal - MOVED OUTSIDE the table row but still in loop -->
-                        {% if item.location_breakdown %}
-                        <div class="modal fade" id="locationModal{{ item.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">{{ item.name }} - Stock by Location</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <table class="table table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th>Location</th>
-                                                    <th>Quantity</th>
-                                                    <th>Reserved</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for loc in item.location_breakdown.locations %}
-                                                <tr>
-                                                    <td>{{ loc.location_name }}</td>
-                                                    <td>{{ loc.quantity }}</td>
-                                                    <td>{{ loc.reserved }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -229,7 +196,37 @@
             {% endif %}
         </div>
     </div>
- </div>
+
+    <!-- Location Modal - SINGLE MODAL (outside loop, better performance) -->
+    <div class="modal fade" id="locationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Stock by Location</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Product:</strong> <span id="locationModalProductName"></span></p>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>Quantity</th>
+                                <th>Reserved</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationModalBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="transferFromModalBtn">Transfer Stock</button>
+                </div>
+            </div>
+        </div>
+    </div>
 <!-- ====================== UPDATED ADD PRODUCT MODAL ====================== -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -584,21 +581,20 @@
 
 <!-- JavaScript for Modals + NEW PERISHABLE TOGGLE -->
 <script nonce="{{ nonce }}">
-// Delete modal handler
 document.addEventListener('DOMContentLoaded', function() {
+    // Delete modal handler
     var deleteModal = document.getElementById('deleteProductModal');
     if (deleteModal) {
         deleteModal.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget;
             var productId = button.getAttribute('data-product-id');
             var productName = button.getAttribute('data-product-name');
-
             document.getElementById('deleteProductId').value = productId;
             document.getElementById('deleteProductName').value = productName;
         });
     }
 
-    // Enhanced Edit Stock Modal Handler
+    // Edit Stock Modal Handler
     var editStockModal = document.getElementById('editStockModal');
     if (editStockModal) {
         editStockModal.addEventListener('show.bs.modal', function (event) {
@@ -617,6 +613,58 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Location Modal Handler - NEW
+    const locationModal = document.getElementById('locationModal');
+    if (locationModal) {
+        locationModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const productId = button.getAttribute('data-product-id');
+            const productName = button.getAttribute('data-product-name');
+            const locationsJson = button.getAttribute('data-locations');
+            
+            document.getElementById('locationModalProductName').textContent = productName;
+            
+            const tbody = document.getElementById('locationModalBody');
+            tbody.innerHTML = '';
+            
+            if (locationsJson) {
+                const locations = JSON.parse(locationsJson);
+                let totalStock = 0;
+                locations.forEach(function(loc) {
+                    totalStock += loc.quantity;
+                    const row = tbody.insertRow();
+                    row.insertCell(0).textContent = loc.location_name;
+                    row.insertCell(1).textContent = loc.quantity;
+                    row.insertCell(2).textContent = loc.reserved || 0;
+                    row.insertCell(3).textContent = loc.type || 'storage';
+                });
+                // Add total row
+                const totalRow = tbody.insertRow();
+                totalRow.style.fontWeight = 'bold';
+                totalRow.insertCell(0).textContent = 'TOTAL';
+                totalRow.insertCell(1).textContent = totalStock;
+                totalRow.insertCell(2).textContent = '';
+                totalRow.insertCell(3).textContent = '';
+            }
+            
+            // Store product ID for transfer
+            locationModal.setAttribute('data-current-product-id', productId);
+        });
+    }
+    
+    // Transfer button handler
+    const transferBtn = document.getElementById('transferFromModalBtn');
+    if (transferBtn) {
+        transferBtn.addEventListener('click', function() {
+            const productId = locationModal.getAttribute('data-current-product-id');
+            // Close location modal
+            const modal = bootstrap.Modal.getInstance(locationModal);
+            modal.hide();
+            // Open transfer modal (to be implemented)
+            alert('Transfer feature coming soon. Product ID: ' + productId);
+        });
+    }
+
     // Dynamic quantity label based on adjustment type
     const adjustmentType = document.querySelector('select[name="adjustment_type"]');
     const quantityLabel = document.getElementById('quantityLabel');
@@ -624,7 +672,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (adjustmentType && quantityLabel) {
         adjustmentType.addEventListener('change', function() {
             const type = this.value;
-
             if (type === 'add_stock') quantityLabel.textContent = 'Quantity to Add *';
             else if (type === 'remove_stock') quantityLabel.textContent = 'Quantity to Remove *';
             else if (type === 'set_stock') quantityLabel.textContent = 'New Total Quantity *';
@@ -634,21 +681,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ────────────────────────────────────────────────
-    // NEW: Show/hide perishable fields
-    // ────────────────────────────────────────────────
+    // Show/hide perishable fields
     const perishableChk = document.getElementById('isPerishable');
     const perishableBlock = document.getElementById('perishableFields');
-
     if (perishableChk && perishableBlock) {
         const togglePerishable = () => {
             perishableBlock.style.display = perishableChk.checked ? 'block' : 'none';
         };
         perishableChk.addEventListener('change', togglePerishable);
-        togglePerishable(); // run once on load
+        togglePerishable();
     }
 
-    // Optional: View All low stock (placeholder)
+    // View All low stock button
     const viewAllBtn = document.getElementById('viewAllLowStockBtn');
     if (viewAllBtn) {
         viewAllBtn.addEventListener('click', function() {

@@ -453,16 +453,24 @@ class InventoryManager:
                         'name': row.name,
                         'sku': row.sku or 'N/A',
                         'category': row.category or '',
-                        'current_stock': row.current_stock,
+                        'current_stock': float(row.current_stock) if row.current_stock else 0,
                         'min_stock_level': row.min_stock_level or 10,
                         'cost_price': float(row.cost_price) if row.cost_price else 0.0,
                         'selling_price': float(row.selling_price) if row.selling_price else 0.0,
                         'supplier': row.supplier or '',
-                        'location': row.location or ''
+                        'location': row.location or 'Main'
                     }
-                    # Add location breakdown
-                    from app.services.location_inventory import LocationInventoryManager
-                    item['location_breakdown'] = LocationInventoryManager.get_product_location_breakdown(row.id)
+                    # Add location breakdown - THIS IS THE CRITICAL PART
+                    try:
+                        from app.services.location_inventory import LocationInventoryManager
+                        breakdown = LocationInventoryManager.get_product_location_breakdown(row.id)
+                        if breakdown and breakdown.get('locations'):
+                            item['location_breakdown'] = breakdown
+                        else:
+                            item['location_breakdown'] = None
+                    except Exception as e:
+                        logger.error(f"Error getting location breakdown for product {row.id}: {e}")
+                        item['location_breakdown'] = None
                     items.append(item)
                 return items
         except Exception as e:
