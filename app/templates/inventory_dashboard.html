@@ -9,10 +9,10 @@
             <p class="text-muted">Real-time inventory status across all locations</p>
         </div>
         <div class="col-auto">
-            <button class="btn btn-primary" onclick="showProductCatalog()">
+            <button type="button" class="btn btn-primary" id="viewCatalogBtn">
                 <i class="bi bi-box-seam"></i> View Product Catalog
             </button>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#transferModal">
+            <button type="button" class="btn btn-success" id="openTransferModalBtn">
                 <i class="bi bi-arrow-left-right"></i> Transfer Stock
             </button>
         </div>
@@ -63,7 +63,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">&nbsp;</label>
-                            <button class="btn btn-primary w-100" onclick="executeQuickTransfer()">
+                            <button type="button" class="btn btn-primary w-100" id="executeQuickTransferBtn">
                                 <i class="bi bi-arrow-left-right"></i> Transfer
                             </button>
                         </div>
@@ -155,239 +155,298 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitTransfer()">Execute Transfer</button>
+                <button type="button" class="btn btn-primary" id="submitTransferBtn">Execute Transfer</button>
             </div>
         </div>
     </div>
 </div>
 
 <script nonce="{{ nonce }}">
-let locations = [];
+(function() {
+    let locations = [];
+    let allProducts = [];
 
-// Load all data on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadLocations();
-    loadLocationStats();
-    loadLowStockAlerts();
-    loadRecentMovements();
-    loadProductsForSelect();
-});
+    // Helper: Safe number formatting
+    function formatNumber(num) {
+        if (num === undefined || num === null) return '0';
+        const n = parseFloat(num);
+        if (isNaN(n)) return '0';
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return n.toString();
+    }
 
-function loadLocations() {
-    fetch('/api/v1/locations', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        locations = data;
-        populateLocationSelects();
-    })
-    .catch(err => console.error('Error loading locations:', err));
-}
+    // Helper: Format currency
+    function formatCurrency(amount) {
+        const val = parseFloat(amount);
+        if (isNaN(val)) return '{{ currency_symbol }}0.00';
+        return '{{ currency_symbol }}' + val.toFixed(2);
+    }
 
-function populateLocationSelects() {
-    const selects = ['quickFromLocation', 'quickToLocation', 'transferFromLocation', 'transferToLocation'];
-    selects.forEach(selectId => {
-        const select = document.getElementById(selectId);
-        if (select) {
-            select.innerHTML = '<option value="">Select location...</option>';
-            locations.forEach(loc => {
-                select.innerHTML += `<option value="${loc.id}">${loc.location_name} (${loc.location_code})</option>`;
-            });
-        }
-    });
-}
+    // Helper: Get color for location type
+    function getColorForType(type) {
+        const colors = {
+            'warehouse': 'primary',
+            'shop': 'success',
+            'storage': 'info',
+            'bin': 'secondary'
+        };
+        return colors[type] || 'dark';
+    }
 
-function loadLocationStats() {
-    fetch('/api/v1/locations', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        const container = document.getElementById('locationStats');
-        if (data.length === 0) {
-            container.innerHTML = '<div class="col text-center">No locations found. Create your first location.</div>';
-            return;
-        }
-        
-        container.innerHTML = '';
-        data.forEach(loc => {
-            container.innerHTML += `
-                <div class="col-md-3 mb-3">
-                    <div class="card bg-${getColorForType(loc.type)} text-white">
-                        <div class="card-body">
-                            <h6 class="card-title">${loc.location_name}</h6>
-                            <h3>${formatNumber(loc.total_value)}</h3>
-                            <small>${loc.product_count} products | ${formatNumber(loc.total_units)} units</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-    })
-    .catch(err => console.error('Error loading stats:', err));
-}
+    // Load all data
+    function loadAllData() {
+        loadLocations();
+        loadLocationStats();
+        loadLowStockAlerts();
+        loadRecentMovements();
+        loadProductsForSelect();
+    }
 
-function loadLowStockAlerts() {
-    fetch('/api/v1/locations', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        const container = document.getElementById('lowStockList');
-        if (data.length === 0) {
-            container.innerHTML = '<div class="alert alert-success">No low stock items!</div>';
-            return;
-        }
-        
-        container.innerHTML = '<div class="list-group">';
-        data.slice(0, 10).forEach(item => {
-            container.innerHTML += `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between">
-                        <strong>${item.name}</strong>
-                        <span class="badge bg-warning">${item.current_stock} / ${item.min_stock_level}</span>
-                    </div>
-                    <small class="text-muted">SKU: ${item.sku || 'N/A'}</small>
-                </div>
-            `;
-        });
-        container.innerHTML += '</div>';
-    })
-    .catch(err => console.error('Error loading alerts:', err));
-}
+    function loadLocations() {
+        fetch('/api/v1/locations', {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(res => res.json())
+        .then(data => {
+            locations = data || [];
+            populateLocationSelects();
+        })
+        .catch(err => console.error('Error loading locations:', err));
+    }
 
-function loadRecentMovements() {
-    fetch('/api/v1/locations', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        const tbody = document.getElementById('recentMovements');
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No movements yet</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = '';
-        data.forEach(move => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${new Date(move.created_at).toLocaleDateString()}</td>
-                    <td>${move.product_name}</td>
-                    <td>${move.from_location || 'N/A'}</td>
-                    <td>${move.to_location || 'N/A'}</td>
-                    <td>${move.quantity}</td>
-                    <td><span class="badge bg-success">${move.status || 'completed'}</span></td>
-                </tr>
-            `;
-        });
-    })
-    .catch(err => console.error('Error loading movements:', err));
-}
-
-function loadProductsForSelect() {
-    fetch('/api/v1/locations', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        const selects = ['quickProductId', 'transferProductId'];
+    function populateLocationSelects() {
+        const selects = ['quickFromLocation', 'quickToLocation', 'transferFromLocation', 'transferToLocation'];
         selects.forEach(selectId => {
             const select = document.getElementById(selectId);
             if (select) {
-                select.innerHTML = '<option value="">Search product...</option>';
-                data.slice(0, 100).forEach(product => {
-                    select.innerHTML += `<option value="${product.id}">${product.name} (${product.sku}) - Stock: ${product.current_stock}</option>`;
+                select.innerHTML = '<option value="">Select location...</option>';
+                locations.forEach(loc => {
+                    select.innerHTML += `<option value="${loc.id}">${escapeHtml(loc.location_name)} (${loc.location_code || ''})</option>`;
                 });
             }
         });
-    })
-    .catch(err => console.error('Error loading products:', err));
-}
-
-function executeQuickTransfer() {
-    const productId = document.getElementById('quickProductId').value;
-    const fromLocation = document.getElementById('quickFromLocation').value;
-    const toLocation = document.getElementById('quickToLocation').value;
-    const quantity = document.getElementById('quickQuantity').value;
-    
-    if (!productId || !fromLocation || !toLocation || !quantity) {
-        alert('Please fill all fields');
-        return;
     }
-    
-    submitTransferData(productId, fromLocation, toLocation, quantity, '');
-}
 
-function submitTransfer() {
-    const productId = document.getElementById('transferProductId').value;
-    const fromLocation = document.getElementById('transferFromLocation').value;
-    const toLocation = document.getElementById('transferToLocation').value;
-    const quantity = document.getElementById('transferQuantity').value;
-    const notes = document.getElementById('transferNotes').value;
-    
-    if (!productId || !fromLocation || !toLocation || !quantity) {
-        alert('Please fill all required fields');
-        return;
-    }
-    
-    submitTransferData(productId, fromLocation, toLocation, quantity, notes);
-}
-
-function submitTransferData(productId, fromLocation, toLocation, quantity, notes) {
-    fetch('/api/v1/transfer', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer {{ api_key }}'
-        },
-        body: JSON.stringify({
-            product_id: parseInt(productId),
-            from_location_id: parseInt(fromLocation),
-            to_location_id: parseInt(toLocation),
-            quantity: parseFloat(quantity),
-            notes: notes
+    function loadLocationStats() {
+        fetch('/api/v1/locations/stats', {
+            method: 'GET',
+            credentials: 'same-origin'
         })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.transfer_number) {
-            alert('Transfer completed successfully!');
-            location.reload();
-        } else {
-            alert('Transfer failed: ' + (data.error || 'Insufficient stock?'));
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('locationStats');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="col text-center">No locations found. Create your first location.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            data.forEach(loc => {
+                const totalValue = loc.total_value || 0;
+                const totalUnits = loc.total_units || 0;
+                const productCount = loc.product_count || 0;
+                
+                container.innerHTML += `
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-${getColorForType(loc.type)} text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">${escapeHtml(loc.location_name)}</h6>
+                                <h3>${formatCurrency(totalValue)}</h3>
+                                <small>${productCount} products | ${formatNumber(totalUnits)} units</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        })
+        .catch(err => {
+            console.error('Error loading stats:', err);
+            document.getElementById('locationStats').innerHTML = '<div class="col text-center text-danger">Error loading stats</div>';
+        });
+    }
+
+    function loadLowStockAlerts() {
+        fetch('/api/v1/inventory/low-stock', {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('lowStockList');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="alert alert-success">No low stock items!</div>';
+                return;
+            }
+            
+            let html = '<div class="list-group">';
+            data.slice(0, 10).forEach(item => {
+                const currentStock = item.current_stock || 0;
+                const minLevel = item.min_stock_level || 0;
+                html += `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>${escapeHtml(item.name)}</strong>
+                            <span class="badge bg-warning">${currentStock} / ${minLevel}</span>
+                        </div>
+                        <small class="text-muted">SKU: ${escapeHtml(item.sku) || 'N/A'}</small>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        })
+        .catch(err => {
+            console.error('Error loading alerts:', err);
+            document.getElementById('lowStockList').innerHTML = '<div class="alert alert-danger">Error loading alerts</div>';
+        });
+    }
+
+    function loadRecentMovements() {
+        fetch('/api/v1/stock-movements/recent', {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('recentMovements');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No movements yet</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            data.forEach(move => {
+                const date = move.created_at ? new Date(move.created_at).toLocaleDateString() : 'N/A';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${escapeHtml(move.product_name)}</td>
+                        <td>${escapeHtml(move.from_location) || 'N/A'}</td>
+                        <td>${escapeHtml(move.to_location) || 'N/A'}</td>
+                        <td>${move.quantity || 0}</td>
+                        <td><span class="badge bg-success">${escapeHtml(move.status) || 'completed'}</span></td>
+                    </tr>
+                `;
+            });
+        })
+        .catch(err => {
+            console.error('Error loading movements:', err);
+            document.getElementById('recentMovements').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading movements</td></tr>';
+        });
+    }
+
+    function loadProductsForSelect() {
+        fetch('/api/v1/inventory', {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(res => res.json())
+        .then(data => {
+            allProducts = data || [];
+            const selects = ['quickProductId', 'transferProductId'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    select.innerHTML = '<option value="">Search product...</option>';
+                    allProducts.slice(0, 100).forEach(product => {
+                        const stock = product.current_stock || 0;
+                        select.innerHTML += `<option value="${product.id}">${escapeHtml(product.name)} (${escapeHtml(product.sku) || 'N/A'}) - Stock: ${stock}</option>`;
+                    });
+                }
+            });
+        })
+        .catch(err => console.error('Error loading products:', err));
+    }
+
+    function executeQuickTransfer() {
+        const productId = document.getElementById('quickProductId').value;
+        const fromLocation = document.getElementById('quickFromLocation').value;
+        const toLocation = document.getElementById('quickToLocation').value;
+        const quantity = document.getElementById('quickQuantity').value;
+        
+        if (!productId || !fromLocation || !toLocation || !quantity) {
+            alert('Please fill all fields');
+            return;
         }
-    })
-    .catch(err => {
-        console.error('Transfer error:', err);
-        alert('Transfer failed. Please try again.');
+        
+        submitTransferData(productId, fromLocation, toLocation, quantity, '');
+    }
+
+    function submitTransferData(productId, fromLocation, toLocation, quantity, notes) {
+        fetch('/api/v1/transfer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                product_id: parseInt(productId),
+                from_location_id: parseInt(fromLocation),
+                to_location_id: parseInt(toLocation),
+                quantity: parseFloat(quantity),
+                notes: notes
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.transfer_number) {
+                alert('Transfer completed successfully!');
+                location.reload();
+            } else {
+                alert('Transfer failed: ' + (data.error || 'Insufficient stock?'));
+            }
+        })
+        .catch(err => {
+            console.error('Transfer error:', err);
+            alert('Transfer failed. Please try again.');
+        });
+    }
+
+    function showProductCatalog() {
+        window.location.href = '/inventory/catalog';
+    }
+
+    function openTransferModal() {
+        const modalEl = document.getElementById('transferModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+
+    function submitTransfer() {
+        const productId = document.getElementById('transferProductId').value;
+        const fromLocation = document.getElementById('transferFromLocation').value;
+        const toLocation = document.getElementById('transferToLocation').value;
+        const quantity = document.getElementById('transferQuantity').value;
+        const notes = document.getElementById('transferNotes').value;
+        
+        if (!productId || !fromLocation || !toLocation || !quantity) {
+            alert('Please fill all required fields');
+            return;
+        }
+        
+        submitTransferData(productId, fromLocation, toLocation, quantity, notes);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Set up event listeners (no inline onclick handlers)
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAllData();
+        
+        document.getElementById('viewCatalogBtn')?.addEventListener('click', showProductCatalog);
+        document.getElementById('openTransferModalBtn')?.addEventListener('click', openTransferModal);
+        document.getElementById('executeQuickTransferBtn')?.addEventListener('click', executeQuickTransfer);
+        document.getElementById('submitTransferBtn')?.addEventListener('click', submitTransfer);
     });
-}
-
-function showProductCatalog() {
-    window.location.href = '/inventory/catalog';
-}
-
-function getColorForType(type) {
-    const colors = {
-        'warehouse': 'primary',
-        'shop': 'success',
-        'storage': 'info',
-        'bin': 'secondary'
-    };
-    return colors[type] || 'dark';
-}
-
-function formatNumber(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-}
+})();
 </script>
 {% endblock %}

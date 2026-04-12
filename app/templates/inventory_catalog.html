@@ -9,10 +9,10 @@
             <p class="text-muted">Browse and manage your inventory</p>
         </div>
         <div class="col-auto">
-            <button class="btn btn-outline-primary" onclick="window.location.href='/inventory/dashboard'">
+            <button type="button" class="btn btn-outline-primary" id="locationDashboardBtn">
                 <i class="bi bi-building"></i> Location Dashboard
             </button>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+            <button type="button" class="btn btn-primary" id="addProductCatalogBtn">
                 <i class="bi bi-plus-circle"></i> Add Product
             </button>
             <a href="{{ url_for('inventory.bulk_upload') }}" class="btn btn-outline-secondary">
@@ -29,11 +29,6 @@
                     <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search by name or SKU...">
                 </div>
                 <div class="col-md-3">
-                    <select class="form-select" id="locationFilter">
-                        <option value="">All Locations</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
                     <select class="form-select" id="stockFilter">
                         <option value="">All Stock Levels</option>
                         <option value="low">Low Stock (≤ Min Level)</option>
@@ -41,12 +36,17 @@
                         <option value="in">In Stock</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <select class="form-select" id="sortBy">
                         <option value="name">Sort by Name</option>
-                        <option value="stock">Sort by Stock</option>
-                        <option value="price">Sort by Price</option>
+                        <option value="stock">Sort by Stock (High to Low)</option>
+                        <option value="price">Sort by Price (High to Low)</option>
                     </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-secondary w-100" id="resetFiltersBtn">
+                        <i class="bi bi-arrow-repeat"></i> Reset
+                    </button>
                 </div>
             </div>
         </div>
@@ -66,8 +66,7 @@
     <div class="row mt-4">
         <div class="col-12">
             <nav>
-                <ul class="pagination justify-content-center" id="pagination">
-                </ul>
+                <ul class="pagination justify-content-center" id="pagination"></ul>
             </nav>
         </div>
     </div>
@@ -109,247 +108,340 @@
                 </table>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="transferFromDetail()">Transfer Stock</button>
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="transferFromDetailBtn">Transfer Stock</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
 <script nonce="{{ nonce }}">
-let allProducts = [];
-let currentPage = 1;
-const itemsPerPage = 20;
+(function() {
+    let allProducts = [];
+    let currentPage = 1;
+    let currentFilteredProducts = [];
+    const itemsPerPage = 20;
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadProducts();
-    loadLocationFilter();
-});
+    function formatNumber(num) {
+        if (num === undefined || num === null) return '0';
+        const n = parseFloat(num);
+        if (isNaN(n)) return '0';
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return n.toString();
+    }
 
-function loadProducts() {
-    fetch('/api/v1/locations', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        allProducts = data;
-        applyFiltersAndRender();
-    })
-    .catch(err => {
-        console.error('Error loading products:', err);
-        document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Error loading products</div>';
-    });
-}
+    function formatCurrency(amount) {
+        const val = parseFloat(amount);
+        if (isNaN(val)) return '{{ currency_symbol }}0.00';
+        return '{{ currency_symbol }}' + val.toFixed(2);
+    }
 
-function loadLocationFilter() {
-    fetch('/api/v1/locations', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        const filter = document.getElementById('locationFilter');
-        data.forEach(loc => {
-            filter.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
         });
-    });
-}
+    }
 
-function applyFiltersAndRender() {
-    let filtered = [...allProducts];
-    
-    // Search filter
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    if (searchTerm) {
-        filtered = filtered.filter(p => 
-            p.name.toLowerCase().includes(searchTerm) || 
-            p.sku.toLowerCase().includes(searchTerm)
-        );
+    function loadProducts() {
+        fetch('/api/v1/inventory', {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(res => res.json())
+        .then(data => {
+            allProducts = data || [];
+            applyFiltersAndRender();
+        })
+        .catch(err => {
+            console.error('Error loading products:', err);
+            document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Error loading products</div>';
+        });
     }
-    
-    // Stock filter
-    const stockFilter = document.getElementById('stockFilter').value;
-    if (stockFilter === 'low') {
-        filtered = filtered.filter(p => p.current_stock <= p.min_stock_level && p.current_stock > 0);
-    } else if (stockFilter === 'out') {
-        filtered = filtered.filter(p => p.current_stock == 0);
-    } else if (stockFilter === 'in') {
-        filtered = filtered.filter(p => p.current_stock > p.min_stock_level);
-    }
-    
-    // Sort
-    const sortBy = document.getElementById('sortBy').value;
-    if (sortBy === 'name') {
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === 'stock') {
-        filtered.sort((a, b) => b.current_stock - a.current_stock);
-    } else if (sortBy === 'price') {
-        filtered.sort((a, b) => b.selling_price - a.selling_price);
-    }
-    
-    renderProducts(filtered);
-}
 
-function renderProducts(products) {
-    const totalPages = Math.ceil(products.length / itemsPerPage);
-    const start = (currentPage - 1) * itemsPerPage;
-    const pageProducts = products.slice(start, start + itemsPerPage);
-    
-    const grid = document.getElementById('productGrid');
-    
-    if (pageProducts.length === 0) {
-        grid.innerHTML = '<div class="col-12 text-center py-5"><h5>No products found</h5></div>';
-        return;
+    function applyFiltersAndRender() {
+        if (!allProducts.length) {
+            renderProducts([]);
+            return;
+        }
+
+        let filtered = [...allProducts];
+        
+        // Search filter
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        if (searchTerm) {
+            filtered = filtered.filter(p => 
+                (p.name && p.name.toLowerCase().includes(searchTerm)) || 
+                (p.sku && p.sku.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        // Stock filter
+        const stockFilter = document.getElementById('stockFilter').value;
+        if (stockFilter === 'low') {
+            filtered = filtered.filter(p => {
+                const current = p.current_stock || 0;
+                const min = p.min_stock_level || 0;
+                return current <= min && current > 0;
+            });
+        } else if (stockFilter === 'out') {
+            filtered = filtered.filter(p => (p.current_stock || 0) === 0);
+        } else if (stockFilter === 'in') {
+            filtered = filtered.filter(p => {
+                const current = p.current_stock || 0;
+                const min = p.min_stock_level || 0;
+                return current > min;
+            });
+        }
+        
+        // Sort
+        const sortBy = document.getElementById('sortBy').value;
+        if (sortBy === 'name') {
+            filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        } else if (sortBy === 'stock') {
+            filtered.sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0));
+        } else if (sortBy === 'price') {
+            filtered.sort((a, b) => (b.selling_price || 0) - (a.selling_price || 0));
+        }
+        
+        currentFilteredProducts = filtered;
+        currentPage = 1;
+        renderProducts(currentFilteredProducts);
     }
-    
-    grid.innerHTML = '';
-    pageProducts.forEach(product => {
-        const stockClass = product.current_stock == 0 ? 'danger' : 
-                          (product.current_stock <= product.min_stock_level ? 'warning' : 'success');
+
+    function renderProducts(products) {
+        const totalPages = Math.ceil(products.length / itemsPerPage);
+        const start = (currentPage - 1) * itemsPerPage;
+        const pageProducts = products.slice(start, start + itemsPerPage);
         
-        const locationCount = product.location_breakdown ? product.location_breakdown.locations.length : 1;
-        const totalStock = product.location_breakdown ? product.location_breakdown.total_stock : product.current_stock;
+        const grid = document.getElementById('productGrid');
         
-        grid.innerHTML += `
-            <div class="col-md-3 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-${stockClass} text-white">
-                        <div class="d-flex justify-content-between">
-                            <strong>${escapeHtml(product.name)}</strong>
-                            <span class="badge bg-light text-dark">${product.sku}</span>
-                        </div>
+        if (!pageProducts.length) {
+            grid.innerHTML = '<div class="col-12 text-center py-5"><h5>No products found</h5></div>';
+            renderPagination(0);
+            return;
+        }
+        
+        grid.innerHTML = '';
+        pageProducts.forEach(product => {
+            const currentStock = product.current_stock || 0;
+            const minStock = product.min_stock_level || 0;
+            
+            let stockClass = 'success';
+            if (currentStock === 0) stockClass = 'danger';
+            else if (currentStock <= minStock) stockClass = 'warning';
+            
+            const locationCount = (product.location_breakdown && product.location_breakdown.locations) 
+                ? product.location_breakdown.locations.length 
+                : 1;
+            const totalStock = (product.location_breakdown && product.location_breakdown.total_stock !== undefined)
+                ? product.location_breakdown.total_stock
+                : currentStock;
+            
+            const breakdownHtml = (product.location_breakdown && product.location_breakdown.locations) ? `
+                <div class="mt-2">
+                    <small class="text-muted">Breakdown:</small>
+                    <div class="small">
+                        ${product.location_breakdown.locations.slice(0, 2).map(loc => 
+                            `${escapeHtml(loc.location_name)}: ${loc.quantity}`
+                        ).join(' | ')}
+                        ${product.location_breakdown.locations.length > 2 ? '...' : ''}
                     </div>
-                    <div class="card-body">
-                        <div class="text-center mb-3">
-                            <h3 class="text-${stockClass}">${formatNumber(totalStock)}</h3>
-                            <small class="text-muted">Total Stock</small>
-                        </div>
-                        <div class="mb-2">
-                            <small class="text-muted">Locations: ${locationCount}</small>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <small>Cost: ${formatCurrency(product.cost_price)}</small>
-                            <small>Sell: ${formatCurrency(product.selling_price)}</small>
-                        </div>
-                        ${product.location_breakdown ? `
-                            <div class="mt-2">
-                                <small class="text-muted">Breakdown:</small>
-                                <div class="small">
-                                    ${product.location_breakdown.locations.slice(0, 2).map(loc => 
-                                        `${loc.location_name}: ${loc.quantity}`
-                                    ).join(' | ')}
-                                    ${product.location_breakdown.locations.length > 2 ? '...' : ''}
-                                </div>
+                </div>
+            ` : '';
+            
+            grid.innerHTML += `
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-${stockClass} text-white">
+                            <div class="d-flex justify-content-between">
+                                <strong>${escapeHtml(product.name)}</strong>
+                                <span class="badge bg-light text-dark">${escapeHtml(product.sku) || 'N/A'}</span>
                             </div>
-                        ` : ''}
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="btn-group w-100">
-                            <button class="btn btn-sm btn-outline-primary" onclick="viewProduct(${product.id})">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-success" onclick="quickTransfer(${product.id})">
-                                <i class="bi bi-arrow-left-right"></i> Transfer
-                            </button>
-                            <button class="btn btn-sm btn-outline-warning" onclick="adjustStock(${product.id})">
-                                <i class="bi bi-pencil"></i> Adjust
-                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <h3 class="text-${stockClass}">${formatNumber(totalStock)}</h3>
+                                <small class="text-muted">Total Stock</small>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Locations: ${locationCount}</small>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small>Cost: ${formatCurrency(product.cost_price)}</small>
+                                <small>Sell: ${formatCurrency(product.selling_price)}</small>
+                            </div>
+                            ${breakdownHtml}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100">
+                                <button type="button" class="btn btn-sm btn-outline-primary view-product-btn" data-product-id="${product.id}">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success transfer-product-btn" data-product-id="${product.id}">
+                                    <i class="bi bi-arrow-left-right"></i> Transfer
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-warning adjust-stock-btn" data-product-id="${product.id}">
+                                    <i class="bi bi-pencil"></i> Adjust
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-    });
-    
-    renderPagination(totalPages);
-}
-
-function renderPagination(totalPages) {
-    const pagination = document.getElementById('pagination');
-    pagination.innerHTML = '';
-    
-    pagination.innerHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-        <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
-    </li>`;
-    
-    for (let i = 1; i <= Math.min(totalPages, 5); i++) {
-        pagination.innerHTML += `<li class="page-item ${currentPage === i ? 'active' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
-        </li>`;
-    }
-    
-    pagination.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-        <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
-    </li>`;
-}
-
-function changePage(page) {
-    currentPage = page;
-    applyFiltersAndRender();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function viewProduct(productId) {
-    const product = allProducts.find(p => p.id == productId);
-    if (!product) return;
-    
-    document.getElementById('detailProductName').textContent = product.name;
-    document.getElementById('detailSku').textContent = product.sku;
-    document.getElementById('detailCategory').textContent = product.category || 'N/A';
-    document.getElementById('detailSupplier').textContent = product.supplier || 'N/A';
-    document.getElementById('detailLocation').textContent = product.location || 'Main';
-    document.getElementById('detailCostPrice').textContent = formatCurrency(product.cost_price);
-    document.getElementById('detailSellingPrice').textContent = formatCurrency(product.selling_price);
-    document.getElementById('detailMinStock').textContent = product.min_stock_level;
-    
-    const tbody = document.querySelector('#detailLocations tbody');
-    tbody.innerHTML = '';
-    if (product.location_breakdown && product.location_breakdown.locations) {
-        product.location_breakdown.locations.forEach(loc => {
-            tbody.innerHTML += `<tr><td>${loc.location_name}</td><td>${loc.quantity}</td><td>${loc.reserved || 0}</td></tr>`;
+            `;
         });
-    } else {
-        tbody.innerHTML += `<tr><td colspan="3">No location data</td></tr>`;
+        
+        renderPagination(totalPages);
+        
+        // Attach event listeners for dynamically created buttons
+        document.querySelectorAll('.view-product-btn').forEach(btn => {
+            btn.addEventListener('click', () => viewProduct(parseInt(btn.dataset.productId)));
+        });
+        document.querySelectorAll('.transfer-product-btn').forEach(btn => {
+            btn.addEventListener('click', () => quickTransfer(parseInt(btn.dataset.productId)));
+        });
+        document.querySelectorAll('.adjust-stock-btn').forEach(btn => {
+            btn.addEventListener('click', () => adjustStock(parseInt(btn.dataset.productId)));
+        });
     }
-    
-    new bootstrap.Modal(document.getElementById('productDetailModal')).show();
-}
 
-function quickTransfer(productId) {
-    // Store product ID and open transfer modal
-    sessionStorage.setItem('transferProductId', productId);
-    window.location.href = '/inventory/dashboard';
-}
+    function renderPagination(totalPages) {
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+        
+        pagination.innerHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" id="prevPageLink">Previous</a>
+        </li>`;
+        
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, startPage + 4);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pagination.innerHTML += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>`;
+        }
+        
+        pagination.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" id="nextPageLink">Next</a>
+        </li>`;
+        
+        // Attach event listeners
+        document.querySelectorAll('#pagination .page-link[data-page]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                changePage(parseInt(link.dataset.page));
+            });
+        });
+        
+        document.getElementById('prevPageLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) changePage(currentPage - 1);
+        });
+        
+        document.getElementById('nextPageLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) changePage(currentPage + 1);
+        });
+    }
 
-function adjustStock(productId) {
-    alert('Stock adjustment coming soon for product ID: ' + productId);
-}
+    function changePage(page) {
+        currentPage = page;
+        renderProducts(currentFilteredProducts);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-// Event listeners for filters
-document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFiltersAndRender(); });
-document.getElementById('locationFilter').addEventListener('change', () => { currentPage = 1; applyFiltersAndRender(); });
-document.getElementById('stockFilter').addEventListener('change', () => { currentPage = 1; applyFiltersAndRender(); });
-document.getElementById('sortBy').addEventListener('change', () => { applyFiltersAndRender(); });
+    function viewProduct(productId) {
+        const product = allProducts.find(p => p.id === productId);
+        if (!product) return;
+        
+        document.getElementById('detailProductName').textContent = product.name || '';
+        document.getElementById('detailSku').textContent = product.sku || 'N/A';
+        document.getElementById('detailCategory').textContent = product.category || 'N/A';
+        document.getElementById('detailSupplier').textContent = product.supplier || 'N/A';
+        document.getElementById('detailLocation').textContent = product.location || 'Main';
+        document.getElementById('detailCostPrice').textContent = formatCurrency(product.cost_price);
+        document.getElementById('detailSellingPrice').textContent = formatCurrency(product.selling_price);
+        document.getElementById('detailMinStock').textContent = product.min_stock_level || 0;
+        
+        const tbody = document.querySelector('#detailLocations tbody');
+        tbody.innerHTML = '';
+        
+        if (product.location_breakdown && product.location_breakdown.locations) {
+            product.location_breakdown.locations.forEach(loc => {
+                tbody.innerHTML += `<tr><td>${escapeHtml(loc.location_name)}</td><td>${loc.quantity}</td><td>${loc.reserved || 0}</td></tr>`;
+            });
+        } else {
+            tbody.innerHTML += `<tr><td colspan="3">No location data</td></tr>`;
+        }
+        
+        const modalEl = document.getElementById('productDetailModal');
+        const modal = new bootstrap.Modal(modalEl);
+        
+        // Store product ID for transfer button
+        const transferBtn = document.getElementById('transferFromDetailBtn');
+        const oldHandler = transferBtn.onclick;
+        transferBtn.replaceWith(transferBtn.cloneNode(true));
+        const newTransferBtn = document.getElementById('transferFromDetailBtn');
+        newTransferBtn.addEventListener('click', () => {
+            modal.hide();
+            quickTransfer(productId);
+        });
+        
+        modal.show();
+    }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
+    function quickTransfer(productId) {
+        sessionStorage.setItem('transferProductId', productId);
+        window.location.href = '/inventory/dashboard';
+    }
+
+    function adjustStock(productId) {
+        // Find and click the adjust button on the main inventory page
+        window.location.href = '/inventory';
+    }
+
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('stockFilter').value = '';
+        document.getElementById('sortBy').value = 'name';
+        applyFiltersAndRender();
+    }
+
+    function goToLocationDashboard() {
+        window.location.href = '/inventory/dashboard';
+    }
+
+    function openAddProductModal() {
+        // Trigger the add product modal on the main inventory page
+        window.location.href = '/inventory';
+    }
+
+    // Set up event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        loadProducts();
+        
+        document.getElementById('searchInput')?.addEventListener('input', () => {
+            currentPage = 1;
+            applyFiltersAndRender();
+        });
+        document.getElementById('stockFilter')?.addEventListener('change', () => {
+            currentPage = 1;
+            applyFiltersAndRender();
+        });
+        document.getElementById('sortBy')?.addEventListener('change', () => {
+            applyFiltersAndRender();
+        });
+        document.getElementById('resetFiltersBtn')?.addEventListener('click', resetFilters);
+        document.getElementById('locationDashboardBtn')?.addEventListener('click', goToLocationDashboard);
+        document.getElementById('addProductCatalogBtn')?.addEventListener('click', openAddProductModal);
     });
-}
-
-function formatNumber(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-}
-
-function formatCurrency(amount) {
-    return '{{ currency_symbol }}' + (amount || 0).toFixed(2);
-}
+})();
 </script>
 {% endblock %}

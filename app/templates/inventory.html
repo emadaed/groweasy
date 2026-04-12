@@ -150,13 +150,9 @@
                                         {{ item.current_stock }}
                                     </span>
                                     {% if item.location_breakdown and item.location_breakdown.locations %}
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-info view-location-btn"
-                                            data-product-id="{{ item.id }}"
-                                            data-product-name="{{ item.name }}"
-                                            data-locations='{{ item.location_breakdown.locations|tojson }}'>
-                                        <i class="bi bi-geo-alt"></i> View ({{ item.location_breakdown.locations|length }})
-                                    </button>
+                                    <span class="badge bg-secondary ms-2" title="Stock distributed across {{ item.location_breakdown.locations|length }} locations">
+                                        {{ item.location_breakdown.locations|length }} locations
+                                    </span>
                                     {% endif %}
                                 </div>
                             </td>
@@ -202,37 +198,8 @@
             {% endif %}
         </div>
     </div>
-
-    <!-- Location Modal - SINGLE MODAL (outside loop, better performance) -->
-    <div class="modal fade" id="locationModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Stock by Location</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p><strong>Product:</strong> <span id="locationModalProductName"></span></p>
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Location</th>
-                                <th>Quantity</th>
-                                <th>Reserved</th>
-                                <th>Type</th>
-                            </tr>
-                        </thead>
-                        <tbody id="locationModalBody">
-                        </tbody>
-                    </table>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="transferFromModalBtn">Transfer Stock</button>
-                </div>
-            </div>
-        </div>
-    </div>
+</div>
+        
 <!-- ====================== UPDATED ADD PRODUCT MODAL ====================== -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
