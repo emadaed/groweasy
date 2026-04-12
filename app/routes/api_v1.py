@@ -1,4 +1,5 @@
 # app/routes/api_v1.py
+from decimal import Decimal
 from flask import Blueprint, request, jsonify, session, g
 from sqlalchemy import text
 from app.services.db import DB_ENGINE
@@ -704,5 +705,47 @@ def get_recent_movements():
             'status': r[5],
             'from_location': r[6],
             'to_location': r[7]
+        })
+    return jsonify(result)
+
+@api_v1_bp.route('/locations/<int:location_id>/products', methods=['GET'])
+@require_auth
+def get_products_by_location(location_id):
+    """Get all products with stock in a specific location"""
+    account_id = g.api_account_id
+    
+    with DB_ENGINE.connect() as conn:
+        # Verify location belongs to account
+        loc_check = conn.execute(text("""
+            SELECT id FROM locations WHERE id = :lid AND account_id = :aid AND is_active = TRUE
+        """), {"lid": location_id, "aid": account_id}).first()
+        if not loc_check:
+            return error_response("Location not found", "NOT_FOUND", 404)
+        
+        rows = conn.execute(text("""
+            SELECT 
+                i.id, i.name, i.sku, i.category, i.supplier,
+                pl.quantity as stock_at_location,
+                i.min_stock_level, i.cost_price, i.selling_price,
+                i.location as default_location
+            FROM product_locations pl
+            JOIN inventory_items i ON pl.product_id = i.id AND i.is_active = TRUE
+            WHERE pl.location_id = :lid
+            ORDER BY i.name
+        """), {"lid": location_id}).fetchall()
+    
+    result = []
+    for r in rows:
+        result.append({
+            'id': r[0],
+            'name': r[1],
+            'sku': r[2],
+            'category': r[3],
+            'supplier': r[4],
+            'stock_at_location': float(r[5]) if r[5] else 0,
+            'min_stock_level': float(r[6]) if r[6] else 0,
+            'cost_price': float(r[7]) if r[7] else 0,
+            'selling_price': float(r[8]) if r[8] else 0,
+            'default_location': r[9]
         })
     return jsonify(result)
