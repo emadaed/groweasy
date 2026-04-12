@@ -90,10 +90,16 @@ def inventory_dashboard():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
+    from app.context_processors import CURRENCY_SYMBOLS
+    from app.services.cache import get_user_profile_cached
     from app.services.auth import get_api_key_for_user
+    
+    user_profile = get_user_profile_cached(session['user_id'])
+    currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     api_key = get_api_key_for_user(session['user_id'])
     
     return render_template("inventory_dashboard.html", 
+                         currency_symbol=currency_symbol,
                          api_key=api_key,
                          nonce=g.nonce)
 

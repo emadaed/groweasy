@@ -127,8 +127,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadProducts() {
-    fetch('/api/v1/inventory', {
-        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+    fetch('/api/v1/locations', {
+        method: 'GET',
+        credentials: 'same-origin'
     })
     .then(res => res.json())
     .then(data => {
@@ -143,7 +144,8 @@ function loadProducts() {
 
 function loadLocationFilter() {
     fetch('/api/v1/locations', {
-        headers: { 'Authorization': 'Bearer {{ api_key }}' }
+        method: 'GET',
+        credentials: 'same-origin'
     })
     .then(res => res.json())
     .then(data => {

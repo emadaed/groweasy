@@ -639,21 +639,24 @@ def get_location_stats():
                 COALESCE(SUM(pl.quantity * i.cost_price), 0) as total_value
             FROM locations l
             LEFT JOIN product_locations pl ON l.id = pl.location_id
-            LEFT JOIN inventory_items i ON pl.product_id = i.id
+            LEFT JOIN inventory_items i ON pl.product_id = i.id AND i.is_active = TRUE
             WHERE l.account_id = :aid AND l.is_active = TRUE
             GROUP BY l.id, l.location_name, l.location_code, l.location_type
             ORDER BY total_value DESC
         """), {"aid": account_id}).fetchall()
     
-    return jsonify([{
-        'id': r[0],
-        'location_name': r[1],
-        'location_code': r[2],
-        'type': r[3],
-        'product_count': r[4],
-        'total_units': float(r[5]) if r[5] else 0,
-        'total_value': float(r[6]) if r[6] else 0
-    } for r in rows])
+    result = []
+    for r in rows:
+        result.append({
+            'id': r[0],
+            'location_name': r[1],
+            'location_code': r[2],
+            'type': r[3],
+            'product_count': r[4],
+            'total_units': float(r[5]) if r[5] else 0,
+            'total_value': float(r[6]) if r[6] else 0
+        })
+    return jsonify(result)
 
 @api_v1_bp.route('/inventory/low-stock', methods=['GET'])
 @require_auth
@@ -666,14 +669,14 @@ def get_low_stock_api():
 @api_v1_bp.route('/stock-movements/recent', methods=['GET'])
 @require_auth
 def get_recent_movements():
-    """Get recent stock movements"""
+    """Get recent stock movements from location_transfers"""
     account_id = g.api_account_id
     limit = request.args.get('limit', default=20, type=int)
     
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text("""
             SELECT 
-                sm.created_at,
+                lt.created_at,
                 i.name as product_name,
                 lt.from_location_id,
                 lt.to_location_id,
@@ -685,18 +688,21 @@ def get_recent_movements():
             JOIN inventory_items i ON lt.product_id = i.id
             LEFT JOIN locations fl ON lt.from_location_id = fl.id
             LEFT JOIN locations tl ON lt.to_location_id = tl.id
-            WHERE lt.account_id = :aid
+            WHERE lt.account_id = :aid AND i.is_active = TRUE
             ORDER BY lt.created_at DESC
             LIMIT :limit
         """), {"aid": account_id, "limit": limit}).fetchall()
     
-    return jsonify([{
-        'created_at': r[0].isoformat() if r[0] else None,
-        'product_name': r[1],
-        'from_location_id': r[2],
-        'to_location_id': r[3],
-        'quantity': float(r[4]) if r[4] else 0,
-        'status': r[5],
-        'from_location': r[6],
-        'to_location': r[7]
-    } for r in rows])
+    result = []
+    for r in rows:
+        result.append({
+            'created_at': r[0].isoformat() if r[0] else None,
+            'product_name': r[1],
+            'from_location_id': r[2],
+            'to_location_id': r[3],
+            'quantity': float(r[4]) if r[4] else 0,
+            'status': r[5],
+            'from_location': r[6],
+            'to_location': r[7]
+        })
+    return jsonify(result)
