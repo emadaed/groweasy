@@ -15,6 +15,9 @@
             <button type="button" class="btn btn-success" id="openTransferModalBtn">
                 <i class="bi bi-arrow-left-right"></i> Transfer Stock
             </button>
+            <button type="button" class="btn btn-outline-secondary" id="createLocationBtn" data-bs-toggle="modal" data-bs-target="#createLocationModal">
+                <i class="bi bi-plus-circle"></i> Create Location
+            </button>
         </div>
     </div>
 
@@ -191,6 +194,45 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" id="transferFromLocationModalBtn">Transfer from this location</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Create Location Modal -->
+<div class="modal fade" id="createLocationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Create New Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Location Name *</label>
+                    <input type="text" id="newLocationName" class="form-control" placeholder="e.g., Downtown Shop">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Location Code *</label>
+                    <input type="text" id="newLocationCode" class="form-control" placeholder="e.g., SHOP_DT">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Location Type</label>
+                    <select id="newLocationType" class="form-select">
+                        <option value="shop">Shop / Retail</option>
+                        <option value="warehouse">Warehouse</option>
+                        <option value="storage">Storage</option>
+                        <option value="bin">Bin / Shelf</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Address (Optional)</label>
+                    <textarea id="newLocationAddress" class="form-control" rows="2"></textarea>
+                </div>
+                <div id="createLocationMsg" class="alert alert-dismissible fade show d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmCreateLocationBtn">Create Location</button>
             </div>
         </div>
     </div>
@@ -514,6 +556,53 @@
             // This button is inside location products modal; we already handle per-product transfer
         });
     });
+    // Create Location
+    const createBtn = document.getElementById('confirmCreateLocationBtn');
+    if (createBtn) {
+        createBtn.addEventListener('click', function() {
+            const name = document.getElementById('newLocationName').value.trim();
+            const code = document.getElementById('newLocationCode').value.trim();
+            const type = document.getElementById('newLocationType').value;
+            const address = document.getElementById('newLocationAddress').value.trim();
+            const msgDiv = document.getElementById('createLocationMsg');
+            
+            if (!name || !code) {
+                msgDiv.className = 'alert alert-danger alert-dismissible fade show';
+                msgDiv.innerHTML = 'Location Name and Code are required. <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                msgDiv.classList.remove('d-none');
+                return;
+            }
+            
+            fetch('/api/v1/locations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    location_name: name,
+                    location_code: code,
+                    location_type: type,
+                    address: address
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.id) {
+                    msgDiv.className = 'alert alert-success alert-dismissible fade show';
+                    msgDiv.innerHTML = `Location created successfully! ID: ${data.id} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+                    msgDiv.classList.remove('d-none');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    msgDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    msgDiv.innerHTML = `Error: ${data.error || 'Unknown error'} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+                    msgDiv.classList.remove('d-none');
+                }
+            })
+            .catch(err => {
+                msgDiv.className = 'alert alert-danger alert-dismissible fade show';
+                msgDiv.innerHTML = `Network error: ${err.message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+                msgDiv.classList.remove('d-none');
+            });
+        });
+    }
 })();
 </script>
 {% endblock %}

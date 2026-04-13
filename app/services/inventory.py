@@ -288,90 +288,104 @@ class InventoryManager:
             return None
 
     @staticmethod
-    def update_stock_delta(user_id, account_id, product_id, quantity_delta, movement_type, reference_id=None, notes=None):
-        try:
-            # Use a fresh connection with a transaction
-            with DB_ENGINE.connect() as conn:
-                with conn.begin():
-                    # Log incoming values
-                    logger.info(f"update_stock_delta: user={user_id}, prod={product_id}, delta={quantity_delta}")
+    def update_stock_delta(user_id, account_id, product_id, quantity_delta, movement_type, reference_id=None, notes=None, location_id=None):
+        """
+        Update stock. If location_id provided, update location-specific stock (product_locations).
+        Otherwise fall back to global inventory_items.current_stock.
+        """
+        from app.services.location_inventory import LocationInventoryManager
+        from decimal import Decimal
 
-                    # Lock row and fetch current
-                    result = conn.execute(text('''
-                        SELECT name, current_stock, min_stock_level FROM inventory_items
-                        WHERE id = :product_id AND account_id = :aid AND is_active = TRUE
-                        FOR UPDATE
-                    '''), {"product_id": product_id, "aid": account_id}).fetchone()
-
-                    if not result:
-                        logger.warning(f"Product not found or inactive: id={product_id}, account={account_id}")
-                        return False
-
-                    product_name, current_stock, min_stock_level = result
-                    if not isinstance(current_stock, Decimal):
-                        current_stock = Decimal(str(current_stock))
-
-                    if isinstance(quantity_delta, (int, float)):
-                        quantity_delta = Decimal(str(quantity_delta))
-                    elif isinstance(quantity_delta, str):
-                        quantity_delta = Decimal(quantity_delta)
-
-                    new_stock = current_stock + quantity_delta
-                    if new_stock < 0:
-                        logger.warning(f"Negative stock prevented for product {product_id}")
-                        return False
-
-                    # Apply update
-                    conn.execute(text('''
-                        UPDATE inventory_items SET current_stock = :new_stock WHERE id = :product_id
-                    '''), {"new_stock": new_stock, "product_id": product_id}),
-##                    # After successful stock update, check if new_stock <= min_stock_level
-##                    if new_stock <= min_stock_level:
-##                        # Fetch owner emails for this account
-##                        with DB_ENGINE.connect() as conn2:  # fresh connection to avoid locking
-##                            owner_emails = [row[0] for row in conn2.execute(text("""
-##                                SELECT email FROM users WHERE account_id = :aid AND role = 'owner'
-##                            """), {"aid": account_id})]
-##                        if owner_emails:
-##                            subject = f"Low Stock Alert: {product_name}"
-##                            body = f"""
-##                    Dear Owner,
-##
-##                    The stock of "{product_name}" has dropped to {new_stock} units.
-##                    Minimum stock level is {min_stock_level}. Please reorder soon.
-##
-##                    Best regards,
-##                    Groweasy
-##                    """
-##                            from app.services.email import send_email
-##                            send_email(owner_emails, subject, body)
-                    # ----- WEBHOOK TRIGGER -----
-                    fire_webhook(account_id, 'stock.low', {
-                        'product_id': product_id,
-                        'product_name': product_name,
-                        'current_stock': float(new_stock),
-                        'min_stock_level': min_stock_level
-                    })
-
-                    # Log movement
-                    conn.execute(text('''
-                        INSERT INTO stock_movements
-                        (user_id, product_id, movement_type, quantity, reference_id, notes)
-                        VALUES (:user_id, :product_id, :movement_type, :quantity, :reference_id, :notes)
-                    '''), {
-                        "user_id": user_id,
-                        "product_id": product_id,
-                        "movement_type": movement_type,
-                        "quantity": quantity_delta,
-                        "reference_id": reference_id,
-                        "notes": notes
-                    })
-
-                    logger.info(f"Stock updated: {current_stock} → {new_stock} ({movement_type})")
+        # NEW: Location-aware deduction (sales, damage, transfers)
+        if location_id is not None:
+            try:
+                if quantity_delta < 0:
+                    # Removing stock (sale, damage)
+                    success = LocationInventoryManager.remove_from_location(
+                        product_id=product_id,
+                        location_id=location_id,
+                        quantity=abs(quantity_delta),
+                        user_id=user_id
+                    )
+                else:
+                    # Adding stock (return, purchase)
+                    success = LocationInventoryManager.add_product_to_location(
+                        product_id=product_id,
+                        location_id=location_id,
+                        quantity=quantity_delta,
+                        user_id=user_id
+                    )
+                
+                if success:
+                    # Optionally sync global stock (for legacy reports)
+                    with DB_ENGINE.begin() as conn:
+                        total = conn.execute(text("""
+                            SELECT COALESCE(SUM(quantity), 0) FROM product_locations WHERE product_id = :pid
+                        """), {"pid": product_id}).scalar()
+                        conn.execute(text("""
+                            UPDATE inventory_items SET current_stock = :total WHERE id = :pid
+                        """), {"total": total, "pid": product_id})
+                    
+                    # Log movement in stock_movements with location info
+                    with DB_ENGINE.begin() as conn:
+                        conn.execute(text("""
+                            INSERT INTO stock_movements
+                            (user_id, product_id, movement_type, quantity, reference_id, notes)
+                            VALUES (:uid, :pid, :type, :qty, :ref, :notes)
+                        """), {
+                            "uid": user_id,
+                            "pid": product_id,
+                            "type": f"{movement_type}_location_{location_id}",
+                            "qty": quantity_delta,
+                            "ref": reference_id,
+                            "notes": f"{notes or ''} (Location ID: {location_id})"
+                        })
                     return True
+                return False
+            except Exception as e:
+                logger.error(f"Location stock update failed: {e}", exc_info=True)
+                return False
 
+        # LEGACY: Global stock update (no location provided)
+        try:
+            with DB_ENGINE.begin() as conn:
+                # Lock row
+                result = conn.execute(text("""
+                    SELECT current_stock FROM inventory_items
+                    WHERE id = :pid AND account_id = :aid AND is_active = TRUE
+                    FOR UPDATE
+                """), {"pid": product_id, "aid": account_id}).fetchone()
+                if not result:
+                    logger.warning(f"Product {product_id} not found or inactive")
+                    return False
+                
+                current_stock = Decimal(str(result[0]))
+                delta = Decimal(str(quantity_delta))
+                new_stock = current_stock + delta
+                if new_stock < 0:
+                    logger.warning(f"Insufficient stock for product {product_id}")
+                    return False
+                
+                conn.execute(text("""
+                    UPDATE inventory_items SET current_stock = :new WHERE id = :pid
+                """), {"new": new_stock, "pid": product_id})
+                
+                conn.execute(text("""
+                    INSERT INTO stock_movements
+                    (user_id, product_id, movement_type, quantity, reference_id, notes)
+                    VALUES (:uid, :pid, :type, :qty, :ref, :notes)
+                """), {
+                    "uid": user_id,
+                    "pid": product_id,
+                    "type": movement_type,
+                    "qty": quantity_delta,
+                    "ref": reference_id,
+                    "notes": notes
+                })
+                logger.info(f"Global stock updated: {current_stock} → {new_stock} ({movement_type})")
+                return True
         except Exception as e:
-            logger.error(f"Stock delta update failed: {e}", exc_info=True)
+            logger.error(f"Global stock update failed: {e}", exc_info=True)
             return False
     
     @staticmethod

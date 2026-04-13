@@ -51,6 +51,33 @@
                 </div>
             </div>
         </div>
+        <!-- Location Selection (Multi-Location Invoice) -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-building"></i> Selling From Location</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Select Location *</label>
+                        <select name="location_id" id="invoiceLocationId" class="form-select" required>
+                            <option value="">-- Choose Location --</option>
+                            {% for loc in locations %}
+                                <option value="{{ loc.id }}" {% if default_location_id == loc.id %}selected{% endif %}>
+                                    {{ loc.location_name }} ({{ loc.location_code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Stock will be deducted from this location</small>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="locationStockInfo" class="alert alert-light border">
+                            Select a location to see available stock.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Inventory Search & Add -->
         <div class="card mb-4">
@@ -199,6 +226,32 @@ document.addEventListener('DOMContentLoaded', function() {
             if (submitBtn.disabled) e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.innerHTML = '⏳ Generating Preview...';
+        });
+    }
+    // Location-aware stock check
+    const locationSelect = document.getElementById('invoiceLocationId');
+    if (locationSelect) {
+        locationSelect.addEventListener('change', function() {
+            const locId = this.value;
+            if (!locId) {
+                document.getElementById('locationStockInfo').innerHTML = 'Select a location to see available stock.';
+                return;
+            }
+            fetch(`/api/v1/locations/${locId}/products`, { credentials: 'same-origin' })
+                .then(res => res.json())
+                .then(products => {
+                    // Store in global for later validation
+                    window.locationStockMap = {};
+                    products.forEach(p => {
+                        window.locationStockMap[p.id] = p.stock_at_location;
+                    });
+                    document.getElementById('locationStockInfo').innerHTML = 
+                        `<i class="bi bi-check-circle-fill text-success"></i> Stock data loaded for ${products.length} products.`;
+                })
+                .catch(() => {
+                    document.getElementById('locationStockInfo').innerHTML = 
+                        `<i class="bi bi-exclamation-triangle-fill text-danger"></i> Failed to load stock data.`;
+                });
         });
     }
 });

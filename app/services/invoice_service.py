@@ -28,8 +28,29 @@ class InvoiceService:
             self.account_id = row[0] if row else None
 
     def create_invoice(self, form_data, files=None):
+        """
+        Create a sales invoice with location-aware stock deduction.
+        Expects form_data to include 'location_id' (required for multi-location).
+        """
         try:
+            # Extract location_id from form data (required)
+            location_id = form_data.get('location_id')
+            if not location_id:
+                self.errors.append("Location ID is required. Please select a selling location.")
+                return None, self.errors
+            
+            # Validate location belongs to account
+            from app.services.location_inventory import LocationInventoryManager
+            locations = LocationInventoryManager.get_account_locations(self.account_id)
+            if not any(str(loc['id']) == str(location_id) for loc in locations):
+                self.errors.append("Invalid location selected.")
+                return None, self.errors
+            
+            location_id = int(location_id)
+            
+            # Prepare invoice data (existing logic)
             invoice_data = prepare_invoice_data(form_data, files=files)
+            
             # Check invoice limit
             if self.account_id:
                 allowed, msg = check_invoice_limit(self.account_id)
@@ -37,12 +58,13 @@ class InvoiceService:
                     self.errors.append(msg)
                     return None, self.errors
 
-            # Generate number
+            # Generate invoice number
             invoice_data['invoice_number'] = NumberGenerator.generate_invoice_number(self.account_id)
-            # Save
+            
+            # Save invoice (existing)
             save_user_invoice(self.user_id, self.account_id, invoice_data)
 
-            # NEW: Insert items into invoice_items table
+            # Insert items into invoice_items table with location_id
             from app.services.db import DB_ENGINE
             from sqlalchemy import text
             with DB_ENGINE.begin() as conn:
@@ -54,49 +76,56 @@ class InvoiceService:
 
                 if result:
                     invoice_id = result[0]
-                    # Insert each item into invoice_items
+                    # Insert each item with location_id
                     for item in invoice_data.get('items', []):
                         conn.execute(text("""
-                            INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, total)
-                            VALUES (:inv_id, :prod_id, :qty, :price, :total)
+                            INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, total, location_id)
+                            VALUES (:inv_id, :prod_id, :qty, :price, :total, :loc_id)
                         """), {
                             'inv_id': invoice_id,
                             'prod_id': item['product_id'],
                             'qty': item['qty'],
                             'price': item['price'],
-                            'total': item['total']
+                            'total': item['total'],
+                            'loc_id': location_id
                         })
 
-            #Update stock - decrease for sales (EXACT DECIMAL QUANTITY)
+            # Update stock - location-aware deduction
             movement_type = 'sale'
-
             for item in invoice_data.get('items', []):
                 if item.get('product_id'):
-                    # Ensure qty is Decimal
-                    qty_sold = Decimal(str(item['qty']))  # safe conversion from float
+                    qty_sold = Decimal(str(item['qty']))
+                    # Pass location_id to InventoryManager.update_stock_delta
                     success = InventoryManager.update_stock_delta(
-                        self.user_id,
-                        self.account_id,
-                        item['product_id'],
-                        -qty_sold,                             # Decimal negative
-                        movement_type,
+                        user_id=self.user_id,
+                        account_id=self.account_id,
+                        product_id=item['product_id'],
+                        quantity_delta=-qty_sold,
+                        movement_type=movement_type,
                         reference_id=invoice_data['invoice_number'],
-                        notes=f"Sold {qty_sold:.3f} {item.get('unit_type', 'unit')} via invoice {invoice_data['invoice_number']}"
+                        notes=f"Sold {qty_sold:.3f} {item.get('unit_type', 'unit')} via invoice {invoice_data['invoice_number']} from location {location_id}",
+                        location_id=location_id   # <-- KEY CHANGE
                     )
                     if not success:
                         product_name = item.get('name', 'Unknown')
                         with DB_ENGINE.connect() as conn:
-                            stock = conn.execute(text(
-                                "SELECT current_stock FROM inventory_items WHERE id = :pid"
-                            ), {"pid": item['product_id']}).scalar() or Decimal('0')
+                            # Get available stock at that specific location
+                            from app.services.location_inventory import LocationInventoryManager
+                            breakdown = LocationInventoryManager.get_product_location_breakdown(item['product_id'])
+                            location_stock = 0
+                            for loc in breakdown.get('locations', []):
+                                if loc.get('location_id') == location_id:
+                                    location_stock = loc.get('quantity', 0)
+                                    break
                         self.warnings.append(
                             f"Stock update failed for {product_name}: "
-                            f"requested -{qty_sold:.3f}, current stock {stock}"
+                            f"requested -{qty_sold:.3f}, available at location: {location_stock}"
                         )
-                        # Increment invoice count
-                        if self.account_id:
-                            increment_invoice_count(self.account_id)
-
+            
+            # Increment invoice count (existing)
+            if self.account_id:
+                increment_invoice_count(self.account_id)
+            
             return invoice_data, self.errors or self.warnings
 
         except Exception as e:

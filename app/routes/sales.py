@@ -28,26 +28,21 @@ sales_bp = Blueprint('sales', __name__)
 @sales_bp.route('/create_invoice')
 @role_required('owner', 'assistant')
 def create_invoice():
-    """Dedicated route for creating sales invoices ONLY"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-
-    prefill_data = {}
+    
+    from app.services.location_inventory import LocationInventoryManager
+    account_id = session['account_id']
+    locations = LocationInventoryManager.get_account_locations(account_id)
+    
+    # Optional: get user's default location from profile
     user_profile = get_user_profile_cached(session['user_id'])
-
-    if user_profile:
-        prefill_data = {
-            'company_name': user_profile.get('company_name', ''),
-            'company_address': user_profile.get('company_address', ''),
-            'company_phone': user_profile.get('company_phone', ''),
-            'company_email': user_profile.get('email', ''),
-            'company_tax_id': user_profile.get('company_tax_id', ''),
-            'seller_ntn': user_profile.get('seller_ntn', ''),
-            'seller_strn': user_profile.get('seller_strn', ''),
-        }
-
+    default_location_id = user_profile.get('default_location_id') if user_profile else None
+    
     return render_template('form.html',
                          prefill_data=prefill_data,
+                         locations=locations,
+                         default_location_id=default_location_id,
                          nonce=g.nonce)
 
 # 2 preview and download 2

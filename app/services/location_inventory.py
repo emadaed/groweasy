@@ -206,11 +206,10 @@ class LocationInventoryManager:
     
     @staticmethod
     def get_product_location_breakdown(product_id):
-        """Get stock breakdown by location for a product"""
         try:
             with DB_ENGINE.connect() as conn:
                 rows = conn.execute(text("""
-                    SELECT l.location_name, l.location_code, pl.quantity,
+                    SELECT l.id, l.location_name, l.location_code, pl.quantity,
                            pl.reserved_quantity, l.location_type
                     FROM product_locations pl
                     JOIN locations l ON pl.location_id = l.id
@@ -223,17 +222,14 @@ class LocationInventoryManager:
                 for row in rows:
                     total += row.quantity
                     breakdown.append({
+                        'location_id': row.id,          # <-- ADD THIS
                         'location_name': row.location_name,
                         'location_code': row.location_code,
                         'quantity': float(row.quantity),
                         'reserved': float(row.reserved_quantity) if row.reserved_quantity else 0,
                         'type': row.location_type
                     })
-                
-                return {
-                    'total_stock': float(total),
-                    'locations': breakdown
-                }
+                return {'total_stock': float(total), 'locations': breakdown}
         except Exception as e:
             logger.error(f"Error getting location breakdown: {e}")
             return {'total_stock': 0, 'locations': []}
