@@ -148,19 +148,16 @@
     }
 
     function loadProducts() {
-        fetch('/api/v1/inventory', {
-            method: 'GET',
-            credentials: 'same-origin'
-        })
-        .then(res => res.json())
-        .then(data => {
-            allProducts = data || [];
-            applyFiltersAndRender();
-        })
-        .catch(err => {
-            console.error('Error loading products:', err);
-            document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Error loading products</div>';
-        });
+        fetch('/api/v1/inventory?per_page=500', { credentials: 'same-origin' })
+            .then(res => res.json())
+            .then(data => {
+                allProducts = data.products || [];  // <-- key change
+                applyFiltersAndRender();
+            })
+            .catch(err => {
+                console.error('Error loading products:', err);
+                document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Error loading products</div>';
+            });
     }
 
     function applyFiltersAndRender() {

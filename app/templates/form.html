@@ -202,7 +202,7 @@
 <script nonce="{{ nonce }}">
     window.userCurrencySymbol = "{{ currency_symbol | default('Rs.') }}";
     window.userLocations = {{ locations | tojson }};
-    window.defaultLocationId = {{ default_location_id | default('null') }};
+    <!--window.defaultLocationId = {{ default_location_id | tojson | default('null') }};-->
 </script>
 <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/form_items.js') }}"></script>
 

@@ -38,9 +38,10 @@ class InvoiceFormManager {
     }
 
     loadProductsForLocation(locationId) {
-        fetch(`/api/v1/locations/${locationId}/products`, { credentials: 'same-origin' })
+        fetch(`/api/v1/locations/${locationId}/products?per_page=500`, { credentials: 'same-origin' })
             .then(res => res.json())
-            .then(products => {
+            .then(data => {
+                const products = data.products || [];  // <-- key change
                 this.inventoryData = products.filter(p => p.stock_at_location > 0).map(p => ({
                     id: p.id,
                     name: p.name,
@@ -53,7 +54,6 @@ class InvoiceFormManager {
                 this.updateInventoryDropdown();
                 document.getElementById('locationStockInfo').innerHTML = 
                     `<i class="bi bi-check-circle-fill text-success"></i> Stock data loaded for ${this.inventoryData.length} products.`;
-                // Also refresh any open search results
                 const searchInput = document.getElementById('modalSearch') || document.getElementById('inventorySearch');
                 if (searchInput && searchInput.value.trim()) {
                     this.searchInventory(searchInput.value);
