@@ -1,32 +1,68 @@
-// form_items.js - Enhanced with SKU display + unit-aware quantity input
-// FIXED: all methods present, safe Number() usage, debug kept
-
+// form_items.js - Location-aware inventory search
 class InvoiceFormManager {
     constructor() {
-        this.inventoryData = [];
+        this.inventoryData = [];         // Will hold products for the selected location
         this.usedProductIds = new Set();
         this.currencySymbol = window.userCurrencySymbol || 'Rs.';
+        this.currentLocationId = window.defaultLocationId || null;
         this.initialize();
     }
 
     initialize() {
-        console.log('Initializing invoice form...');
-        this.loadInventoryData();
+        console.log('Initializing location-aware invoice form...');
         this.setupCoreEventListeners();
         this.updateEmptyState();
         this.updateGrandTotal();
+
+        // Load initial location products if a default location exists
+        if (this.currentLocationId) {
+            this.loadProductsForLocation(this.currentLocationId);
+            const locationSelect = document.getElementById('invoiceLocationId');
+            if (locationSelect) locationSelect.value = this.currentLocationId;
+        }
+
+        // Listen to location change
+        const locationSelect = document.getElementById('invoiceLocationId');
+        if (locationSelect) {
+            locationSelect.addEventListener('change', (e) => {
+                this.currentLocationId = e.target.value;
+                if (this.currentLocationId) {
+                    this.loadProductsForLocation(this.currentLocationId);
+                } else {
+                    this.inventoryData = [];
+                    this.updateInventoryDropdown();
+                    document.getElementById('locationStockInfo').innerHTML = 'Select a location to see available stock.';
+                }
+            });
+        }
     }
 
-    loadInventoryData() {
-        fetch('/api/inventory_items')
-            .then(response => response.json())
-            .then(items => {
-                console.log(`Loaded ${items.length} inventory items`);
-                this.inventoryData = items;
+    loadProductsForLocation(locationId) {
+        fetch(`/api/v1/locations/${locationId}/products`, { credentials: 'same-origin' })
+            .then(res => res.json())
+            .then(products => {
+                this.inventoryData = products.filter(p => p.stock_at_location > 0).map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    sku: p.sku,
+                    price: p.selling_price,
+                    stock: p.stock_at_location,
+                    unit_type: p.unit_type || 'piece'
+                }));
+                console.log(`Loaded ${this.inventoryData.length} products for location ${locationId}`);
                 this.updateInventoryDropdown();
+                document.getElementById('locationStockInfo').innerHTML = 
+                    `<i class="bi bi-check-circle-fill text-success"></i> Stock data loaded for ${this.inventoryData.length} products.`;
+                // Also refresh any open search results
+                const searchInput = document.getElementById('modalSearch') || document.getElementById('inventorySearch');
+                if (searchInput && searchInput.value.trim()) {
+                    this.searchInventory(searchInput.value);
+                }
             })
-            .catch(error => {
-                console.error('Failed to load inventory:', error);
+            .catch(err => {
+                console.error('Failed to load location products:', err);
+                document.getElementById('locationStockInfo').innerHTML = 
+                    `<i class="bi bi-exclamation-triangle-fill text-danger"></i> Failed to load stock data.`;
             });
     }
 
@@ -39,11 +75,15 @@ class InvoiceFormManager {
                 this.addInventoryItemFromDropdown();
             }
             if (e.target.id === 'showAllInventory') {
-                this.showAllInventory();
+                if (this.currentLocationId) {
+                    this.showAllInventory();
+                } else {
+                    this.showToast('Please select a location first', 'warning');
+                }
             }
             if (e.target.classList.contains('add-inventory-search-item')) {
                 const productId = e.target.dataset.id;
-                const product = this.inventoryData.find(p => p.id === productId);
+                const product = this.inventoryData.find(p => p.id == productId);
                 if (product) {
                     this.addInventoryItem(
                         product.id,
@@ -110,8 +150,12 @@ class InvoiceFormManager {
         const resultsDiv = document.getElementById('inventoryResults');
         if (!resultsDiv) return;
 
-        if (!searchTerm.trim()) {
+        if (!searchTerm.trim() || !this.currentLocationId) {
             resultsDiv.style.display = 'none';
+            if (!this.currentLocationId && searchTerm.trim()) {
+                resultsDiv.innerHTML = '<div class="alert alert-warning">Please select a location first</div>';
+                resultsDiv.style.display = 'block';
+            }
             return;
         }
 
@@ -125,6 +169,10 @@ class InvoiceFormManager {
     }
 
     showAllInventory() {
+        if (!this.currentLocationId) {
+            this.showToast('Please select a location first', 'warning');
+            return;
+        }
         const availableItems = this.inventoryData.filter(item => !this.usedProductIds.has(item.id));
         this.displaySearchResults(availableItems);
     }
@@ -134,14 +182,14 @@ class InvoiceFormManager {
         if (!resultsDiv) return;
 
         if (items.length === 0) {
-            resultsDiv.innerHTML = '<div class="alert alert-warning">No matching products found</div>';
+            resultsDiv.innerHTML = '<div class="alert alert-warning">No matching products found at this location</div>';
             resultsDiv.style.display = 'block';
             return;
         }
 
         const resultsHTML = `
             <div class="alert alert-info mb-3">
-                <strong>Found ${items.length} product(s):</strong>
+                <strong>Found ${items.length} product(s) at this location:</strong>
             </div>
             <div class="row g-3">
                 ${items.map(item => `
@@ -182,66 +230,65 @@ class InvoiceFormManager {
     }
 
     addInventoryItem(productId, productName, productPrice, productStock, productSku = '', unitType = 'piece') {
-    if (this.usedProductIds.has(productId)) {
-        this.showToast('This item is already in the invoice', 'warning');
-        return;
-    }
+        if (this.usedProductIds.has(productId)) {
+            this.showToast('This item is already in the invoice', 'warning');
+            return;
+        }
 
-    const itemsContainer = document.getElementById('itemsContainer');
-    if (!itemsContainer) return;
+        const itemsContainer = document.getElementById('itemsContainer');
+        if (!itemsContainer) return;
 
-    this.usedProductIds.add(productId);
+        this.usedProductIds.add(productId);
 
-    const qtyAttributes = this.getQuantityAttributes(unitType);
-    const initialQty = (unitType === 'piece') ? '1' : '1.00';  // ← nicer default
+        const qtyAttributes = this.getQuantityAttributes(unitType);
+        const initialQty = (unitType === 'piece') ? '1' : '1.00';
 
-    const newRow = document.createElement('div');
-    newRow.className = 'row g-3 align-items-end mb-3 pb-3 border-bottom item-row';
-    newRow.innerHTML = `
-        <div class="col-md-5">
-            <label class="form-label small fw-semibold">Item</label>
-            <input type="text" name="item_name[]" class="form-control" value="${this.escapeHtml(productName)}" readonly>
-            ${productSku ? `<small class="text-muted d-block">SKU: ${this.escapeHtml(productSku)}</small>` : ''}
-            <!-- NEW: show unit type clearly -->
-            <small class="text-muted d-block">
-                Unit: ${this.getUnitLabel(unitType)} • Stock: ${productStock} ${this.getUnitLabel(unitType)}
-            </small>
-            <input type="hidden" name="item_id[]" value="${productId}">
-            <input type="hidden" name="item_unit_type[]" value="${unitType}">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small fw-semibold">Qty</label>
-            <div class="input-group">
-                <input type="number" name="item_qty[]" class="form-control" value="${initialQty}" 
-                       ${qtyAttributes} required>
-                <span class="input-group-text">${this.getUnitLabel(unitType)}</span>
+        const newRow = document.createElement('div');
+        newRow.className = 'row g-3 align-items-end mb-3 pb-3 border-bottom item-row';
+        newRow.innerHTML = `
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold">Item</label>
+                <input type="text" name="item_name[]" class="form-control" value="${this.escapeHtml(productName)}" readonly>
+                ${productSku ? `<small class="text-muted d-block">SKU: ${this.escapeHtml(productSku)}</small>` : ''}
+                <small class="text-muted d-block">
+                    Unit: ${this.getUnitLabel(unitType)} • Stock: ${productStock} ${this.getUnitLabel(unitType)}
+                </small>
+                <input type="hidden" name="item_id[]" value="${productId}">
+                <input type="hidden" name="item_unit_type[]" value="${unitType}">
             </div>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-semibold">Unit Price</label>
-            <input type="number" name="item_price[]" class="form-control" value="${Number(productPrice)}" step="0.01" readonly>
-        </div>
-        <div class="col-md-1">
-            <label class="form-label small opacity-0">Remove</label>
-            <button type="button" class="btn btn-outline-danger removeItemBtn w-100">×</button>
-        </div>
-        <div class="col-md-1 text-end">
-            <div class="fw-bold text-success fs-6 line-total">${this.currencySymbol}${Number(productPrice).toFixed(2)}</div>
-        </div>
-    `;
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Qty</label>
+                <div class="input-group">
+                    <input type="number" name="item_qty[]" class="form-control" value="${initialQty}" 
+                           ${qtyAttributes} required>
+                    <span class="input-group-text">${this.getUnitLabel(unitType)}</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Unit Price</label>
+                <input type="number" name="item_price[]" class="form-control" value="${Number(productPrice)}" step="0.01" readonly>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small opacity-0">Remove</label>
+                <button type="button" class="btn btn-outline-danger removeItemBtn w-100">×</button>
+            </div>
+            <div class="col-md-1 text-end">
+                <div class="fw-bold text-success fs-6 line-total">${this.currencySymbol}${Number(productPrice).toFixed(2)}</div>
+            </div>
+        `;
 
-    itemsContainer.appendChild(newRow);
+        itemsContainer.appendChild(newRow);
 
-    this.showToast(`${productName} added!`);
-    this.updateEmptyState();
-    this.updateInventoryDropdown();
-    this.updateGrandTotal();
+        this.showToast(`${productName} added!`);
+        this.updateEmptyState();
+        this.updateInventoryDropdown();
+        this.updateGrandTotal();
 
-    const resultsDiv = document.getElementById('inventoryResults');
-    if (resultsDiv) resultsDiv.style.display = 'none';
-    const searchInput = document.getElementById('modalSearch') || document.getElementById('inventorySearch');
-    if (searchInput) searchInput.value = '';
-}
+        const resultsDiv = document.getElementById('inventoryResults');
+        if (resultsDiv) resultsDiv.style.display = 'none';
+        const searchInput = document.getElementById('modalSearch') || document.getElementById('inventorySearch');
+        if (searchInput) searchInput.value = '';
+    }
 
     getQuantityAttributes(unitType) {
         if (unitType === 'piece') {
@@ -267,11 +314,12 @@ class InvoiceFormManager {
         const productIdInput = row.querySelector('input[name="item_id[]"]');
         if (!productIdInput) return;
 
-        const product = this.inventoryData.find(item => item.id === productIdInput.value);
+        const product = this.inventoryData.find(item => item.id == productIdInput.value);
         if (!product) return;
 
         if (qty > product.stock) {
             input.classList.add('is-invalid');
+            this.showToast(`Only ${product.stock} available at this location`, 'warning');
         } else {
             input.classList.remove('is-invalid');
         }
@@ -358,9 +406,6 @@ class InvoiceFormManager {
             .replace(/'/g, "&#039;");
     }
 }
-
-// Temporary debug - keep this for one more test
-console.log('InvoiceFormManager prototype methods:', Object.getOwnPropertyNames(InvoiceFormManager.prototype));
 
 document.addEventListener('DOMContentLoaded', () => {
     new InvoiceFormManager();

@@ -21,12 +21,12 @@
         </div>
     </div>
 
-    <!-- Location Summary Cards (clickable) -->
+    <!-- Location Summary Cards (clickable, with edit/delete) -->
     <div class="row mb-4" id="locationCards">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="bi bi-map"></i> Stock by Location <small class="text-muted">(click any card to view products)</small></h5>
+                    <h5><i class="bi bi-map"></i> Stock by Location <small class="text-muted">(click card to view products)</small></h5>
                 </div>
                 <div class="card-body">
                     <div class="row" id="locationStats">
@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <!-- Quick Transfer Panel -->
+    <!-- Quick Transfer Panel (improved) -->
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card">
@@ -47,22 +47,26 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label">Product</label>
-                            <select class="form-select" id="quickProductId">
-                                <option value="">Search product...</option>
-                            </select>
+                            <label class="form-label">Search Product</label>
+                            <input type="text" class="form-control" id="quickProductSearch" placeholder="Type product name or SKU...">
+                            <input type="hidden" id="quickProductId">
+                            <div id="quickProductSuggestions" class="list-group mt-1" style="max-height: 200px; overflow-y: auto; display: none;"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">From Location</label>
-                            <select class="form-select" id="quickFromLocation"></select>
+                            <select class="form-select" id="quickFromLocation" required>
+                                <option value="">Select location...</option>
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">To Location</label>
-                            <select class="form-select" id="quickToLocation"></select>
+                            <select class="form-select" id="quickToLocation" required>
+                                <option value="">Select location...</option>
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" id="quickQuantity" min="1">
+                            <input type="number" class="form-control" id="quickQuantity" min="1" step="1">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">&nbsp;</label>
@@ -101,18 +105,9 @@
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Product</th>
-                                    <th>From</th>
-                                    <th>To</th>
-                                    <th>Quantity</th>
-                                    <th>Status</th>
-                                </tr>
+                                <tr><th>Date</th><th>Product</th><th>From</th><th>To</th><th>Quantity</th><th>Status</th></tr>
                             </thead>
-                            <tbody id="recentMovements">
-                                <tr><td colspan="6" class="text-center">Loading......</td></tr>
-                            </tbody>
+                            <tbody id="recentMovements"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -126,35 +121,23 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="bi bi-arrow-left-right"></i> Transfer Stock</h5>
+                <h5 class="modal-title">Transfer Stock</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Product *</label>
-                    <select class="form-select" id="transferProductId" required>
-                        <option value="">Select product...</option>
-                    </select>
+                    <label class="form-label">Product</label>
+                    <input type="text" class="form-control" id="transferProductSearch" placeholder="Search product...">
+                    <input type="hidden" id="transferProductId">
+                    <div id="transferProductSuggestions" class="list-group mt-1" style="max-height: 150px; overflow-y: auto; display: none;"></div>
                 </div>
                 <div class="row">
-                    <div class="col-md-6">
-                        <label class="form-label">From Location *</label>
-                        <select class="form-select" id="transferFromLocation" required></select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">To Location *</label>
-                        <select class="form-select" id="transferToLocation" required></select>
-                    </div>
+                    <div class="col-md-6"><label>From Location</label><select id="transferFromLocation" class="form-select"></select></div>
+                    <div class="col-md-6"><label>To Location</label><select id="transferToLocation" class="form-select"></select></div>
                 </div>
-                <div class="mt-3">
-                    <label class="form-label">Quantity *</label>
-                    <input type="number" class="form-control" id="transferQuantity" min="1" required>
-                    <small class="text-muted" id="availableStock">Available: --</small>
-                </div>
-                <div class="mt-3">
-                    <label class="form-label">Notes (Optional)</label>
-                    <textarea class="form-control" id="transferNotes" rows="2"></textarea>
-                </div>
+                <div class="mt-3"><label>Quantity</label><input type="number" id="transferQuantity" class="form-control" min="1"></div>
+                <div class="mt-3"><label>Notes</label><textarea id="transferNotes" class="form-control" rows="2"></textarea></div>
+                <div class="mt-2 text-muted small" id="availableStockInfo"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -164,75 +147,67 @@
     </div>
 </div>
 
-<!-- Location Products Modal (Drill-down) -->
+<!-- Location Products Modal (Drill-down with pagination) -->
 <div class="modal fade" id="locationProductsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="locationModalTitle">Products in <span id="locationNameSpan"></span></h5>
+                <h5 class="modal-title">Products in <span id="locationNameSpan"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="locationProductSearch" class="form-control" placeholder="Search within this location...">
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>Product Name</th>
-                                <th>SKU</th>
-                                <th>Stock at this location</th>
-                                <th>Min Level</th>
-                                <th>Selling Price</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="locationProductsTableBody">
-                            <tr><td colspan="6" class="text-center">Loading......</td></tr>
-                        </tbody>
+                        <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Min Level</th><th>Price</th><th>Action</th></tr></thead>
+                        <tbody id="locationProductsTableBody"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
                     </table>
                 </div>
+                <nav><ul class="pagination justify-content-center" id="locationProductsPagination"></ul></nav>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="transferFromLocationModalBtn">Transfer from this location</button>
             </div>
         </div>
     </div>
 </div>
+
 <!-- Create Location Modal -->
 <div class="modal fade" id="createLocationModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Create New Location</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-primary text-white"><h5 class="modal-title">Create New Location</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Location Name *</label>
-                    <input type="text" id="newLocationName" class="form-control" placeholder="e.g., Downtown Shop">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Location Code *</label>
-                    <input type="text" id="newLocationCode" class="form-control" placeholder="e.g., SHOP_DT">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Location Type</label>
-                    <select id="newLocationType" class="form-select">
-                        <option value="shop">Shop / Retail</option>
-                        <option value="warehouse">Warehouse</option>
-                        <option value="storage">Storage</option>
-                        <option value="bin">Bin / Shelf</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Address (Optional)</label>
-                    <textarea id="newLocationAddress" class="form-control" rows="2"></textarea>
-                </div>
-                <div id="createLocationMsg" class="alert alert-dismissible fade show d-none"></div>
+                <div class="mb-3"><label>Location Name *</label><input type="text" id="newLocationName" class="form-control"></div>
+                <div class="mb-3"><label>Location Code *</label><input type="text" id="newLocationCode" class="form-control"></div>
+                <div class="mb-3"><label>Location Type</label><select id="newLocationType" class="form-select"><option value="shop">Shop</option><option value="warehouse">Warehouse</option><option value="storage">Storage</option></select></div>
+                <div class="mb-3"><label>Address</label><textarea id="newLocationAddress" class="form-control" rows="2"></textarea></div>
+                <div id="createLocationMsg" class="alert d-none"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="confirmCreateLocationBtn">Create</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Location Modal -->
+<div class="modal fade" id="editLocationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning"><h5 class="modal-title">Edit Location</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="editLocationId">
+                <div class="mb-3"><label>Name</label><input type="text" id="editLocationName" class="form-control"></div>
+                <div class="mb-3"><label>Code</label><input type="text" id="editLocationCode" class="form-control"></div>
+                <div class="mb-3"><label>Type</label><select id="editLocationType" class="form-select"><option>shop</option><option>warehouse</option><option>storage</option></select></div>
+                <div class="mb-3"><label>Address</label><textarea id="editLocationAddress" class="form-control" rows="2"></textarea></div>
+                <div id="editLocationMsg" class="alert d-none"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmCreateLocationBtn">Create Location</button>
+                <button class="btn btn-danger" id="deleteLocationBtn">Delete</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="confirmEditLocationBtn">Save Changes</button>
             </div>
         </div>
     </div>
@@ -241,368 +216,283 @@
 <script nonce="{{ nonce }}">
 (function() {
     let locations = [];
-    let allProducts = [];
+    let allProducts = [];  // for global search suggestions
+    let currentLocationIdForProducts = null;
+    let currentLocationProductsPage = 1;
+    let currentLocationProductsTotalPages = 1;
+    let currentLocationProductsData = [];
 
-    function formatNumber(num) {
-        if (num === undefined || num === null) return '0';
-        const n = parseFloat(num);
-        if (isNaN(n)) return '0';
-        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-        return n.toString();
-    }
+    // Helper functions
+    function formatNumber(num) { if (num===undefined||num===null) return '0'; const n=parseFloat(num); if(isNaN(n)) return '0'; if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return n.toString(); }
+    function formatCurrency(amount) { const val=parseFloat(amount); if(isNaN(val)) return '{{ currency_symbol }}0.00'; return '{{ currency_symbol }}'+val.toFixed(2); }
+    function getColorForType(type) { const c={'warehouse':'primary','shop':'success','storage':'info','bin':'secondary'}; return c[type]||'dark'; }
+    function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
 
-    function formatCurrency(amount) {
-        const val = parseFloat(amount);
-        if (isNaN(val)) return '{{ currency_symbol }}0.00';
-        return '{{ currency_symbol }}' + val.toFixed(2);
-    }
-
-    function getColorForType(type) {
-        const colors = {
-            'warehouse': 'primary',
-            'shop': 'success',
-            'storage': 'info',
-            'bin': 'secondary'
-        };
-        return colors[type] || 'dark';
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    function loadAllData() {
-        loadLocations();
-        loadLocationStats();
-        loadLowStockAlerts();
-        loadRecentMovements();
-        loadProductsForSelect();
-    }
+    function loadAllData() { loadLocations(); loadLocationStats(); loadLowStockAlerts(); loadRecentMovements(); loadProductsForSearch(); }
 
     function loadLocations() {
-        fetch('/api/v1/locations', { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                locations = data || [];
-                populateLocationSelects();
-            })
-            .catch(err => console.error('Error loading locations:', err));
+        fetch('/api/v1/locations',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{ locations=data||[]; populateLocationSelects(); }).catch(console.error);
     }
-
     function populateLocationSelects() {
-        const selects = ['quickFromLocation', 'quickToLocation', 'transferFromLocation', 'transferToLocation'];
-        selects.forEach(selectId => {
-            const select = document.getElementById(selectId);
-            if (select) {
-                select.innerHTML = '<option value="">Select location...</option>';
-                locations.forEach(loc => {
-                    select.innerHTML += `<option value="${loc.id}">${escapeHtml(loc.location_name)} (${loc.location_code || ''})</option>`;
-                });
-            }
-        });
+        const selects=['quickFromLocation','quickToLocation','transferFromLocation','transferToLocation'];
+        selects.forEach(id=>{ const sel=document.getElementById(id); if(sel){ sel.innerHTML='<option value="">Select location...</option>'; locations.forEach(l=>{ sel.innerHTML+=`<option value="${l.id}">${escapeHtml(l.location_name)} (${l.location_code||''})</option>`; }); } });
     }
 
     function loadLocationStats() {
-        fetch('/api/v1/locations/stats', { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                const container = document.getElementById('locationStats');
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<div class="col text-center">No locations found. Create your first location.</div>';
-                    return;
-                }
-                
-                container.innerHTML = '';
-                data.forEach(loc => {
-                    const totalValue = loc.total_value || 0;
-                    const totalUnits = loc.total_units || 0;
-                    const productCount = loc.product_count || 0;
-                    
-                    const cardDiv = document.createElement('div');
-                    cardDiv.className = 'col-md-3 mb-3';
-                    cardDiv.innerHTML = `
-                        <div class="card bg-${getColorForType(loc.type)} text-white location-card" data-location-id="${loc.id}" data-location-name="${escapeHtml(loc.location_name)}" style="cursor: pointer;">
-                            <div class="card-body">
+        fetch('/api/v1/locations/stats',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{
+            const container=document.getElementById('locationStats');
+            if(!data||!data.length){ container.innerHTML='<div class="col text-center">No locations found.</div>'; return; }
+            container.innerHTML='';
+            data.forEach(loc=>{
+                const cardDiv=document.createElement('div'); cardDiv.className='col-md-3 mb-3';
+                cardDiv.innerHTML=`
+                    <div class="card bg-${getColorForType(loc.type)} text-white location-card" data-location-id="${loc.id}" data-location-name="${escapeHtml(loc.location_name)}" style="cursor: pointer;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
                                 <h6 class="card-title">${escapeHtml(loc.location_name)}</h6>
-                                <h3>${formatCurrency(totalValue)}</h3>
-                                <small>${productCount} products | ${formatNumber(totalUnits)} units</small>
+                                <div>
+                                    <i class="bi bi-pencil-square edit-location-icon" data-location-id="${loc.id}" data-location-name="${escapeHtml(loc.location_name)}" data-location-code="${escapeHtml(loc.location_code||'')}" data-location-type="${loc.type}" data-location-address="${escapeHtml(loc.address||'')}" style="cursor:pointer; margin-right:8px;"></i>
+                                    <i class="bi bi-trash delete-location-icon" data-location-id="${loc.id}" style="cursor:pointer;"></i>
+                                </div>
                             </div>
+                            <h3>${formatCurrency(loc.total_value)}</h3>
+                            <small>${loc.product_count||0} products | ${formatNumber(loc.total_units)} units</small>
                         </div>
-                    `;
-                    cardDiv.querySelector('.location-card').addEventListener('click', () => showLocationProducts(loc.id, loc.location_name));
-                    container.appendChild(cardDiv);
-                });
-            })
-            .catch(err => {
-                console.error('Error loading stats:', err);
-                document.getElementById('locationStats').innerHTML = '<div class="col text-center text-danger">Error loading stats</div>';
+                    </div>`;
+                container.appendChild(cardDiv);
+                cardDiv.querySelector('.location-card').addEventListener('click', (e) => { if(!e.target.classList.contains('edit-location-icon') && !e.target.classList.contains('delete-location-icon')) showLocationProducts(loc.id, loc.location_name); });
+                cardDiv.querySelector('.edit-location-icon')?.addEventListener('click', (e) => { e.stopPropagation(); openEditLocationModal(loc.id, loc.location_name, loc.location_code, loc.type, loc.address); });
+                cardDiv.querySelector('.delete-location-icon')?.addEventListener('click', (e) => { e.stopPropagation(); if(confirm(`Delete location "${loc.location_name}"? This will remove all stock assignments.`)) deleteLocation(loc.id); });
             });
+        }).catch(err=>{ console.error(err); document.getElementById('locationStats').innerHTML='<div class="col text-center text-danger">Error loading stats</div>'; });
     }
+
+    function openEditLocationModal(id, name, code, type, address) {
+        document.getElementById('editLocationId').value=id;
+        document.getElementById('editLocationName').value=name;
+        document.getElementById('editLocationCode').value=code||'';
+        document.getElementById('editLocationType').value=type||'shop';
+        document.getElementById('editLocationAddress').value=address||'';
+        const modal=new bootstrap.Modal(document.getElementById('editLocationModal'));
+        modal.show();
+    }
+
+    function deleteLocation(id) {
+        fetch(`/api/v1/locations/${id}`,{method:'DELETE',credentials:'same-origin'}).then(res=>res.json()).then(data=>{ if(data.message) location.reload(); else alert('Delete failed'); }).catch(err=>alert('Error deleting location'));
+    }
+
+    function saveEditLocation() {
+        const id=document.getElementById('editLocationId').value;
+        const payload={ location_name:document.getElementById('editLocationName').value, location_code:document.getElementById('editLocationCode').value, location_type:document.getElementById('editLocationType').value, address:document.getElementById('editLocationAddress').value };
+        fetch(`/api/v1/locations/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'}).then(res=>res.json()).then(data=>{ if(data.message) location.reload(); else alert('Update failed'); });
+    }
+    document.getElementById('confirmEditLocationBtn')?.addEventListener('click', saveEditLocation);
+    document.getElementById('deleteLocationBtn')?.addEventListener('click', ()=>{ const id=document.getElementById('editLocationId').value; if(confirm('Permanently delete?')) deleteLocation(id); });
 
     function showLocationProducts(locationId, locationName) {
+        currentLocationIdForProducts = locationId;
         document.getElementById('locationNameSpan').innerText = locationName;
-        const tbody = document.getElementById('locationProductsTableBody');
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-        
-        fetch(`/api/v1/locations/${locationId}/products`, { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(products => {
-                if (!products || products.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No products in this location</td></tr>';
-                } else {
-                    tbody.innerHTML = '';
-                    products.forEach(p => {
-                        const stockClass = p.stock_at_location == 0 ? 'danger' : (p.stock_at_location <= p.min_stock_level ? 'warning' : 'success');
-                        tbody.innerHTML += `
-                            <tr>
-                                <td><strong>${escapeHtml(p.name)}</strong></td>
-                                <td><code>${escapeHtml(p.sku) || 'N/A'}</code></td>
-                                <td><span class="badge bg-${stockClass}">${p.stock_at_location}</span></td>
-                                <td>${p.min_stock_level}</td>
-                                <td>${formatCurrency(p.selling_price)}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary transfer-from-location-btn" data-product-id="${p.id}" data-product-name="${escapeHtml(p.name)}" data-location-id="${locationId}">
-                                        <i class="bi bi-arrow-left-right"></i> Transfer
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    // Attach transfer buttons
-                    document.querySelectorAll('.transfer-from-location-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const productId = btn.dataset.productId;
-                            const locationId = btn.dataset.locationId;
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('locationProductsModal'));
-                            modal.hide();
-                            // Pre-fill transfer modal with this location as "from"
-                            setTimeout(() => {
-                                document.getElementById('transferFromLocation').value = locationId;
-                                document.getElementById('transferProductId').value = productId;
-                                document.getElementById('transferModal').querySelector('.modal-title').scrollIntoView();
-                                new bootstrap.Modal(document.getElementById('transferModal')).show();
-                            }, 300);
-                        });
-                    });
-                }
-            })
-            .catch(err => {
-                console.error('Error loading location products:', err);
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading products</td></tr>';
-            });
-        
-        const modalEl = document.getElementById('locationProductsModal');
-        new bootstrap.Modal(modalEl).show();
+        currentLocationProductsPage = 1;
+        loadLocationProductsPage();
+        const modal = new bootstrap.Modal(document.getElementById('locationProductsModal'));
+        modal.show();
     }
 
-    function loadLowStockAlerts() {
-        fetch('/api/v1/inventory/low-stock', { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                const container = document.getElementById('lowStockList');
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<div class="alert alert-success">No low stock items!</div>';
-                    return;
+    function loadLocationProductsPage() {
+        const search = document.getElementById('locationProductSearch')?.value || '';
+        fetch(`/api/v1/locations/${currentLocationIdForProducts}/products?page=${currentLocationProductsPage}&per_page=20&search=${encodeURIComponent(search)}`, { credentials:'same-origin' })
+            .then(res=>res.json())
+            .then(data=>{
+                currentLocationProductsTotalPages = data.total_pages || 1;
+                const tbody = document.getElementById('locationProductsTableBody');
+                if(!data.products || data.products.length===0){
+                    tbody.innerHTML='<tr><td colspan="6" class="text-center">No products in this location</td></tr>';
+                } else {
+                    tbody.innerHTML='';
+                    data.products.forEach(p=>{
+                        const stockClass = p.stock_at_location==0?'danger':(p.stock_at_location<=p.min_stock_level?'warning':'success');
+                        tbody.innerHTML+=`
+                            <tr>
+                                <td><strong>${escapeHtml(p.name)}</strong></td>
+                                <td><code>${escapeHtml(p.sku)||'N/A'}</code></td>
+                                <td><span class="badge bg-${stockClass}">${p.stock_at_location}</span></td>
+                                <td>${p.min_stock_level||0}</td>
+                                <td>${formatCurrency(p.selling_price)}</td>
+                                <td><button class="btn btn-sm btn-outline-primary transfer-from-location-btn" data-product-id="${p.id}" data-product-name="${escapeHtml(p.name)}" data-location-id="${currentLocationIdForProducts}">Transfer</button></td>
+                            </tr>`;
+                    });
                 }
-                let html = '<div class="list-group">';
-                data.slice(0, 10).forEach(item => {
-                    html += `
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between">
-                                <strong>${escapeHtml(item.name)}</strong>
-                                <span class="badge bg-warning">${item.current_stock || 0} / ${item.min_stock_level || 0}</span>
-                            </div>
-                            <small class="text-muted">SKU: ${escapeHtml(item.sku) || 'N/A'}</small>
-                        </div>
-                    `;
+                renderLocationProductsPagination();
+                document.querySelectorAll('.transfer-from-location-btn').forEach(btn=>{
+                    btn.addEventListener('click', ()=>{
+                        const productId=btn.dataset.productId;
+                        const locId=btn.dataset.locationId;
+                        bootstrap.Modal.getInstance(document.getElementById('locationProductsModal')).hide();
+                        setTimeout(()=>{
+                            document.getElementById('transferFromLocation').value=locId;
+                            document.getElementById('transferProductId').value=productId;
+                            document.getElementById('transferProductSearch').value=btn.dataset.productName;
+                            new bootstrap.Modal(document.getElementById('transferModal')).show();
+                        },300);
+                    });
                 });
-                html += '</div>';
-                container.innerHTML = html;
-            })
-            .catch(err => {
-                console.error('Error loading alerts:', err);
-                document.getElementById('lowStockList').innerHTML = '<div class="alert alert-danger">Error loading alerts</div>';
-            });
+            }).catch(err=>{ console.error(err); document.getElementById('locationProductsTableBody').innerHTML='<tr><td colspan="6" class="text-danger">Error loading</td></tr>'; });
+    }
+
+    function renderLocationProductsPagination() {
+        const pagination=document.getElementById('locationProductsPagination');
+        if(!pagination) return;
+        pagination.innerHTML='';
+        if(currentLocationProductsTotalPages<=1) return;
+        for(let i=1;i<=Math.min(currentLocationProductsTotalPages,5);i++){
+            const li=document.createElement('li'); li.className=`page-item ${i===currentLocationProductsPage?'active':''}`;
+            const a=document.createElement('a'); a.className='page-link'; a.href='#'; a.innerText=i;
+            a.addEventListener('click',(e)=>{ e.preventDefault(); currentLocationProductsPage=i; loadLocationProductsPage(); });
+            li.appendChild(a); pagination.appendChild(li);
+        }
+    }
+    document.getElementById('locationProductSearch')?.addEventListener('input', ()=>{ currentLocationProductsPage=1; loadLocationProductsPage(); });
+
+    function loadLowStockAlerts() {
+        fetch('/api/v1/inventory/low-stock',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{
+            const container=document.getElementById('lowStockList');
+            if(!data||!data.length){ container.innerHTML='<div class="alert alert-success">No low stock items!</div>'; return; }
+            let html='<div class="list-group">';
+            data.slice(0,10).forEach(item=>{ html+=`<div class="list-group-item"><div class="d-flex justify-content-between"><strong>${escapeHtml(item.name)}</strong><span class="badge bg-warning">${item.current_stock||0}/${item.min_stock_level||0}</span></div><small>SKU: ${escapeHtml(item.sku)||'N/A'}</small></div>`; });
+            html+='</div>'; container.innerHTML=html;
+        }).catch(err=>{ document.getElementById('lowStockList').innerHTML='<div class="alert alert-danger">Error loading alerts</div>'; });
     }
 
     function loadRecentMovements() {
-        fetch('/api/v1/stock-movements/recent', { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                const tbody = document.getElementById('recentMovements');
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No movements yet</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = '';
-                data.forEach(move => {
-                    const date = move.created_at ? new Date(move.created_at).toLocaleDateString() : 'N/A';
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${date}</td>
-                            <td>${escapeHtml(move.product_name)}</td>
-                            <td>${escapeHtml(move.from_location) || 'N/A'}</td>
-                            <td>${escapeHtml(move.to_location) || 'N/A'}</td>
-                            <td>${move.quantity || 0}</td>
-                            <td><span class="badge bg-success">${escapeHtml(move.status) || 'completed'}</span></td>
-                        </tr>
-                    `;
-                });
-            })
-            .catch(err => {
-                console.error('Error loading movements:', err);
-                document.getElementById('recentMovements').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading movements</td></tr>';
-            });
+        fetch('/api/v1/stock-movements/recent',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{
+            const tbody=document.getElementById('recentMovements');
+            if(!data||!data.length){ tbody.innerHTML='<tr><td colspan="6" class="text-center">No movements yet</td></tr>'; return; }
+            tbody.innerHTML='';
+            data.forEach(m=>{ tbody.innerHTML+=`<tr><td>${new Date(m.created_at).toLocaleDateString()}</td><td>${escapeHtml(m.product_name)}</td><td>${escapeHtml(m.from_location)||'N/A'}</td><td>${escapeHtml(m.to_location)||'N/A'}</td><td>${m.quantity||0}</td><td><span class="badge bg-success">${escapeHtml(m.status)||'completed'}</span></td></tr>`; });
+        }).catch(err=>{ document.getElementById('recentMovements').innerHTML='<tr><td colspan="6" class="text-danger">Error loading</td></tr>'; });
     }
 
-    function loadProductsForSelect() {
-        fetch('/api/v1/inventory', { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                allProducts = data || [];
-                const selects = ['quickProductId', 'transferProductId'];
-                selects.forEach(selectId => {
-                    const select = document.getElementById(selectId);
-                    if (select) {
-                        select.innerHTML = '<option value="">Search product...</option>';
-                        allProducts.slice(0, 100).forEach(product => {
-                            const stock = product.current_stock || 0;
-                            select.innerHTML += `<option value="${product.id}">${escapeHtml(product.name)} (${escapeHtml(product.sku) || 'N/A'}) - Stock: ${stock}</option>`;
-                        });
-                    }
-                });
-            })
-            .catch(err => console.error('Error loading products:', err));
+    function loadProductsForSearch() {
+        fetch('/api/v1/inventory?limit=500',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{ allProducts=data.products||[]; }).catch(console.error);
     }
+
+    // Quick Transfer: searchable product input
+    const quickSearchInput = document.getElementById('quickProductSearch');
+    const quickSuggestions = document.getElementById('quickProductSuggestions');
+    let searchTimeout;
+    quickSearchInput?.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const term = this.value.trim();
+        if(term.length<2){ quickSuggestions.style.display='none'; return; }
+        searchTimeout = setTimeout(()=>{
+            fetch(`/api/v1/inventory?search=${encodeURIComponent(term)}&limit=10`,{credentials:'same-origin'})
+                .then(res=>res.json())
+                .then(data=>{
+                    const products = data.products || [];
+                    if(!products.length){ quickSuggestions.style.display='none'; return; }
+                    quickSuggestions.innerHTML = products.map(p=>`<a href="#" class="list-group-item list-group-item-action" data-id="${p.id}" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)} (${escapeHtml(p.sku||'N/A')}) - Stock: ${p.current_stock}</a>`).join('');
+                    quickSuggestions.style.display='block';
+                    quickSuggestions.querySelectorAll('a').forEach(a=>{
+                        a.addEventListener('click', (e)=>{
+                            e.preventDefault();
+                            quickSearchInput.value = a.dataset.name;
+                            document.getElementById('quickProductId').value = a.dataset.id;
+                            quickSuggestions.style.display='none';
+                            // Auto-populate From Location with locations where this product has stock
+                            fetch(`/api/v1/products/${a.dataset.id}/locations`,{credentials:'same-origin'})
+                                .then(res=>res.json())
+                                .then(breakdown=>{
+                                    const fromSelect = document.getElementById('quickFromLocation');
+                                    fromSelect.innerHTML = '<option value="">Select location...</option>';
+                                    if(breakdown.locations && breakdown.locations.length){
+                                        breakdown.locations.forEach(loc=>{
+                                            if(loc.quantity>0){
+                                                fromSelect.innerHTML += `<option value="${loc.location_id}" data-stock="${loc.quantity}">${escapeHtml(loc.location_name)} (${loc.quantity} units)</option>`;
+                                            }
+                                        });
+                                        if(breakdown.locations.length===1) fromSelect.value = breakdown.locations[0].location_id;
+                                    } else {
+                                        fromSelect.innerHTML = '<option value="">No stock available</option>';
+                                    }
+                                });
+                        });
+                    });
+                }).catch(console.error);
+        }, 300);
+    });
+    document.addEventListener('click', function(e) { if(!quickSearchInput?.contains(e.target) && !quickSuggestions?.contains(e.target)) quickSuggestions.style.display='none'; });
+
+    // Transfer modal search
+    const transferSearch = document.getElementById('transferProductSearch');
+    const transferSuggestions = document.getElementById('transferProductSuggestions');
+    transferSearch?.addEventListener('input', function() {
+        const term = this.value.trim();
+        if(term.length<2){ transferSuggestions.style.display='none'; return; }
+        fetch(`/api/v1/inventory?search=${encodeURIComponent(term)}&limit=10`,{credentials:'same-origin'})
+            .then(res=>res.json())
+            .then(data=>{
+                const products = data.products || [];
+                if(!products.length){ transferSuggestions.style.display='none'; return; }
+                transferSuggestions.innerHTML = products.map(p=>`<a href="#" class="list-group-item list-group-item-action" data-id="${p.id}" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)} (${escapeHtml(p.sku||'N/A')})</a>`).join('');
+                transferSuggestions.style.display='block';
+                transferSuggestions.querySelectorAll('a').forEach(a=>{
+                    a.addEventListener('click', (e)=>{
+                        e.preventDefault();
+                        transferSearch.value = a.dataset.name;
+                        document.getElementById('transferProductId').value = a.dataset.id;
+                        transferSuggestions.style.display='none';
+                        fetch(`/api/v1/products/${a.dataset.id}/locations`,{credentials:'same-origin'})
+                            .then(res=>res.json())
+                            .then(breakdown=>{
+                                const fromSelect = document.getElementById('transferFromLocation');
+                                fromSelect.innerHTML = '<option value="">Select location...</option>';
+                                breakdown.locations?.forEach(loc=>{ if(loc.quantity>0) fromSelect.innerHTML+=`<option value="${loc.location_id}" data-stock="${loc.quantity}">${escapeHtml(loc.location_name)} (${loc.quantity})</option>`; });
+                            });
+                    });
+                });
+            });
+    });
+    document.addEventListener('click', function(e) { if(!transferSearch?.contains(e.target) && !transferSuggestions?.contains(e.target)) transferSuggestions.style.display='none'; });
 
     function executeQuickTransfer() {
         const productId = document.getElementById('quickProductId').value;
         const fromLocation = document.getElementById('quickFromLocation').value;
         const toLocation = document.getElementById('quickToLocation').value;
         const quantity = document.getElementById('quickQuantity').value;
-        
-        if (!productId || !fromLocation || !toLocation || !quantity) {
-            alert('Please fill all fields');
-            return;
-        }
+        if(!productId||!fromLocation||!toLocation||!quantity){ alert('Please fill all fields'); return; }
         submitTransferData(productId, fromLocation, toLocation, quantity, '');
     }
 
     function submitTransferData(productId, fromLocation, toLocation, quantity, notes) {
         fetch('/api/v1/transfer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                product_id: parseInt(productId),
-                from_location_id: parseInt(fromLocation),
-                to_location_id: parseInt(toLocation),
-                quantity: parseFloat(quantity),
-                notes: notes
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.transfer_number) {
-                alert('Transfer completed successfully!');
-                location.reload();
-            } else {
-                alert('Transfer failed: ' + (data.error || 'Insufficient stock?'));
-            }
-        })
-        .catch(err => {
-            console.error('Transfer error:', err);
-            alert('Transfer failed. Please try again.');
-        });
+            method: 'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ product_id: parseInt(productId), from_location_id: parseInt(fromLocation), to_location_id: parseInt(toLocation), quantity: parseFloat(quantity), notes: notes })
+        }).then(res=>res.json()).then(data=>{ if(data.transfer_number){ alert('Transfer completed!'); location.reload(); } else alert('Transfer failed: '+ (data.error||'Insufficient stock?')); }).catch(err=>{ alert('Transfer failed'); });
     }
 
-    function showProductCatalog() {
-        window.location.href = '/inventory/catalog';
-    }
-
-    function openTransferModal() {
-        const modalEl = document.getElementById('transferModal');
-        new bootstrap.Modal(modalEl).show();
-    }
-
+    function showProductCatalog() { window.location.href='/inventory/catalog'; }
+    function openTransferModal() { new bootstrap.Modal(document.getElementById('transferModal')).show(); }
     function submitTransfer() {
-        const productId = document.getElementById('transferProductId').value;
-        const fromLocation = document.getElementById('transferFromLocation').value;
-        const toLocation = document.getElementById('transferToLocation').value;
-        const quantity = document.getElementById('transferQuantity').value;
-        const notes = document.getElementById('transferNotes').value;
-        
-        if (!productId || !fromLocation || !toLocation || !quantity) {
-            alert('Please fill all required fields');
-            return;
-        }
-        submitTransferData(productId, fromLocation, toLocation, quantity, notes);
+        const pid=document.getElementById('transferProductId').value, from=document.getElementById('transferFromLocation').value, to=document.getElementById('transferToLocation').value, qty=document.getElementById('transferQuantity').value, notes=document.getElementById('transferNotes').value;
+        if(!pid||!from||!to||!qty){ alert('Please fill all fields'); return; }
+        submitTransferData(pid, from, to, qty, notes);
     }
 
-    // Event listeners
+    // Create location
+    document.getElementById('confirmCreateLocationBtn')?.addEventListener('click',()=>{
+        const name=document.getElementById('newLocationName').value.trim(), code=document.getElementById('newLocationCode').value.trim(), type=document.getElementById('newLocationType').value, address=document.getElementById('newLocationAddress').value.trim();
+        if(!name||!code){ alert('Name and Code required'); return; }
+        fetch('/api/v1/locations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location_name:name,location_code:code,location_type:type,address:address}),credentials:'same-origin'})
+            .then(res=>res.json()).then(data=>{ if(data.id){ alert('Location created'); location.reload(); } else alert('Error: '+data.error); });
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
         loadAllData();
         document.getElementById('viewCatalogBtn')?.addEventListener('click', showProductCatalog);
         document.getElementById('openTransferModalBtn')?.addEventListener('click', openTransferModal);
         document.getElementById('executeQuickTransferBtn')?.addEventListener('click', executeQuickTransfer);
         document.getElementById('submitTransferBtn')?.addEventListener('click', submitTransfer);
-        document.getElementById('transferFromLocationModalBtn')?.addEventListener('click', () => {
-            // This button is inside location products modal; we already handle per-product transfer
-        });
     });
-    // Create Location
-    const createBtn = document.getElementById('confirmCreateLocationBtn');
-    if (createBtn) {
-        createBtn.addEventListener('click', function() {
-            const name = document.getElementById('newLocationName').value.trim();
-            const code = document.getElementById('newLocationCode').value.trim();
-            const type = document.getElementById('newLocationType').value;
-            const address = document.getElementById('newLocationAddress').value.trim();
-            const msgDiv = document.getElementById('createLocationMsg');
-            
-            if (!name || !code) {
-                msgDiv.className = 'alert alert-danger alert-dismissible fade show';
-                msgDiv.innerHTML = 'Location Name and Code are required. <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                msgDiv.classList.remove('d-none');
-                return;
-            }
-            
-            fetch('/api/v1/locations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    location_name: name,
-                    location_code: code,
-                    location_type: type,
-                    address: address
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.id) {
-                    msgDiv.className = 'alert alert-success alert-dismissible fade show';
-                    msgDiv.innerHTML = `Location created successfully! ID: ${data.id} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-                    msgDiv.classList.remove('d-none');
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    msgDiv.className = 'alert alert-danger alert-dismissible fade show';
-                    msgDiv.innerHTML = `Error: ${data.error || 'Unknown error'} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-                    msgDiv.classList.remove('d-none');
-                }
-            })
-            .catch(err => {
-                msgDiv.className = 'alert alert-danger alert-dismissible fade show';
-                msgDiv.innerHTML = `Network error: ${err.message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-                msgDiv.classList.remove('d-none');
-            });
-        });
-    }
 })();
 </script>
 {% endblock %}

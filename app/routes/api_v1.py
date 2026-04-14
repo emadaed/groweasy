@@ -62,25 +62,46 @@ def log_request(response):
 @api_v1_bp.route('/inventory', methods=['GET'])
 @limiter.limit("100 per minute")
 @require_auth
-def list_inventory():
-    """
-    List all inventory items for the account
-    ---
-    tags:
-      - Inventory
-    security:
-      - Bearer: []
-    responses:
-      200:
-        description: A list of inventory items
-        schema:
-          type: array
-          items:
-            $ref: '#/definitions/InventoryItem'
-    """
+def list_inventory_paginated():
+    """List inventory items with pagination and search."""
     account_id = g.api_account_id
-    items = InventoryManager.get_inventory_items(account_id)
-    return jsonify(items)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    search = request.args.get('search', '').strip()
+    
+    with DB_ENGINE.connect() as conn:
+        base_query = """
+            SELECT id, name, sku, category, current_stock, min_stock_level,
+                   cost_price, selling_price, supplier, location
+            FROM inventory_items
+            WHERE account_id = :aid AND is_active = TRUE
+        """
+        params = {"aid": account_id}
+        if search:
+            base_query += " AND (name ILIKE :search OR sku ILIKE :search)"
+            params["search"] = f"%{search}%"
+        
+        count_result = conn.execute(text(f"SELECT COUNT(*) FROM ({base_query}) AS sub"), params).scalar()
+        total = count_result or 0
+        total_pages = (total + per_page - 1) // per_page
+        
+        offset = (page - 1) * per_page
+        query = base_query + " ORDER BY name LIMIT :limit OFFSET :offset"
+        params["limit"] = per_page
+        params["offset"] = offset
+        rows = conn.execute(text(query), params).fetchall()
+    
+    products = []
+    for r in rows:
+        products.append({
+            'id': r[0], 'name': r[1], 'sku': r[2], 'category': r[3],
+            'current_stock': float(r[4]) if r[4] else 0,
+            'min_stock_level': r[5] or 10,
+            'cost_price': float(r[6]) if r[6] else 0,
+            'selling_price': float(r[7]) if r[7] else 0,
+            'supplier': r[8] or '', 'location': r[9] or 'Main'
+        })
+    return jsonify({'products': products, 'total': total, 'total_pages': total_pages, 'current_page': page})
 
 @api_v1_bp.route('/inventory/<int:product_id>', methods=['GET'])
 @limiter.limit("100 per minute")
@@ -580,6 +601,58 @@ def get_product_locations(product_id):
     breakdown = LocationInventoryManager.get_product_location_breakdown(product_id)
     return jsonify(breakdown)
 
+@api_v1_bp.route('/locations/<int:location_id>/products', methods=['GET'])
+@require_auth
+def get_products_by_location_paginated(location_id):
+    """Get products in a specific location with pagination and search."""
+    account_id = g.api_account_id
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    search = request.args.get('search', '').strip()
+    
+    with DB_ENGINE.connect() as conn:
+        # Verify location belongs to account
+        loc_check = conn.execute(text("""
+            SELECT id FROM locations WHERE id=:lid AND account_id=:aid AND is_active=TRUE
+        """), {"lid": location_id, "aid": account_id}).first()
+        if not loc_check:
+            return error_response("Location not found", "NOT_FOUND", 404)
+        
+        base_query = """
+            SELECT i.id, i.name, i.sku, i.category, i.supplier,
+                   pl.quantity as stock_at_location,
+                   i.min_stock_level, i.cost_price, i.selling_price,
+                   i.location as default_location, i.unit_type
+            FROM product_locations pl
+            JOIN inventory_items i ON pl.product_id = i.id AND i.is_active = TRUE
+            WHERE pl.location_id = :lid
+        """
+        params = {"lid": location_id}
+        if search:
+            base_query += " AND (i.name ILIKE :search OR i.sku ILIKE :search)"
+            params["search"] = f"%{search}%"
+        
+        count_result = conn.execute(text(f"SELECT COUNT(*) FROM ({base_query}) AS sub"), params).scalar()
+        total = count_result or 0
+        total_pages = (total + per_page - 1) // per_page
+        
+        offset = (page - 1) * per_page
+        query = base_query + " ORDER BY i.name LIMIT :limit OFFSET :offset"
+        params["limit"] = per_page
+        params["offset"] = offset
+        rows = conn.execute(text(query), params).fetchall()
+    
+    products = []
+    for r in rows:
+        products.append({
+            'id': r[0], 'name': r[1], 'sku': r[2], 'category': r[3],
+            'supplier': r[4], 'stock_at_location': float(r[5]) if r[5] else 0,
+            'min_stock_level': r[6] or 0, 'cost_price': float(r[7]) if r[7] else 0,
+            'selling_price': float(r[8]) if r[8] else 0,
+            'default_location': r[9], 'unit_type': r[10] or 'piece'
+        })
+    return jsonify({'products': products, 'total': total, 'total_pages': total_pages, 'current_page': page})
+
 @api_v1_bp.route('/transfer', methods=['POST'])
 @csrf.exempt
 @require_auth
@@ -708,44 +781,44 @@ def get_recent_movements():
         })
     return jsonify(result)
 
-@api_v1_bp.route('/locations/<int:location_id>/products', methods=['GET'])
+@api_v1_bp.route('/locations/<int:location_id>', methods=['PUT'])
+@csrf.exempt
 @require_auth
-def get_products_by_location(location_id):
-    """Get all products with stock in a specific location"""
+def update_location(location_id):
+    """Update a location (name, code, type, address)."""
     account_id = g.api_account_id
-    
-    with DB_ENGINE.connect() as conn:
-        # Verify location belongs to account
-        loc_check = conn.execute(text("""
-            SELECT id FROM locations WHERE id = :lid AND account_id = :aid AND is_active = TRUE
-        """), {"lid": location_id, "aid": account_id}).first()
-        if not loc_check:
+    data = request.get_json()
+    with DB_ENGINE.begin() as conn:
+        loc = conn.execute(text("SELECT id FROM locations WHERE id=:lid AND account_id=:aid"), 
+                           {"lid": location_id, "aid": account_id}).first()
+        if not loc:
             return error_response("Location not found", "NOT_FOUND", 404)
-        
-        rows = conn.execute(text("""
-            SELECT 
-                i.id, i.name, i.sku, i.category, i.supplier,
-                pl.quantity as stock_at_location,
-                i.min_stock_level, i.cost_price, i.selling_price,
-                i.location as default_location
-            FROM product_locations pl
-            JOIN inventory_items i ON pl.product_id = i.id AND i.is_active = TRUE
-            WHERE pl.location_id = :lid
-            ORDER BY i.name
-        """), {"lid": location_id}).fetchall()
-    
-    result = []
-    for r in rows:
-        result.append({
-            'id': r[0],
-            'name': r[1],
-            'sku': r[2],
-            'category': r[3],
-            'supplier': r[4],
-            'stock_at_location': float(r[5]) if r[5] else 0,
-            'min_stock_level': float(r[6]) if r[6] else 0,
-            'cost_price': float(r[7]) if r[7] else 0,
-            'selling_price': float(r[8]) if r[8] else 0,
-            'default_location': r[9]
+        conn.execute(text("""
+            UPDATE locations 
+            SET location_name = :name, location_code = :code, location_type = :type, 
+                address = :address, updated_at = NOW()
+            WHERE id = :lid
+        """), {
+            "name": data.get('location_name'),
+            "code": data.get('location_code'),
+            "type": data.get('location_type'),
+            "address": data.get('address'),
+            "lid": location_id
         })
-    return jsonify(result)
+    return jsonify({"message": "Location updated"})
+
+@api_v1_bp.route('/locations/<int:location_id>', methods=['DELETE'])
+@csrf.exempt
+@require_auth
+def delete_location(location_id):
+    """Delete a location and all its product assignments."""
+    account_id = g.api_account_id
+    with DB_ENGINE.begin() as conn:
+        loc = conn.execute(text("SELECT id FROM locations WHERE id=:lid AND account_id=:aid"), 
+                           {"lid": location_id, "aid": account_id}).first()
+        if not loc:
+            return error_response("Location not found", "NOT_FOUND", 404)
+        # Delete product_locations entries first
+        conn.execute(text("DELETE FROM product_locations WHERE location_id = :lid"), {"lid": location_id})
+        conn.execute(text("DELETE FROM locations WHERE id = :lid"), {"lid": location_id})
+    return jsonify({"message": "Location deleted"})

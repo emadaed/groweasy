@@ -51,6 +51,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Location Selection (Multi-Location Invoice) -->
         <div class="card mb-4">
             <div class="card-header bg-info text-white">
@@ -79,7 +80,7 @@
             </div>
         </div>
 
-        <!-- Inventory Search & Add -->
+        <!-- Inventory Search & Add (now location-aware) -->
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Add from Inventory</h5>
@@ -87,7 +88,7 @@
             <div class="card-body">
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" id="inventorySearch" placeholder="Quick search product name...">
-                    <button type="button" class="btn btn-outline-primary" id="showAllInventory">Show All</button>
+                    <button type="button" class="btn btn-outline-primary" id="showAllInventory">Show All (at selected location)</button>
                 </div>
                 <div id="inventoryResults" class="mt-3"></div>
 
@@ -182,7 +183,7 @@
     </form>
 </div>
 
-<!-- Add Item Modal (unchanged) -->
+<!-- Add Item Modal (search) -->
 <div class="modal fade" id="addItemModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4">
@@ -200,6 +201,8 @@
 
 <script nonce="{{ nonce }}">
     window.userCurrencySymbol = "{{ currency_symbol | default('Rs.') }}";
+    window.userLocations = {{ locations | tojson }};
+    window.defaultLocationId = {{ default_location_id | default('null') }};
 </script>
 <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/form_items.js') }}"></script>
 
@@ -226,32 +229,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (submitBtn.disabled) e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.innerHTML = '⏳ Generating Preview...';
-        });
-    }
-    // Location-aware stock check
-    const locationSelect = document.getElementById('invoiceLocationId');
-    if (locationSelect) {
-        locationSelect.addEventListener('change', function() {
-            const locId = this.value;
-            if (!locId) {
-                document.getElementById('locationStockInfo').innerHTML = 'Select a location to see available stock.';
-                return;
-            }
-            fetch(`/api/v1/locations/${locId}/products`, { credentials: 'same-origin' })
-                .then(res => res.json())
-                .then(products => {
-                    // Store in global for later validation
-                    window.locationStockMap = {};
-                    products.forEach(p => {
-                        window.locationStockMap[p.id] = p.stock_at_location;
-                    });
-                    document.getElementById('locationStockInfo').innerHTML = 
-                        `<i class="bi bi-check-circle-fill text-success"></i> Stock data loaded for ${products.length} products.`;
-                })
-                .catch(() => {
-                    document.getElementById('locationStockInfo').innerHTML = 
-                        `<i class="bi bi-exclamation-triangle-fill text-danger"></i> Failed to load stock data.`;
-                });
         });
     }
 });
