@@ -318,6 +318,125 @@
         </div>
     </div>
 </div>
+<!-- Edit Product Modal (Full Fields) -->
+<div class="modal fade" id="editProductModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">✏️ Edit Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('inventory.update_product') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="product_id" id="editProductIdFull">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Product Name *</label>
+                                <input type="text" class="form-control" name="name" id="editProductNameFull" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">SKU</label>
+                                <input type="text" class="form-control" name="sku" id="editProductSku">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Barcode</label>
+                        <input type="text" class="form-control" name="barcode" id="editProductBarcode">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <select class="form-control" name="category" id="editProductCategory">
+                                    <option value="">Select Category</option>
+                                    <option value="Services">Services</option>
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Clothing">Clothing</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Office Supplies">Office Supplies</option>
+                                    <option value="Raw Materials">Raw Materials</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Supplier</label>
+                                <input type="text" class="form-control" name="supplier" id="editProductSupplier">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Min Stock Level</label>
+                                <input type="number" class="form-control" name="min_stock_level" id="editProductMinStock">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Location</label>
+                                <input type="text" class="form-control" name="location" id="editProductLocation">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Unit Type</label>
+                                <select class="form-select" name="unit_type" id="editProductUnitType">
+                                    <option value="piece">Piece</option>
+                                    <option value="weight">Weight</option>
+                                    <option value="volume">Volume</option>
+                                    <option value="length">Length</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Cost Price ({{ currency_symbol }})</label>
+                                <input type="number" step="0.01" class="form-control" name="cost_price" id="editProductCostPrice">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Selling Price ({{ currency_symbol }})</label>
+                                <input type="number" step="0.01" class="form-control" name="selling_price" id="editProductSellingPrice">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Expiry Date</label>
+                                <input type="date" class="form-control" name="expiry_date" id="editProductExpiryDate">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Batch Number</label>
+                                <input type="text" class="form-control" name="batch_number" id="editProductBatchNumber">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2" id="editProductDescription"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Update Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Delete Product Modal -->
 <div class="modal fade" id="deleteProductModal" tabindex="-1">
@@ -526,7 +645,27 @@ function renderTable(products) {
         tbody.innerHTML = '<tr><td colspan="10" class="text-center">No products found</td></tr>';
         return;
     }
-
+    // Edit Product button handler (full edit)
+    document.querySelectorAll('.edit-product-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('editProductIdFull').value = this.dataset.id;
+            document.getElementById('editProductNameFull').value = this.dataset.name;
+            document.getElementById('editProductSku').value = this.dataset.sku || '';
+            document.getElementById('editProductBarcode').value = this.dataset.barcode || '';
+            document.getElementById('editProductCategory').value = this.dataset.category || '';
+            document.getElementById('editProductSupplier').value = this.dataset.supplier || '';
+            document.getElementById('editProductMinStock').value = this.dataset.minStock || 5;
+            document.getElementById('editProductLocation').value = this.dataset.location || '';
+            document.getElementById('editProductUnitType').value = this.dataset.unitType || 'piece';
+            document.getElementById('editProductCostPrice').value = this.dataset.cost || 0;
+            document.getElementById('editProductSellingPrice').value = this.dataset.price || 0;
+            document.getElementById('editProductExpiryDate').value = this.dataset.expiry || '';
+            document.getElementById('editProductBatchNumber').value = this.dataset.batch || '';
+            document.getElementById('editProductDescription').value = this.dataset.description || '';
+            const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
+            modal.show();
+        });
+    });
     // Apply stock filter (frontend for simplicity)
     let filtered = [...products];
     if (currentStockFilter === 'low') {

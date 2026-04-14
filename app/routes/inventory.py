@@ -25,38 +25,6 @@ def _safe_float(val, default):
     except (ValueError, TypeError):
         return default
 
-##@inventory_bp.route("/inventory")
-##@role_required('owner', 'assistant')
-##def inventory():
-##    if 'user_id' not in session:
-##        return redirect(url_for('auth.login'))
-##
-##    account_id = session['account_id']
-##    from app.context_processors import CURRENCY_SYMBOLS
-##    from app.services.cache import get_user_profile_cached
-##    
-##    user_profile = get_user_profile_cached(session['user_id'])
-##    currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
-##    
-##    with DB_ENGINE.connect() as conn:
-##        items = conn.execute(text("""
-##            SELECT id, name, sku, category, current_stock, min_stock_level,
-##                   cost_price, selling_price, supplier, location
-##            FROM inventory_items
-##            WHERE account_id = :aid AND is_active = TRUE
-##            ORDER BY name
-##        """), {"aid": account_id}).fetchall()
-##    
-##    # Use the updated get_inventory_items method that includes location breakdown
-##    inventory_items = InventoryManager.get_inventory_items(account_id)
-##    low_stock_alerts = InventoryManager.get_low_stock_alerts(account_id)
-##    
-##    return render_template("inventory.html",
-##                         inventory_items=inventory_items,
-##                         low_stock_alerts=low_stock_alerts,
-##                         currency_symbol=currency_symbol,
-##                         nonce=g.nonce)
-
 @inventory_bp.route("/inventory")
 @role_required('owner', 'assistant')
 def inventory():
@@ -76,14 +44,38 @@ def inventory():
     # Get low stock alerts (lightweight)
     low_stock_alerts = InventoryManager.get_low_stock_alerts(account_id)
     
-    # Get summary counts directly from DB (fast)
+    # Summary counts - using COALESCE to handle NULL min_stock_level
     with DB_ENGINE.connect() as conn:
-        total = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE"), {"aid": account_id}).scalar() or 0
-        in_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock > min_stock_level"), {"aid": account_id}).scalar() or 0
-        low_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock <= min_stock_level AND current_stock > 0"), {"aid": account_id}).scalar() or 0
-        out_of_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock = 0"), {"aid": account_id}).scalar() or 0
+        # Total active products
+        total = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items 
+            WHERE account_id = :aid AND is_active = TRUE
+        """), {"aid": account_id}).scalar() or 0
+        
+        # In stock: current_stock > COALESCE(min_stock_level, 0) AND current_stock > 0
+        in_stock = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items 
+            WHERE account_id = :aid AND is_active = TRUE 
+            AND current_stock > COALESCE(min_stock_level, 0) 
+            AND current_stock > 0
+        """), {"aid": account_id}).scalar() or 0
+        
+        # Low stock: current_stock <= COALESCE(min_stock_level, 0) AND current_stock > 0
+        low_stock = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items 
+            WHERE account_id = :aid AND is_active = TRUE 
+            AND current_stock <= COALESCE(min_stock_level, 0) 
+            AND current_stock > 0
+        """), {"aid": account_id}).scalar() or 0
+        
+        # Out of stock: current_stock = 0
+        out_of_stock = conn.execute(text("""
+            SELECT COUNT(*) FROM inventory_items 
+            WHERE account_id = :aid AND is_active = TRUE 
+            AND current_stock = 0
+        """), {"aid": account_id}).scalar() or 0
     
-    # Create a simple namespace for template
+    # Create a simple namespace object for the template
     class Summary:
         pass
     inventory_summary = Summary()
@@ -201,6 +193,78 @@ def add_product():
         flash('✅ Product added successfully!', 'success')
     else:
         flash('❌ Error adding product. SKU might already exist.', 'error')
+    return redirect(url_for('inventory.inventory'))
+
+@inventory_bp.route("/update_product", methods=['POST'])
+@role_required('owner', 'assistant')
+def update_product():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    user_id = session['user_id']
+    account_id = session['account_id']
+    product_id = request.form.get('product_id')
+    
+    if not product_id:
+        flash("Product ID missing", "error")
+        return redirect(url_for('inventory.inventory'))
+    
+    # Verify product belongs to user's account
+    from app.services.db import DB_ENGINE
+    from sqlalchemy import text
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(text("""
+            SELECT id FROM inventory_items WHERE id = :pid AND account_id = :aid
+        """), {"pid": product_id, "aid": account_id}).first()
+        if not row:
+            flash("Product not found", "error")
+            return redirect(url_for('inventory.inventory'))
+    
+    # Prepare update data
+    update_data = {
+        'name': request.form.get('name'),
+        'sku': request.form.get('sku'),
+        'barcode': request.form.get('barcode'),
+        'category': request.form.get('category'),
+        'supplier': request.form.get('supplier'),
+        'min_stock_level': request.form.get('min_stock_level', 5),
+        'location': request.form.get('location'),
+        'unit_type': request.form.get('unit_type', 'piece'),
+        'cost_price': request.form.get('cost_price', 0),
+        'selling_price': request.form.get('selling_price', 0),
+        'expiry_date': request.form.get('expiry_date') or None,
+        'batch_number': request.form.get('batch_number'),
+        'description': request.form.get('description'),
+    }
+    
+    try:
+        with DB_ENGINE.begin() as conn:
+            conn.execute(text("""
+                UPDATE inventory_items SET
+                    name = :name,
+                    sku = :sku,
+                    barcode = :barcode,
+                    category = :category,
+                    supplier = :supplier,
+                    min_stock_level = :min_stock_level,
+                    location = :location,
+                    unit_type = :unit_type,
+                    cost_price = :cost_price,
+                    selling_price = :selling_price,
+                    expiry_date = :expiry_date,
+                    batch_number = :batch_number,
+                    description = :description,
+                    updated_at = NOW()
+                WHERE id = :pid AND account_id = :aid
+            """), {
+                **update_data,
+                'pid': product_id,
+                'aid': account_id
+            })
+        flash("Product updated successfully", "success")
+    except Exception as e:
+        flash(f"Update failed: {str(e)}", "error")
+    
     return redirect(url_for('inventory.inventory'))
 
 @inventory_bp.route("/delete_product", methods=['POST'])
