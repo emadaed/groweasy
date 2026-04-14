@@ -1,4 +1,4 @@
-<!-- templates/inventory.html - PAGINATED VERSION (FAST LCP) -->
+<!-- templates/inventory.html - PAGINATED VERSION WITH FIXED SUMMARY CARDS + EDIT BUTTON -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -57,26 +57,8 @@
     </div>
     {% endif %}
 
-    <!-- INVENTORY SUMMARY CARDS (COMPACT) -->
+    <!-- INVENTORY SUMMARY CARDS (FIXED - using inventory_summary from route) -->
     <div class="row g-2 mb-4">
-        {% set inventory_summary = namespace(
-            total=0,
-            in_stock=0,
-            low_stock=0,
-            out_of_stock=0
-        ) %}
-
-        {% for item in inventory_items %}
-            {% set inventory_summary.total = inventory_summary.total + 1 %}
-            {% if item.current_stock == 0 %}
-                {% set inventory_summary.out_of_stock = inventory_summary.out_of_stock + 1 %}
-         {% elif item.current_stock > 0 and item.min_stock_level is not none and item.current_stock <= item.min_stock_level %}
-                {% set inventory_summary.low_stock = inventory_summary.low_stock + 1 %}
-            {% elif item.current_stock > 0 %}
-                {% set inventory_summary.in_stock = inventory_summary.in_stock + 1 %}
-            {% endif %}
-        {% endfor %}
-
         <div class="col-md-3">
             <div class="card text-white bg-primary">
                 <div class="card-body p-2 text-center">
@@ -163,7 +145,6 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Pagination -->
             <nav>
                 <ul class="pagination justify-content-center" id="inventoryPagination"></ul>
             </nav>
@@ -171,7 +152,7 @@
     </div>
 </div>
 
-<!-- ====================== ADD PRODUCT MODAL (unchanged) ====================== -->
+<!-- ====================== ADD PRODUCT MODAL ====================== -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -183,132 +164,36 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Product Name *</label>
-                                <input type="text" class="form-control" name="name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">SKU (Unique)</label>
-                                <input type="text" class="form-control" name="sku" placeholder="PROD-001">
-                            </div>
-                        </div>
+                        <div class="col-md-6"><div class="mb-3"><label>Product Name *</label><input type="text" class="form-control" name="name" required></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label>SKU (Unique)</label><input type="text" class="form-control" name="sku" placeholder="PROD-001"></div></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Barcode (EAN/UPC)</label>
-                        <input type="text" class="form-control" name="barcode" placeholder="1234567890123 or custom code">
-                        <small class="text-muted">Optional — barcode scanning / quick search</small>
+                    <div class="mb-3"><label>Barcode (EAN/UPC)</label><input type="text" class="form-control" name="barcode" placeholder="1234567890123"></div>
+                    <div class="row">
+                        <div class="col-md-6"><div class="mb-3"><label>Category</label><select class="form-control" name="category"><option value="">Select</option><option>Services</option><option>Electronics</option><option>Clothing</option><option>Food</option><option>Office Supplies</option><option>Raw Materials</option><option>Other</option></select></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label>Supplier</label><input type="text" class="form-control" name="supplier"></div></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Category</label>
-                                <select class="form-control" name="category">
-                                    <option value="">Select Category</option>
-                                    <option value="Services">Services (Consulting, Labor, etc.)</option>
-                                    <option value="Electronics">Electronics</option>
-                                    <option value="Clothing">Clothing</option>
-                                    <option value="Food">Food</option>
-                                    <option value="Office Supplies">Office Supplies</option>
-                                    <option value="Raw Materials">Raw Materials</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Supplier</label>
-                                <input type="text" class="form-control" name="supplier" placeholder="Supplier name">
-                            </div>
-                        </div>
+                        <div class="col-md-4"><div class="mb-3"><label>Current Stock</label><input type="number" class="form-control" name="current_stock" value="0" min="0"></div></div>
+                        <div class="col-md-4"><div class="mb-3"><label>Min Stock Level</label><input type="number" class="form-control" name="min_stock_level" value="5" min="1"></div></div>
+                        <div class="col-md-4"><div class="mb-3"><label>Location</label><input type="text" class="form-control" name="location"></div></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Current Stock</label>
-                                <input type="number" class="form-control" name="current_stock" value="0" min="0">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Min Stock Level</label>
-                                <input type="number" class="form-control" name="min_stock_level" value="5" min="1">
-                                <small class="text-muted">Alert when stock ≤ this level</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Location</label>
-                                <input type="text" class="form-control" name="location" placeholder="Warehouse A / Shelf B3">
-                            </div>
-                        </div>
+                        <div class="col-md-6"><div class="mb-3"><label>Cost Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="form-control" name="cost_price"></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label>Selling Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="form-control" name="selling_price"></div></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Cost Price ({{ currency_symbol }})</label>
-                                <input type="number" step="0.01" class="form-control" name="cost_price" placeholder="0.00">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Selling Price ({{ currency_symbol }})</label>
-                                <input type="number" step="0.01" class="form-control" name="selling_price" placeholder="0.00">
-                            </div>
-                        </div>
+                        <div class="col-md-4"><div class="mb-3"><label>Unit Type</label><select class="form-select" name="unit_type"><option value="piece">Piece</option><option value="weight">Weight</option><option value="volume">Volume</option><option value="length">Length</option></select></div></div>
+                        <div class="col-md-4"><div class="mb-3"><label>Pack Size</label><input type="number" step="0.1" class="form-control" name="pack_size" value="1.0"></div></div>
+                        <div class="col-md-4"><div class="mb-3"><label>Weight per Unit (kg)</label><input type="number" step="0.001" class="form-control" name="weight_kg"></div></div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Unit Type</label>
-                                <select class="form-select" name="unit_type">
-                                    <option value="piece" selected>Piece (units, boxes)</option>
-                                    <option value="weight">Weight (kg / g)</option>
-                                    <option value="volume">Volume (L / ml)</option>
-                                    <option value="length">Length / Area (m, m²)</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Pack Size</label>
-                                <input type="number" step="0.1" min="0.1" class="form-control" name="pack_size" value="1.0">
-                                <small class="text-muted">1 = single unit</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Weight per Unit (kg)</label>
-                                <input type="number" step="0.001" min="0" class="form-control" name="weight_kg" placeholder="e.g. 0.500">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3 form-check mt-3">
-                        <input class="form-check-input" type="checkbox" name="is_perishable" id="isPerishable">
-                        <label class="form-check-label" for="isPerishable">This is a perishable item (has expiry date)</label>
-                    </div>
+                    <div class="mb-3 form-check"><input class="form-check-input" type="checkbox" name="is_perishable" id="isPerishable"><label class="form-check-label" for="isPerishable">This is a perishable item (has expiry date)</label></div>
                     <div id="perishableFields" style="display:none;">
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Expiry Date</label>
-                                    <input type="date" class="form-control" name="expiry_date">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Batch / Lot / Vintage</label>
-                                    <input type="text" class="form-control" name="batch_number" placeholder="LOT-2025-03 or 2024-HARV">
-                                </div>
-                            </div>
+                            <div class="col-md-6"><div class="mb-3"><label>Expiry Date</label><input type="date" class="form-control" name="expiry_date"></div></div>
+                            <div class="col-md-6"><div class="mb-3"><label>Batch Number</label><input type="text" class="form-control" name="batch_number"></div></div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" rows="2" placeholder="Product description..."></textarea>
-                    </div>
+                    <div class="mb-3"><label>Description</label><textarea class="form-control" name="description" rows="2"></textarea></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -318,6 +203,7 @@
         </div>
     </div>
 </div>
+
 <!-- Edit Product Modal (Full Fields) -->
 <div class="modal fade" id="editProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -331,103 +217,28 @@
                 <input type="hidden" name="product_id" id="editProductIdFull">
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Product Name *</label>
-                                <input type="text" class="form-control" name="name" id="editProductNameFull" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">SKU</label>
-                                <input type="text" class="form-control" name="sku" id="editProductSku">
-                            </div>
-                        </div>
+                        <div class="col-md-6"><div class="mb-3"><label>Product Name *</label><input type="text" class="form-control" name="name" id="editProductNameFull" required></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label>SKU</label><input type="text" class="form-control" name="sku" id="editProductSku"></div></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Barcode</label>
-                        <input type="text" class="form-control" name="barcode" id="editProductBarcode">
+                    <div class="mb-3"><label>Barcode</label><input type="text" class="form-control" name="barcode" id="editProductBarcode"></div>
+                    <div class="row">
+                        <div class="col-md-6"><div class="mb-3"><label>Category</label><select class="form-control" name="category" id="editProductCategory"><option value="">Select</option><option>Services</option><option>Electronics</option><option>Clothing</option><option>Food</option><option>Office Supplies</option><option>Raw Materials</option><option>Other</option></select></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label>Supplier</label><input type="text" class="form-control" name="supplier" id="editProductSupplier"></div></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Category</label>
-                                <select class="form-control" name="category" id="editProductCategory">
-                                    <option value="">Select Category</option>
-                                    <option value="Services">Services</option>
-                                    <option value="Electronics">Electronics</option>
-                                    <option value="Clothing">Clothing</option>
-                                    <option value="Food">Food</option>
-                                    <option value="Office Supplies">Office Supplies</option>
-                                    <option value="Raw Materials">Raw Materials</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Supplier</label>
-                                <input type="text" class="form-control" name="supplier" id="editProductSupplier">
-                            </div>
-                        </div>
+                        <div class="col-md-4"><div class="mb-3"><label>Min Stock Level</label><input type="number" class="form-control" name="min_stock_level" id="editProductMinStock"></div></div>
+                        <div class="col-md-4"><div class="mb-3"><label>Location</label><input type="text" class="form-control" name="location" id="editProductLocation"></div></div>
+                        <div class="col-md-4"><div class="mb-3"><label>Unit Type</label><select class="form-select" name="unit_type" id="editProductUnitType"><option value="piece">Piece</option><option value="weight">Weight</option><option value="volume">Volume</option><option value="length">Length</option></select></div></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Min Stock Level</label>
-                                <input type="number" class="form-control" name="min_stock_level" id="editProductMinStock">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Location</label>
-                                <input type="text" class="form-control" name="location" id="editProductLocation">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Unit Type</label>
-                                <select class="form-select" name="unit_type" id="editProductUnitType">
-                                    <option value="piece">Piece</option>
-                                    <option value="weight">Weight</option>
-                                    <option value="volume">Volume</option>
-                                    <option value="length">Length</option>
-                                </select>
-                            </div>
-                        </div>
+                        <div class="col-md-6"><div class="mb-3"><label>Cost Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="form-control" name="cost_price" id="editProductCostPrice"></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label>Selling Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="form-control" name="selling_price" id="editProductSellingPrice"></div></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Cost Price ({{ currency_symbol }})</label>
-                                <input type="number" step="0.01" class="form-control" name="cost_price" id="editProductCostPrice">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Selling Price ({{ currency_symbol }})</label>
-                                <input type="number" step="0.01" class="form-control" name="selling_price" id="editProductSellingPrice">
-                            </div>
-                        </div>
+                        <div class="col-md-6"><div class="mb-3"><label>Expiry Date</label><input type="date" class="form-control" name="expiry_date" id="editProductExpiryDate"></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label>Batch Number</label><input type="text" class="form-control" name="batch_number" id="editProductBatchNumber"></div></div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Expiry Date</label>
-                                <input type="date" class="form-control" name="expiry_date" id="editProductExpiryDate">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Batch Number</label>
-                                <input type="text" class="form-control" name="batch_number" id="editProductBatchNumber">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" rows="2" id="editProductDescription"></textarea>
-                    </div>
+                    <div class="mb-3"><label>Description</label><textarea class="form-control" name="description" rows="2" id="editProductDescription"></textarea></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -442,42 +253,17 @@
 <div class="modal fade" id="deleteProductModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">🗑️ Remove Product</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-danger text-white"><h5 class="modal-title">🗑️ Remove Product</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <form method="POST" action="{{ url_for('inventory.delete_product') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="deleteProductId">
-                    <div class="alert alert-warning">
-                        <strong>⚠️ Warning:</strong> This will remove the product from active inventory.
-                        Transaction history will be preserved.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Product to Remove</label>
-                        <input type="text" class="form-control" id="deleteProductName" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Reason for Removal *</label>
-                        <select name="reason" class="form-control" required>
-                            <option value="">Select reason...</option>
-                            <option value="Discontinued">Discontinued Product</option>
-                            <option value="Expired">Expired/Damaged</option>
-                            <option value="Low Demand">Low Demand</option>
-                            <option value="Supplier Issue">Supplier Issue</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Additional Notes</label>
-                        <textarea name="notes" class="form-control" rows="2"></textarea>
-                    </div>
+                    <div class="alert alert-warning"><strong>⚠️ Warning:</strong> This will remove the product from active inventory. Transaction history will be preserved.</div>
+                    <div class="mb-3"><label>Product to Remove</label><input type="text" class="form-control" id="deleteProductName" readonly></div>
+                    <div class="mb-3"><label>Reason for Removal *</label><select name="reason" class="form-control" required><option value="">Select reason...</option><option>Discontinued</option><option>Expired/Damaged</option><option>Low Demand</option><option>Supplier Issue</option><option>Other</option></select></div>
+                    <div class="mb-3"><label>Additional Notes</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Remove Product</button>
-                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Remove Product</button></div>
             </form>
         </div>
     </div>
@@ -487,130 +273,27 @@
 <div class="modal fade" id="editStockModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">📊 Stock & Price Adjustment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-primary text-white"><h5 class="modal-title">📊 Stock & Price Adjustment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <form method="POST" action="{{ url_for('inventory.adjust_stock_audit') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="editProductId">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h6>Product Details</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label class="form-label">Product Name</label>
-                                    <input type="text" class="form-control" id="editProductName" readonly>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Current Stock</label>
-                                    <input type="number" class="form-control" id="editCurrentStock" readonly>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card mb-3">
-                        <div class="card-header bg-warning">
-                            <h6 class="mb-0">Stock Adjustment</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Adjustment Type *</label>
-                                <select class="form-control" name="adjustment_type" required>
-                                    <option value="">Select type...</option>
-                                    <option value="add_stock">Add Stock</option>
-                                    <option value="remove_stock">Remove Stock</option>
-                                    <option value="set_stock">Set Exact Quantity</option>
-                                    <option value="damaged">Damaged Goods</option>
-                                    <option value="found_stock">Found Stock</option>
-                                </select>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label" id="quantityLabel">Quantity *</label>
-                                        <input type="number" class="form-control" name="quantity" min="0" step="1" required>
-                                        <small class="text-muted">Number of units</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Unit Cost (Optional)</label>
-                                        <input type="number" step="0.01" class="form-control" name="unit_cost" placeholder="0.00">
-                                        <small class="text-muted">Cost per unit for this batch</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card mb-3">
-                        <div class="card-header bg-info">
-                            <h6 class="mb-0">Price Adjustment (Optional)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">New Cost Price ({{ currency_symbol }})</label>
-                                        <input type="number" step="0.01" class="form-control" name="new_cost_price" id="editCostPrice" placeholder="Keep current">
-                                        <small class="text-muted">Cost to you</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">New Selling Price ({{ currency_symbol }})</label>
-                                        <input type="number" step="0.01" class="form-control" name="new_selling_price" id="editSellingPrice" placeholder="Keep current">
-                                        <small class="text-muted">Price to customers</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header bg-secondary">
-                            <h6 class="mb-0">Audit Information</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Reason for Adjustment *</label>
-                                <select class="form-control" name="reason" required>
-                                    <option value="">Select reason...</option>
-                                    <option value="purchase_order">Purchase Order Arrival</option>
-                                    <option value="damaged_goods">Damaged/Expired Goods</option>
-                                    <option value="stock_take">Stock Take/Count</option>
-                                    <option value="price_change">Supplier Price Change</option>
-                                    <option value="market_adjustment">Market Price Adjustment</option>
-                                    <option value="manual_correction">Manual Correction</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Additional Notes</label>
-                                <textarea class="form-control" name="notes" rows="2" placeholder="e.g., Supplier: ABC Corp, Invoice #123, Quality issues, etc."></textarea>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="create_audit" id="createAudit" checked>
-                                <label class="form-check-label" for="createAudit">Create audit trail for this adjustment</label>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="card mb-3"><div class="card-body"><h6>Product Details</h6><div class="row"><div class="col-md-6"><label>Product Name</label><input type="text" class="form-control" id="editProductName" readonly></div><div class="col-md-6"><label>Current Stock</label><input type="number" class="form-control" id="editCurrentStock" readonly></div></div></div></div>
+                    <div class="card mb-3"><div class="card-header bg-warning"><h6 class="mb-0">Stock Adjustment</h6></div><div class="card-body"><div class="mb-3"><label>Adjustment Type *</label><select class="form-control" name="adjustment_type" required><option value="">Select type...</option><option value="add_stock">Add Stock</option><option value="remove_stock">Remove Stock</option><option value="set_stock">Set Exact Quantity</option><option value="damaged">Damaged Goods</option><option value="found_stock">Found Stock</option></select></div><div class="row"><div class="col-md-6"><div class="mb-3"><label id="quantityLabel">Quantity *</label><input type="number" class="form-control" name="quantity" min="0" step="1" required></div></div><div class="col-md-6"><div class="mb-3"><label>Unit Cost (Optional)</label><input type="number" step="0.01" class="form-control" name="unit_cost"></div></div></div></div></div>
+                    <div class="card mb-3"><div class="card-header bg-info"><h6 class="mb-0">Price Adjustment (Optional)</h6></div><div class="card-body"><div class="row"><div class="col-md-6"><div class="mb-3"><label>New Cost Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="form-control" name="new_cost_price" id="editCostPrice"></div></div><div class="col-md-6"><div class="mb-3"><label>New Selling Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="form-control" name="new_selling_price" id="editSellingPrice"></div></div></div></div></div>
+                    <div class="card"><div class="card-header bg-secondary"><h6 class="mb-0">Audit Information</h6></div><div class="card-body"><div class="mb-3"><label>Reason for Adjustment *</label><select class="form-control" name="reason" required><option value="">Select reason...</option><option value="purchase_order">Purchase Order Arrival</option><option value="damaged_goods">Damaged/Expired Goods</option><option value="stock_take">Stock Take/Count</option><option value="price_change">Supplier Price Change</option><option value="market_adjustment">Market Price Adjustment</option><option value="manual_correction">Manual Correction</option><option value="other">Other</option></select></div><div class="mb-3"><label>Additional Notes</label><textarea class="form-control" name="notes" rows="2"></textarea></div><div class="form-check"><input class="form-check-input" type="checkbox" name="create_audit" id="createAudit" checked><label class="form-check-label" for="createAudit">Create audit trail for this adjustment</label></div></div></div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Adjustments</button>
-                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save Adjustments</button></div>
             </form>
         </div>
     </div>
 </div>
 
 <script nonce="{{ nonce }}">
-// Paginated inventory table with search & filter
 let currentPage = 1;
 let totalPages = 1;
 let currentSearch = '';
-let currentStockFilter = '';  // for frontend filtering only (can be extended to backend)
+let currentStockFilter = '';
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -645,28 +328,7 @@ function renderTable(products) {
         tbody.innerHTML = '<tr><td colspan="10" class="text-center">No products found</td></tr>';
         return;
     }
-    // Edit Product button handler (full edit)
-    document.querySelectorAll('.edit-product-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.getElementById('editProductIdFull').value = this.dataset.id;
-            document.getElementById('editProductNameFull').value = this.dataset.name;
-            document.getElementById('editProductSku').value = this.dataset.sku || '';
-            document.getElementById('editProductBarcode').value = this.dataset.barcode || '';
-            document.getElementById('editProductCategory').value = this.dataset.category || '';
-            document.getElementById('editProductSupplier').value = this.dataset.supplier || '';
-            document.getElementById('editProductMinStock').value = this.dataset.minStock || 5;
-            document.getElementById('editProductLocation').value = this.dataset.location || '';
-            document.getElementById('editProductUnitType').value = this.dataset.unitType || 'piece';
-            document.getElementById('editProductCostPrice').value = this.dataset.cost || 0;
-            document.getElementById('editProductSellingPrice').value = this.dataset.price || 0;
-            document.getElementById('editProductExpiryDate').value = this.dataset.expiry || '';
-            document.getElementById('editProductBatchNumber').value = this.dataset.batch || '';
-            document.getElementById('editProductDescription').value = this.dataset.description || '';
-            const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
-            modal.show();
-        });
-    });
-    // Apply stock filter (frontend for simplicity)
+
     let filtered = [...products];
     if (currentStockFilter === 'low') {
         filtered = filtered.filter(p => (p.current_stock || 0) <= (p.min_stock_level || 0) && (p.current_stock || 0) > 0);
@@ -699,32 +361,60 @@ function renderTable(products) {
             <td>${escapeHtml(p.location) || 'Main'}</td>
             <td>
                 <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-warning edit-product-btn" 
+                        data-id="${p.id}" 
+                        data-name="${escapeHtml(p.name)}" 
+                        data-sku="${escapeHtml(p.sku || '')}" 
+                        data-barcode="${escapeHtml(p.barcode || '')}" 
+                        data-category="${escapeHtml(p.category || '')}" 
+                        data-supplier="${escapeHtml(p.supplier || '')}" 
+                        data-min-stock="${p.min_stock_level || 5}" 
+                        data-location="${escapeHtml(p.location || '')}" 
+                        data-unit-type="${p.unit_type || 'piece'}" 
+                        data-cost="${p.cost_price || 0}" 
+                        data-price="${p.selling_price || 0}" 
+                        data-expiry="${p.expiry_date || ''}" 
+                        data-batch="${p.batch_number || ''}" 
+                        data-description="${escapeHtml(p.description || '')}">✏️ Edit</button>
                     <button class="btn btn-outline-primary edit-stock-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-stock="${stock}" data-cost="${p.cost_price || ''}" data-price="${p.selling_price || ''}">📝 Adjust</button>
                     <button class="btn btn-outline-danger delete-product-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}">🗑️ Remove</button>
                 </div>
-            </td>
-        </tr>`;
+             </td>
+         </tr>`;
     });
     tbody.innerHTML = html;
 
     // Attach event listeners for dynamically created buttons
+    document.querySelectorAll('.edit-product-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('editProductIdFull').value = this.dataset.id;
+            document.getElementById('editProductNameFull').value = this.dataset.name;
+            document.getElementById('editProductSku').value = this.dataset.sku || '';
+            document.getElementById('editProductBarcode').value = this.dataset.barcode || '';
+            document.getElementById('editProductCategory').value = this.dataset.category || '';
+            document.getElementById('editProductSupplier').value = this.dataset.supplier || '';
+            document.getElementById('editProductMinStock').value = this.dataset.minStock || 5;
+            document.getElementById('editProductLocation').value = this.dataset.location || '';
+            document.getElementById('editProductUnitType').value = this.dataset.unitType || 'piece';
+            document.getElementById('editProductCostPrice').value = this.dataset.cost || 0;
+            document.getElementById('editProductSellingPrice').value = this.dataset.price || 0;
+            document.getElementById('editProductExpiryDate').value = this.dataset.expiry || '';
+            document.getElementById('editProductBatchNumber').value = this.dataset.batch || '';
+            document.getElementById('editProductDescription').value = this.dataset.description || '';
+            new bootstrap.Modal(document.getElementById('editProductModal')).show();
+        });
+    });
+
     document.querySelectorAll('.edit-stock-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const productId = this.dataset.id;
-            const productName = this.dataset.name;
-            const currentStock = this.dataset.stock;
-            const costPrice = this.dataset.cost;
-            const sellingPrice = this.dataset.price;
-
-            document.getElementById('editProductId').value = productId;
-            document.getElementById('editProductName').value = productName;
-            document.getElementById('editCurrentStock').value = currentStock;
-            const costPlaceholder = costPrice ? 'Current: {{ currency_symbol }}' + parseFloat(costPrice).toFixed(2) : '';
-            const pricePlaceholder = sellingPrice ? 'Current: {{ currency_symbol }}' + parseFloat(sellingPrice).toFixed(2) : '';
+            document.getElementById('editProductId').value = this.dataset.id;
+            document.getElementById('editProductName').value = this.dataset.name;
+            document.getElementById('editCurrentStock').value = this.dataset.stock;
+            const costPlaceholder = this.dataset.cost ? 'Current: {{ currency_symbol }}' + parseFloat(this.dataset.cost).toFixed(2) : '';
+            const pricePlaceholder = this.dataset.price ? 'Current: {{ currency_symbol }}' + parseFloat(this.dataset.price).toFixed(2) : '';
             document.getElementById('editCostPrice').placeholder = costPlaceholder;
             document.getElementById('editSellingPrice').placeholder = pricePlaceholder;
-            const modal = new bootstrap.Modal(document.getElementById('editStockModal'));
-            modal.show();
+            new bootstrap.Modal(document.getElementById('editStockModal')).show();
         });
     });
 
@@ -732,8 +422,7 @@ function renderTable(products) {
         btn.addEventListener('click', function() {
             document.getElementById('deleteProductId').value = this.dataset.id;
             document.getElementById('deleteProductName').value = this.dataset.name;
-            const modal = new bootstrap.Modal(document.getElementById('deleteProductModal'));
-            modal.show();
+            new bootstrap.Modal(document.getElementById('deleteProductModal')).show();
         });
     });
 }
@@ -742,28 +431,19 @@ function renderPagination() {
     const pagination = document.getElementById('inventoryPagination');
     pagination.innerHTML = '';
     if (totalPages <= 1) return;
-
     const maxVisible = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
     let endPage = Math.min(totalPages, startPage + maxVisible - 1);
     if (endPage - startPage + 1 < maxVisible) startPage = Math.max(1, endPage - maxVisible + 1);
-
     const prevLi = document.createElement('li');
     prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
     const prevLink = document.createElement('a');
     prevLink.className = 'page-link';
     prevLink.href = '#';
     prevLink.innerText = 'Previous';
-    prevLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentPage > 1) {
-            currentPage--;
-            loadInventory();
-        }
-    });
+    prevLink.addEventListener('click', (e) => { e.preventDefault(); if (currentPage > 1) { currentPage--; loadInventory(); } });
     prevLi.appendChild(prevLink);
     pagination.appendChild(prevLi);
-
     for (let i = startPage; i <= endPage; i++) {
         const li = document.createElement('li');
         li.className = `page-item ${i === currentPage ? 'active' : ''}`;
@@ -771,43 +451,23 @@ function renderPagination() {
         a.className = 'page-link';
         a.href = '#';
         a.innerText = i;
-        a.addEventListener('click', (e) => {
-            e.preventDefault();
-            currentPage = i;
-            loadInventory();
-        });
+        a.addEventListener('click', (e) => { e.preventDefault(); currentPage = i; loadInventory(); });
         li.appendChild(a);
         pagination.appendChild(li);
     }
-
     const nextLi = document.createElement('li');
     nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
     const nextLink = document.createElement('a');
     nextLink.className = 'page-link';
     nextLink.href = '#';
     nextLink.innerText = 'Next';
-    nextLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentPage < totalPages) {
-            currentPage++;
-            loadInventory();
-        }
-    });
+    nextLink.addEventListener('click', (e) => { e.preventDefault(); if (currentPage < totalPages) { currentPage++; loadInventory(); } });
     nextLi.appendChild(nextLink);
     pagination.appendChild(nextLi);
 }
 
-// Event listeners for search and filters
-document.getElementById('searchInventory')?.addEventListener('input', function() {
-    currentSearch = this.value;
-    currentPage = 1;
-    loadInventory();
-});
-document.getElementById('stockFilter')?.addEventListener('change', function() {
-    currentStockFilter = this.value;
-    currentPage = 1;
-    loadInventory();  // filter applied client-side inside renderTable
-});
+document.getElementById('searchInventory')?.addEventListener('input', function() { currentSearch = this.value; currentPage = 1; loadInventory(); });
+document.getElementById('stockFilter')?.addEventListener('change', function() { currentStockFilter = this.value; currentPage = 1; loadInventory(); });
 document.getElementById('resetFilters')?.addEventListener('click', function() {
     document.getElementById('searchInventory').value = '';
     document.getElementById('stockFilter').value = '';
@@ -817,11 +477,8 @@ document.getElementById('resetFilters')?.addEventListener('click', function() {
     loadInventory();
 });
 
-// Initial load
 document.addEventListener('DOMContentLoaded', function() {
     loadInventory();
-
-    // Perishable checkbox toggle (for add product modal)
     const perishableChk = document.getElementById('isPerishable');
     const perishableBlock = document.getElementById('perishableFields');
     if (perishableChk && perishableBlock) {
@@ -829,8 +486,6 @@ document.addEventListener('DOMContentLoaded', function() {
         perishableChk.addEventListener('change', toggle);
         toggle();
     }
-
-    // Adjustment type label change
     const adjType = document.querySelector('select[name="adjustment_type"]');
     const qtyLabel = document.getElementById('quantityLabel');
     if (adjType && qtyLabel) {
@@ -844,12 +499,8 @@ document.addEventListener('DOMContentLoaded', function() {
             else qtyLabel.textContent = 'Quantity *';
         });
     }
-
-    // View all low stock button (placeholder)
     const viewAllBtn = document.getElementById('viewAllLowStockBtn');
-    if (viewAllBtn) {
-        viewAllBtn.addEventListener('click', () => alert('Full low stock report coming soon!'));
-    }
+    if (viewAllBtn) viewAllBtn.addEventListener('click', () => alert('Full low stock report coming soon!'));
 });
 </script>
 
