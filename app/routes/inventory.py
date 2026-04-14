@@ -66,27 +66,31 @@ def inventory():
     from app.context_processors import CURRENCY_SYMBOLS
     from app.services.cache import get_user_profile_cached
     from app.services.inventory import InventoryManager
+    from app.services.db import DB_ENGINE
+    from sqlalchemy import text
     
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+    account_id = session['account_id']
     
-    # Get ONLY low stock alerts (lightweight query)
-    low_stock_alerts = InventoryManager.get_low_stock_alerts(session['account_id'])
+    # Get low stock alerts (lightweight)
+    low_stock_alerts = InventoryManager.get_low_stock_alerts(account_id)
     
-    # For summary cards, we need totals – use COUNT queries instead of loading all
-    from app.services.db import DB_ENGINE
-    from sqlalchemy import text
+    # Get summary counts directly from DB (fast)
     with DB_ENGINE.connect() as conn:
-        total = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE"), 
-                            {"aid": session['account_id']}).scalar() or 0
-        in_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock > min_stock_level"), 
-                               {"aid": session['account_id']}).scalar() or 0
-        low_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock <= min_stock_level AND current_stock > 0"), 
-                                {"aid": session['account_id']}).scalar() or 0
-        out_of_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock = 0"), 
-                                   {"aid": session['account_id']}).scalar() or 0
+        total = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE"), {"aid": account_id}).scalar() or 0
+        in_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock > min_stock_level"), {"aid": account_id}).scalar() or 0
+        low_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock <= min_stock_level AND current_stock > 0"), {"aid": account_id}).scalar() or 0
+        out_of_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock = 0"), {"aid": account_id}).scalar() or 0
     
-    inventory_summary = type('obj', (object,), {'total': total, 'in_stock': in_stock, 'low_stock': low_stock, 'out_of_stock': out_of_stock})
+    # Create a simple namespace for template
+    class Summary:
+        pass
+    inventory_summary = Summary()
+    inventory_summary.total = total
+    inventory_summary.in_stock = in_stock
+    inventory_summary.low_stock = low_stock
+    inventory_summary.out_of_stock = out_of_stock
     
     return render_template("inventory.html", 
                          currency_symbol=currency_symbol,
