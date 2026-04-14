@@ -1,4 +1,4 @@
-<!-- templates/inventory.html - ENHANCED VERSION WITH AUDIT TRAIL + UPDATED ADD PRODUCT MODAL -->
+<!-- templates/inventory.html - PAGINATED VERSION (FAST LCP) -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -27,7 +27,7 @@
             </a>
         </div>
     </div>
-     
+
     <!-- Low Stock Alerts (scrollable) -->
     {% if low_stock_alerts %}
     <div class="row mb-4">
@@ -57,7 +57,7 @@
     </div>
     {% endif %}
 
-    <!-- 🛡️ INVENTORY SUMMARY CARDS (COMPACT) -->
+    <!-- INVENTORY SUMMARY CARDS (COMPACT) -->
     <div class="row g-2 mb-4">
         {% set inventory_summary = namespace(
             total=0,
@@ -115,13 +115,33 @@
         </div>
     </div>
 
-    <!-- Inventory Table -->
+    <!-- Search & Filter Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" id="searchInventory" class="form-control" placeholder="🔍 Search by name or SKU...">
+                </div>
+                <div class="col-md-3">
+                    <select id="stockFilter" class="form-select">
+                        <option value="">All Stock</option>
+                        <option value="low">Low Stock (≤ Min)</option>
+                        <option value="out">Out of Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button id="resetFilters" class="btn btn-outline-secondary w-100">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Table (AJAX paginated) -->
     <div class="card">
         <div class="card-header">
             <h5>All Products</h5>
         </div>
         <div class="card-body">
-            {% if inventory_items %}
             <div class="table-responsive">
                 <table class="table table-striped table-sm">
                     <thead>
@@ -138,69 +158,20 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for item in inventory_items %}
-                        <tr class="{% if item.current_stock == 0 %}table-danger{% elif item.current_stock <= item.min_stock_level %}table-warning{% endif %}">
-                            <td><strong>{{ item.name }}</strong></td>
-                            <td><code>{{ item.sku or 'N/A' }}</code></td>
-                            <td>{{ item.category or 'General' }}</td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge {% if item.current_stock == 0 %}bg-danger{% elif item.current_stock <= item.min_stock_level %}bg-warning{% else %}bg-success{% endif %}">
-                                        {{ item.current_stock }}
-                                    </span>
-                                    {% if item.location_breakdown and item.location_breakdown.locations %}
-                                    <span class="badge bg-secondary ms-2" title="Stock distributed across {{ item.location_breakdown.locations|length }} locations">
-                                        {{ item.location_breakdown.locations|length }} locations
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td>{{ item.min_stock_level }}</td>
-                            <td>{{ currency_symbol }}{{ "%.2f"|format(item.cost_price or 0) }}</td>
-                            <td>{{ currency_symbol }}{{ "%.2f"|format(item.selling_price or 0) }}</td>
-                            <td>{{ item.supplier or 'N/A' }}</td>
-                            <td>{{ item.location or 'Main' }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editStockModal"
-                                            data-product-id="{{ item.id }}"
-                                            data-product-name="{{ item.name }}"
-                                            data-current-stock="{{ item.current_stock }}"
-                                            data-cost-price="{{ item.cost_price or '' }}"
-                                            data-selling-price="{{ item.selling_price or '' }}">
-                                        📝 Adjust
-                                    </button>
-                                    <button class="btn btn-outline-danger"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteProductModal"
-                                            data-product-id="{{ item.id }}"
-                                            data-product-name="{{ item.name }}">
-                                        🗑️ Remove
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="inventoryTableBody">
+                        <tr><td colspan="10" class="text-center">Loading products...</td></tr>
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="text-center py-4">
-                <h5>No products in inventory yet</h5>
-                <p class="text-muted">Add your first product to get started!</p>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                    ➕ Add Your First Product
-                </button>
-            </div>
-            {% endif %}
+            <!-- Pagination -->
+            <nav>
+                <ul class="pagination justify-content-center" id="inventoryPagination"></ul>
+            </nav>
         </div>
     </div>
 </div>
-        
-<!-- ====================== UPDATED ADD PRODUCT MODAL ====================== -->
+
+<!-- ====================== ADD PRODUCT MODAL (unchanged) ====================== -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -211,8 +182,6 @@
             <form method="POST" action="{{ url_for('inventory.add_product') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
-
-                    <!-- Row 1: Name + SKU -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -227,15 +196,11 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Barcode -->
                     <div class="mb-3">
                         <label class="form-label">Barcode (EAN/UPC)</label>
                         <input type="text" class="form-control" name="barcode" placeholder="1234567890123 or custom code">
                         <small class="text-muted">Optional — barcode scanning / quick search</small>
                     </div>
-
-                    <!-- Row 2: Category + Supplier -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -259,8 +224,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Row 3: Stock levels + Location -->
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -282,9 +245,6 @@
                             </div>
                         </div>
                     </div>
-                    
-
-                    <!-- Prices -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -299,11 +259,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- ──────────────────────────────────────────────── -->
-                    <!--          NEW STANDARD INVENTORY FIELDS           -->
-                    <!-- ──────────────────────────────────────────────── -->
-
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -330,14 +285,10 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="mb-3 form-check mt-3">
                         <input class="form-check-input" type="checkbox" name="is_perishable" id="isPerishable">
-                        <label class="form-check-label" for="isPerishable">
-                            This is a perishable item (has expiry date)
-                        </label>
+                        <label class="form-check-label" for="isPerishable">This is a perishable item (has expiry date)</label>
                     </div>
-
                     <div id="perishableFields" style="display:none;">
                         <div class="row">
                             <div class="col-md-6">
@@ -354,13 +305,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Description -->
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea class="form-control" name="description" rows="2" placeholder="Product description..."></textarea>
                     </div>
-
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -371,7 +319,7 @@
     </div>
 </div>
 
-<!-- Delete Product Modal (unchanged) -->
+<!-- Delete Product Modal -->
 <div class="modal fade" id="deleteProductModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -380,7 +328,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('inventory.delete_product') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">                
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="deleteProductId">
                     <div class="alert alert-warning">
@@ -416,7 +364,7 @@
     </div>
 </div>
 
-<!-- Adjust Stock Modal (unchanged for now) -->
+<!-- Adjust Stock Modal -->
 <div class="modal fade" id="editStockModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -428,8 +376,6 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="editProductId">
-
-                    <!-- Product Info -->
                     <div class="card mb-3">
                         <div class="card-body">
                             <h6>Product Details</h6>
@@ -445,8 +391,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Stock Adjustment Section -->
                     <div class="card mb-3">
                         <div class="card-header bg-warning">
                             <h6 class="mb-0">Stock Adjustment</h6>
@@ -463,7 +407,6 @@
                                     <option value="found_stock">Found Stock</option>
                                 </select>
                             </div>
-
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -482,8 +425,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Price Adjustment Section -->
                     <div class="card mb-3">
                         <div class="card-header bg-info">
                             <h6 class="mb-0">Price Adjustment (Optional)</h6>
@@ -493,24 +434,20 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">New Cost Price ({{ currency_symbol }})</label>
-                                        <input type="number" step="0.01" class="form-control" name="new_cost_price"
-                                               id="editCostPrice" placeholder="Keep current">
+                                        <input type="number" step="0.01" class="form-control" name="new_cost_price" id="editCostPrice" placeholder="Keep current">
                                         <small class="text-muted">Cost to you</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">New Selling Price ({{ currency_symbol }})</label>
-                                        <input type="number" step="0.01" class="form-control" name="new_selling_price"
-                                               id="editSellingPrice" placeholder="Keep current">
+                                        <input type="number" step="0.01" class="form-control" name="new_selling_price" id="editSellingPrice" placeholder="Keep current">
                                         <small class="text-muted">Price to customers</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Audit Information -->
                     <div class="card">
                         <div class="card-header bg-secondary">
                             <h6 class="mb-0">Audit Information</h6>
@@ -531,14 +468,11 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Additional Notes</label>
-                                <textarea class="form-control" name="notes" rows="2"
-                                          placeholder="e.g., Supplier: ABC Corp, Invoice #123, Quality issues, etc."></textarea>
+                                <textarea class="form-control" name="notes" rows="2" placeholder="e.g., Supplier: ABC Corp, Invoice #123, Quality issues, etc."></textarea>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="create_audit" id="createAudit" checked>
-                                <label class="form-check-label" for="createAudit">
-                                    Create audit trail for this adjustment
-                                </label>
+                                <label class="form-check-label" for="createAudit">Create audit trail for this adjustment</label>
                             </div>
                         </div>
                     </div>
@@ -552,144 +486,238 @@
     </div>
 </div>
 
-<!-- JavaScript for Modals + NEW PERISHABLE TOGGLE -->
 <script nonce="{{ nonce }}">
-document.addEventListener('DOMContentLoaded', function() {
-    // Delete modal handler
-    var deleteModal = document.getElementById('deleteProductModal');
-    if (deleteModal) {
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var productId = button.getAttribute('data-product-id');
-            var productName = button.getAttribute('data-product-name');
-            document.getElementById('deleteProductId').value = productId;
-            document.getElementById('deleteProductName').value = productName;
+// Paginated inventory table with search & filter
+let currentPage = 1;
+let totalPages = 1;
+let currentSearch = '';
+let currentStockFilter = '';  // for frontend filtering only (can be extended to backend)
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+function loadInventory() {
+    let url = `/api/v1/inventory?page=${currentPage}&per_page=50`;
+    if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
+    fetch(url, { credentials: 'same-origin' })
+        .then(res => res.json())
+        .then(data => {
+            const products = data.products || [];
+            totalPages = data.total_pages || 1;
+            renderTable(products);
+            renderPagination();
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('inventoryTableBody').innerHTML = '<tr><td colspan="10" class="text-danger text-center">Error loading products</td></tr>';
         });
+}
+
+function renderTable(products) {
+    const tbody = document.getElementById('inventoryTableBody');
+    if (!products.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No products found</td></tr>';
+        return;
     }
 
-    // Edit Stock Modal Handler
-    var editStockModal = document.getElementById('editStockModal');
-    if (editStockModal) {
-        editStockModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var productId = button.getAttribute('data-product-id');
-            var productName = button.getAttribute('data-product-name');
-            var currentStock = button.getAttribute('data-current-stock');
-            var costPrice = button.getAttribute('data-cost-price') || '';
-            var sellingPrice = button.getAttribute('data-selling-price') || '';
+    // Apply stock filter (frontend for simplicity)
+    let filtered = [...products];
+    if (currentStockFilter === 'low') {
+        filtered = filtered.filter(p => (p.current_stock || 0) <= (p.min_stock_level || 0) && (p.current_stock || 0) > 0);
+    } else if (currentStockFilter === 'out') {
+        filtered = filtered.filter(p => (p.current_stock || 0) === 0);
+    }
+
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No products match the filter</td></tr>';
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(p => {
+        const stock = p.current_stock || 0;
+        const min = p.min_stock_level || 0;
+        let rowClass = '';
+        if (stock === 0) rowClass = 'table-danger';
+        else if (stock <= min) rowClass = 'table-warning';
+
+        html += `<tr class="${rowClass}">
+            <td><strong>${escapeHtml(p.name)}</strong></td>
+            <td><code>${escapeHtml(p.sku) || 'N/A'}</code></td>
+            <td>${escapeHtml(p.category) || 'General'}</td>
+            <td><span class="badge ${stock === 0 ? 'bg-danger' : (stock <= min ? 'bg-warning' : 'bg-success')}">${stock}</span></td>
+            <td>${min}</td>
+            <td>{{ currency_symbol }}${(p.cost_price || 0).toFixed(2)}</td>
+            <td>{{ currency_symbol }}${(p.selling_price || 0).toFixed(2)}</td>
+            <td>${escapeHtml(p.supplier) || 'N/A'}</td>
+            <td>${escapeHtml(p.location) || 'Main'}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary edit-stock-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-stock="${stock}" data-cost="${p.cost_price || ''}" data-price="${p.selling_price || ''}">📝 Adjust</button>
+                    <button class="btn btn-outline-danger delete-product-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}">🗑️ Remove</button>
+                </div>
+            </td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+
+    // Attach event listeners for dynamically created buttons
+    document.querySelectorAll('.edit-stock-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.id;
+            const productName = this.dataset.name;
+            const currentStock = this.dataset.stock;
+            const costPrice = this.dataset.cost;
+            const sellingPrice = this.dataset.price;
 
             document.getElementById('editProductId').value = productId;
             document.getElementById('editProductName').value = productName;
             document.getElementById('editCurrentStock').value = currentStock;
-            document.getElementById('editCostPrice').placeholder = costPrice ? 'Current: {{ currency_symbol }}' + parseFloat(costPrice).toFixed(2) : '';
-            document.getElementById('editSellingPrice').placeholder = sellingPrice ? 'Current: {{ currency_symbol }}' + parseFloat(sellingPrice).toFixed(2) : '';
+            const costPlaceholder = costPrice ? 'Current: {{ currency_symbol }}' + parseFloat(costPrice).toFixed(2) : '';
+            const pricePlaceholder = sellingPrice ? 'Current: {{ currency_symbol }}' + parseFloat(sellingPrice).toFixed(2) : '';
+            document.getElementById('editCostPrice').placeholder = costPlaceholder;
+            document.getElementById('editSellingPrice').placeholder = pricePlaceholder;
+            const modal = new bootstrap.Modal(document.getElementById('editStockModal'));
+            modal.show();
         });
+    });
+
+    document.querySelectorAll('.delete-product-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('deleteProductId').value = this.dataset.id;
+            document.getElementById('deleteProductName').value = this.dataset.name;
+            const modal = new bootstrap.Modal(document.getElementById('deleteProductModal'));
+            modal.show();
+        });
+    });
+}
+
+function renderPagination() {
+    const pagination = document.getElementById('inventoryPagination');
+    pagination.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    if (endPage - startPage + 1 < maxVisible) startPage = Math.max(1, endPage - maxVisible + 1);
+
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    const prevLink = document.createElement('a');
+    prevLink.className = 'page-link';
+    prevLink.href = '#';
+    prevLink.innerText = 'Previous';
+    prevLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            loadInventory();
+        }
+    });
+    prevLi.appendChild(prevLink);
+    pagination.appendChild(prevLi);
+
+    for (let i = startPage; i <= endPage; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.innerText = i;
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentPage = i;
+            loadInventory();
+        });
+        li.appendChild(a);
+        pagination.appendChild(li);
     }
 
-    // Location Modal Handler - NEW
-    const locationModal = document.getElementById('locationModal');
-    if (locationModal) {
-        locationModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const productId = button.getAttribute('data-product-id');
-            const productName = button.getAttribute('data-product-name');
-            const locationsJson = button.getAttribute('data-locations');
-            
-            document.getElementById('locationModalProductName').textContent = productName;
-            
-            const tbody = document.getElementById('locationModalBody');
-            tbody.innerHTML = '';
-            
-            if (locationsJson) {
-                const locations = JSON.parse(locationsJson);
-                let totalStock = 0;
-                locations.forEach(function(loc) {
-                    totalStock += loc.quantity;
-                    const row = tbody.insertRow();
-                    row.insertCell(0).textContent = loc.location_name;
-                    row.insertCell(1).textContent = loc.quantity;
-                    row.insertCell(2).textContent = loc.reserved || 0;
-                    row.insertCell(3).textContent = loc.type || 'storage';
-                });
-                // Add total row
-                const totalRow = tbody.insertRow();
-                totalRow.style.fontWeight = 'bold';
-                totalRow.insertCell(0).textContent = 'TOTAL';
-                totalRow.insertCell(1).textContent = totalStock;
-                totalRow.insertCell(2).textContent = '';
-                totalRow.insertCell(3).textContent = '';
-            }
-            
-            // Store product ID for transfer
-            locationModal.setAttribute('data-current-product-id', productId);
-        });
-    }
-    
-    // Transfer button handler
-    const transferBtn = document.getElementById('transferFromModalBtn');
-    if (transferBtn) {
-        transferBtn.addEventListener('click', function() {
-            const productId = locationModal.getAttribute('data-current-product-id');
-            // Close location modal
-            const modal = bootstrap.Modal.getInstance(locationModal);
-            modal.hide();
-            // Open transfer modal (to be implemented)
-            alert('Transfer feature coming soon. Product ID: ' + productId);
-        });
-    }
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    const nextLink = document.createElement('a');
+    nextLink.className = 'page-link';
+    nextLink.href = '#';
+    nextLink.innerText = 'Next';
+    nextLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadInventory();
+        }
+    });
+    nextLi.appendChild(nextLink);
+    pagination.appendChild(nextLi);
+}
 
-    // Dynamic quantity label based on adjustment type
-    const adjustmentType = document.querySelector('select[name="adjustment_type"]');
-    const quantityLabel = document.getElementById('quantityLabel');
+// Event listeners for search and filters
+document.getElementById('searchInventory')?.addEventListener('input', function() {
+    currentSearch = this.value;
+    currentPage = 1;
+    loadInventory();
+});
+document.getElementById('stockFilter')?.addEventListener('change', function() {
+    currentStockFilter = this.value;
+    currentPage = 1;
+    loadInventory();  // filter applied client-side inside renderTable
+});
+document.getElementById('resetFilters')?.addEventListener('click', function() {
+    document.getElementById('searchInventory').value = '';
+    document.getElementById('stockFilter').value = '';
+    currentSearch = '';
+    currentStockFilter = '';
+    currentPage = 1;
+    loadInventory();
+});
 
-    if (adjustmentType && quantityLabel) {
-        adjustmentType.addEventListener('change', function() {
-            const type = this.value;
-            if (type === 'add_stock') quantityLabel.textContent = 'Quantity to Add *';
-            else if (type === 'remove_stock') quantityLabel.textContent = 'Quantity to Remove *';
-            else if (type === 'set_stock') quantityLabel.textContent = 'New Total Quantity *';
-            else if (type === 'damaged') quantityLabel.textContent = 'Damaged Quantity *';
-            else if (type === 'found_stock') quantityLabel.textContent = 'Found Quantity *';
-            else quantityLabel.textContent = 'Quantity *';
-        });
-    }
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    loadInventory();
 
-    // Show/hide perishable fields
+    // Perishable checkbox toggle (for add product modal)
     const perishableChk = document.getElementById('isPerishable');
     const perishableBlock = document.getElementById('perishableFields');
     if (perishableChk && perishableBlock) {
-        const togglePerishable = () => {
-            perishableBlock.style.display = perishableChk.checked ? 'block' : 'none';
-        };
-        perishableChk.addEventListener('change', togglePerishable);
-        togglePerishable();
+        const toggle = () => { perishableBlock.style.display = perishableChk.checked ? 'block' : 'none'; };
+        perishableChk.addEventListener('change', toggle);
+        toggle();
     }
 
-    // View All low stock button
+    // Adjustment type label change
+    const adjType = document.querySelector('select[name="adjustment_type"]');
+    const qtyLabel = document.getElementById('quantityLabel');
+    if (adjType && qtyLabel) {
+        adjType.addEventListener('change', function() {
+            const type = this.value;
+            if (type === 'add_stock') qtyLabel.textContent = 'Quantity to Add *';
+            else if (type === 'remove_stock') qtyLabel.textContent = 'Quantity to Remove *';
+            else if (type === 'set_stock') qtyLabel.textContent = 'New Total Quantity *';
+            else if (type === 'damaged') qtyLabel.textContent = 'Damaged Quantity *';
+            else if (type === 'found_stock') qtyLabel.textContent = 'Found Quantity *';
+            else qtyLabel.textContent = 'Quantity *';
+        });
+    }
+
+    // View all low stock button (placeholder)
     const viewAllBtn = document.getElementById('viewAllLowStockBtn');
     if (viewAllBtn) {
-        viewAllBtn.addEventListener('click', function() {
-            alert('Full low stock report coming soon!');
-        });
+        viewAllBtn.addEventListener('click', () => alert('Full low stock report coming soon!'));
     }
 });
 </script>
 
 <style>
-/* Scrollbar styling for low stock alerts */
-.card-body::-webkit-scrollbar {
-    width: 6px;
-}
-.card-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-.card-body::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 3px;
-}
-.card-body::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
+.card-body::-webkit-scrollbar { width: 6px; }
+.card-body::-webkit-scrollbar-track { background: #f1f1f1; }
+.card-body::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+.card-body::-webkit-scrollbar-thumb:hover { background: #555; }
 </style>
-
 {% endblock %}
