@@ -25,36 +25,73 @@ def _safe_float(val, default):
     except (ValueError, TypeError):
         return default
 
+##@inventory_bp.route("/inventory")
+##@role_required('owner', 'assistant')
+##def inventory():
+##    if 'user_id' not in session:
+##        return redirect(url_for('auth.login'))
+##
+##    account_id = session['account_id']
+##    from app.context_processors import CURRENCY_SYMBOLS
+##    from app.services.cache import get_user_profile_cached
+##    
+##    user_profile = get_user_profile_cached(session['user_id'])
+##    currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
+##    
+##    with DB_ENGINE.connect() as conn:
+##        items = conn.execute(text("""
+##            SELECT id, name, sku, category, current_stock, min_stock_level,
+##                   cost_price, selling_price, supplier, location
+##            FROM inventory_items
+##            WHERE account_id = :aid AND is_active = TRUE
+##            ORDER BY name
+##        """), {"aid": account_id}).fetchall()
+##    
+##    # Use the updated get_inventory_items method that includes location breakdown
+##    inventory_items = InventoryManager.get_inventory_items(account_id)
+##    low_stock_alerts = InventoryManager.get_low_stock_alerts(account_id)
+##    
+##    return render_template("inventory.html",
+##                         inventory_items=inventory_items,
+##                         low_stock_alerts=low_stock_alerts,
+##                         currency_symbol=currency_symbol,
+##                         nonce=g.nonce)
+
 @inventory_bp.route("/inventory")
 @role_required('owner', 'assistant')
 def inventory():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-
-    account_id = session['account_id']
+    
     from app.context_processors import CURRENCY_SYMBOLS
     from app.services.cache import get_user_profile_cached
+    from app.services.inventory import InventoryManager
     
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     
+    # Get ONLY low stock alerts (lightweight query)
+    low_stock_alerts = InventoryManager.get_low_stock_alerts(session['account_id'])
+    
+    # For summary cards, we need totals – use COUNT queries instead of loading all
+    from app.services.db import DB_ENGINE
+    from sqlalchemy import text
     with DB_ENGINE.connect() as conn:
-        items = conn.execute(text("""
-            SELECT id, name, sku, category, current_stock, min_stock_level,
-                   cost_price, selling_price, supplier, location
-            FROM inventory_items
-            WHERE account_id = :aid AND is_active = TRUE
-            ORDER BY name
-        """), {"aid": account_id}).fetchall()
+        total = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE"), 
+                            {"aid": session['account_id']}).scalar() or 0
+        in_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock > min_stock_level"), 
+                               {"aid": session['account_id']}).scalar() or 0
+        low_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock <= min_stock_level AND current_stock > 0"), 
+                                {"aid": session['account_id']}).scalar() or 0
+        out_of_stock = conn.execute(text("SELECT COUNT(*) FROM inventory_items WHERE account_id = :aid AND is_active = TRUE AND current_stock = 0"), 
+                                   {"aid": session['account_id']}).scalar() or 0
     
-    # Use the updated get_inventory_items method that includes location breakdown
-    inventory_items = InventoryManager.get_inventory_items(account_id)
-    low_stock_alerts = InventoryManager.get_low_stock_alerts(account_id)
+    inventory_summary = type('obj', (object,), {'total': total, 'in_stock': in_stock, 'low_stock': low_stock, 'out_of_stock': out_of_stock})
     
-    return render_template("inventory.html",
-                         inventory_items=inventory_items,
-                         low_stock_alerts=low_stock_alerts,
+    return render_template("inventory.html", 
                          currency_symbol=currency_symbol,
+                         low_stock_alerts=low_stock_alerts,
+                         inventory_summary=inventory_summary,
                          nonce=g.nonce)
 
 @inventory_bp.route("/inventory_reports")
