@@ -91,16 +91,25 @@ def list_inventory_paginated():
         params["offset"] = offset
         rows = conn.execute(text(query), params).fetchall()
     
-    products = []
-    for r in rows:
-        products.append({
-            'id': r[0], 'name': r[1], 'sku': r[2], 'category': r[3],
-            'current_stock': float(r[4]) if r[4] else 0,
-            'min_stock_level': r[5] or 10,
-            'cost_price': float(r[6]) if r[6] else 0,
-            'selling_price': float(r[7]) if r[7] else 0,
-            'supplier': r[8] or '', 'location': r[9] or 'Main'
-        })
+        products = []
+        for r in rows:
+            product = {
+                'id': r[0], 'name': r[1], 'sku': r[2], 'category': r[3],
+                'current_stock': float(r[4]) if r[4] else 0,
+                'min_stock_level': r[5] or 10,
+                'cost_price': float(r[6]) if r[6] else 0,
+                'selling_price': float(r[7]) if r[7] else 0,
+                'supplier': r[8] or '', 'location': r[9] or 'Main'
+            }
+            # Add location breakdown
+            try:
+                from app.services.location_inventory import LocationInventoryManager
+                breakdown = LocationInventoryManager.get_product_location_breakdown(r[0])
+                if breakdown and breakdown.get('locations'):
+                    product['location_breakdown'] = breakdown
+            except Exception as e:
+                pass
+            products.append(product)
     return jsonify({'products': products, 'total': total, 'total_pages': total_pages, 'current_page': page})
 
 @api_v1_bp.route('/inventory/<int:product_id>', methods=['GET'])
@@ -234,6 +243,28 @@ def update_stock_by_sku(sku):
     else:
         return error_response("Stock update failed (negative stock?)", "STOCK_ERROR", 400)
     
+@api_v1_bp.route('/inventory/<int:product_id>/stock', methods=['PATCH'])
+@csrf.exempt
+@require_auth
+def update_stock_via_patch(product_id):
+    account_id = g.api_account_id
+    data = request.get_json()
+    delta = data.get('delta')
+    reason = data.get('reason', 'API adjustment')
+    if delta is None:
+        return error_response("delta required", "MISSING_FIELD", 400)
+    with DB_ENGINE.connect() as conn:
+        # Get user_id
+        row = conn.execute(text("SELECT id FROM users WHERE account_id = :aid AND role = 'owner' LIMIT 1"), {"aid": account_id}).first()
+        if not row:
+            return error_response("No owner found", "INTERNAL_ERROR", 400)
+        user_id = row[0]
+    success = InventoryManager.update_stock_delta(user_id, account_id, product_id, delta, 'api_adjustment', notes=reason)
+    if success:
+        return jsonify({"message": "Stock updated"}), 200
+    else:
+        return error_response("Stock update failed (negative stock?)", "STOCK_ERROR", 400)
+
 # ========== CUSTOMERS ==========
 @api_v1_bp.route('/customers', methods=['GET'])
 @limiter.limit("100 per minute")

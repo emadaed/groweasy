@@ -2,7 +2,6 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <!-- Header -->
     <div class="row mb-4">
         <div class="col">
             <h2><i class="bi bi-box-seam"></i> Product Catalog</h2>
@@ -21,7 +20,6 @@
         </div>
     </div>
 
-    <!-- Search & Filters -->
     <div class="card mb-4">
         <div class="card-body">
             <div class="row g-3">
@@ -44,68 +42,35 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="button" class="btn btn-outline-secondary w-100" id="resetFiltersBtn">
-                        <i class="bi bi-arrow-repeat"></i> Reset
-                    </button>
+                    <button type="button" class="btn btn-outline-secondary w-100" id="resetFiltersBtn">Reset</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Product Grid (Card View) -->
     <div class="row" id="productGrid">
         <div class="col-12 text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
             <p class="mt-3">Loading products...</p>
         </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <nav>
-                <ul class="pagination justify-content-center" id="pagination"></ul>
-            </nav>
-        </div>
-    </div>
+    <div class="row mt-4"><div class="col-12"><nav><ul class="pagination justify-content-center" id="pagination"></ul></nav></div></div>
 </div>
 
-<!-- Product Card Modal (View Details) -->
+<!-- Product Detail Modal -->
 <div class="modal fade" id="productDetailModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="detailProductName"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header"><h5 class="modal-title" id="detailProductName"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-6">
-                        <h6>Product Details</h6>
-                        <table class="table table-sm">
-                            <tr><th>SKU:</th><td id="detailSku"></td></tr>
-                            <tr><th>Category:</th><td id="detailCategory"></td></tr>
-                            <tr><th>Supplier:</th><td id="detailSupplier"></td></tr>
-                            <tr><th>Location:</th><td id="detailLocation"></td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Pricing</h6>
-                        <table class="table table-sm">
-                            <tr><th>Cost Price:</th><td id="detailCostPrice"></td></tr>
-                            <tr><th>Selling Price:</th><td id="detailSellingPrice"></td></tr>
-                            <tr><th>Min Stock:</th><td id="detailMinStock"></td></tr>
-                        </table>
-                    </div>
+                    <div class="col-md-6"><h6>Product Details</h6><table class="table table-sm"><tr><th>SKU:</th><td id="detailSku"></td></tr><tr><th>Category:</th><td id="detailCategory"></td></tr><tr><th>Supplier:</th><td id="detailSupplier"></td></tr><tr><th>Location:</th><td id="detailLocation"></td></tr></table></div>
+                    <div class="col-md-6"><h6>Pricing</h6><table class="table table-sm"><tr><th>Cost Price:</th><td id="detailCostPrice"></td></tr><tr><th>Selling Price:</th><td id="detailSellingPrice"></td></tr><tr><th>Min Stock:</th><td id="detailMinStock"></td></tr></table></div>
                 </div>
                 <hr>
                 <h6>Stock by Location</h6>
-                <table class="table table-sm" id="detailLocations">
-                    <thead><tr><th>Location</th><th>Quantity</th><th>Reserved</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+                <table class="table table-sm" id="detailLocations"><thead><tr><th>Location</th><th>Quantity</th><th>Reserved</th></tr></thead><tbody></tbody></table>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" id="transferFromDetailBtn">Transfer Stock</button>
@@ -115,330 +80,208 @@
     </div>
 </div>
 
+<!-- Adjust Stock Modal (simple) -->
+<div class="modal fade" id="adjustStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white"><h5 class="modal-title">Adjust Stock</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="adjustProductId">
+                <div class="mb-3"><label>Product</label><input type="text" id="adjustProductName" class="form-control" readonly></div>
+                <div class="mb-3"><label>Current Stock</label><input type="number" id="adjustCurrentStock" class="form-control" readonly></div>
+                <div class="mb-3"><label>Adjustment Type</label><select id="adjustType" class="form-select"><option value="add">Add Stock</option><option value="remove">Remove Stock</option><option value="set">Set Exact Quantity</option></select></div>
+                <div class="mb-3"><label>Quantity</label><input type="number" id="adjustQuantity" class="form-control" min="0" step="1"></div>
+                <div class="mb-3"><label>Reason</label><input type="text" id="adjustReason" class="form-control" placeholder="e.g., Stock take, return"></div>
+                <div id="adjustMsg" class="alert d-none"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="confirmAdjustBtn">Apply Adjustment</button></div>
+        </div>
+    </div>
+</div>
+
 <script nonce="{{ nonce }}">
-(function() {
-    let allProducts = [];
-    let currentPage = 1;
-    let currentFilteredProducts = [];
-    const itemsPerPage = 20;
+let allProducts = [];
+let currentPage = 1;
+let currentFilteredProducts = [];
+const itemsPerPage = 20;
 
-    function formatNumber(num) {
-        if (num === undefined || num === null) return '0';
-        const n = parseFloat(num);
-        if (isNaN(n)) return '0';
-        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-        return n.toString();
-    }
+function formatNumber(num) { if (num===undefined||num===null) return '0'; const n=parseFloat(num); if(isNaN(n)) return '0'; if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return n.toString(); }
+function formatCurrency(amount) { const val=parseFloat(amount); if(isNaN(val)) return '{{ currency_symbol }}0.00'; return '{{ currency_symbol }}'+val.toFixed(2); }
+function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
 
-    function formatCurrency(amount) {
-        const val = parseFloat(amount);
-        if (isNaN(val)) return '{{ currency_symbol }}0.00';
-        return '{{ currency_symbol }}' + val.toFixed(2);
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
+function loadProducts() {
+    fetch('/api/v1/inventory?per_page=500', { credentials: 'same-origin' })
+        .then(res => res.json())
+        .then(data => {
+            allProducts = data.products || [];
+            applyFiltersAndRender();
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Error loading products</div>';
         });
-    }
+}
 
-    function loadProducts() {
-        fetch('/api/v1/inventory?per_page=500', { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                allProducts = data.products || [];  // <-- key change
-                applyFiltersAndRender();
-            })
-            .catch(err => {
-                console.error('Error loading products:', err);
-                document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Error loading products</div>';
-            });
-    }
+function applyFiltersAndRender() {
+    if (!allProducts.length) { renderProducts([]); return; }
+    let filtered = [...allProducts];
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    if (searchTerm) filtered = filtered.filter(p => (p.name && p.name.toLowerCase().includes(searchTerm)) || (p.sku && p.sku.toLowerCase().includes(searchTerm)));
+    const stockFilter = document.getElementById('stockFilter').value;
+    if (stockFilter === 'low') filtered = filtered.filter(p => (p.current_stock||0) <= (p.min_stock_level||0) && (p.current_stock||0) > 0);
+    else if (stockFilter === 'out') filtered = filtered.filter(p => (p.current_stock||0) === 0);
+    else if (stockFilter === 'in') filtered = filtered.filter(p => (p.current_stock||0) > (p.min_stock_level||0));
+    const sortBy = document.getElementById('sortBy').value;
+    if (sortBy === 'name') filtered.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    else if (sortBy === 'stock') filtered.sort((a,b) => (b.current_stock||0) - (a.current_stock||0));
+    else if (sortBy === 'price') filtered.sort((a,b) => (b.selling_price||0) - (a.selling_price||0));
+    currentFilteredProducts = filtered;
+    currentPage = 1;
+    renderProducts(currentFilteredProducts);
+}
 
-    function applyFiltersAndRender() {
-        if (!allProducts.length) {
-            renderProducts([]);
-            return;
-        }
-
-        let filtered = [...allProducts];
-        
-        // Search filter
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        if (searchTerm) {
-            filtered = filtered.filter(p => 
-                (p.name && p.name.toLowerCase().includes(searchTerm)) || 
-                (p.sku && p.sku.toLowerCase().includes(searchTerm))
-            );
-        }
-        
-        // Stock filter
-        const stockFilter = document.getElementById('stockFilter').value;
-        if (stockFilter === 'low') {
-            filtered = filtered.filter(p => {
-                const current = p.current_stock || 0;
-                const min = p.min_stock_level || 0;
-                return current <= min && current > 0;
-            });
-        } else if (stockFilter === 'out') {
-            filtered = filtered.filter(p => (p.current_stock || 0) === 0);
-        } else if (stockFilter === 'in') {
-            filtered = filtered.filter(p => {
-                const current = p.current_stock || 0;
-                const min = p.min_stock_level || 0;
-                return current > min;
-            });
-        }
-        
-        // Sort
-        const sortBy = document.getElementById('sortBy').value;
-        if (sortBy === 'name') {
-            filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        } else if (sortBy === 'stock') {
-            filtered.sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0));
-        } else if (sortBy === 'price') {
-            filtered.sort((a, b) => (b.selling_price || 0) - (a.selling_price || 0));
-        }
-        
-        currentFilteredProducts = filtered;
-        currentPage = 1;
-        renderProducts(currentFilteredProducts);
-    }
-
-    function renderProducts(products) {
-        const totalPages = Math.ceil(products.length / itemsPerPage);
-        const start = (currentPage - 1) * itemsPerPage;
-        const pageProducts = products.slice(start, start + itemsPerPage);
-        
-        const grid = document.getElementById('productGrid');
-        
-        if (!pageProducts.length) {
-            grid.innerHTML = '<div class="col-12 text-center py-5"><h5>No products found</h5></div>';
-            renderPagination(0);
-            return;
-        }
-        
-        grid.innerHTML = '';
-        pageProducts.forEach(product => {
-            const currentStock = product.current_stock || 0;
-            const minStock = product.min_stock_level || 0;
-            
-            let stockClass = 'success';
-            if (currentStock === 0) stockClass = 'danger';
-            else if (currentStock <= minStock) stockClass = 'warning';
-            
-            const locationCount = (product.location_breakdown && product.location_breakdown.locations) 
-                ? product.location_breakdown.locations.length 
-                : 1;
-            const totalStock = (product.location_breakdown && product.location_breakdown.total_stock !== undefined)
-                ? product.location_breakdown.total_stock
-                : currentStock;
-            
-            const breakdownHtml = (product.location_breakdown && product.location_breakdown.locations) ? `
-                <div class="mt-2">
-                    <small class="text-muted">Breakdown:</small>
-                    <div class="small">
-                        ${product.location_breakdown.locations.slice(0, 2).map(loc => 
-                            `${escapeHtml(loc.location_name)}: ${loc.quantity}`
-                        ).join(' | ')}
-                        ${product.location_breakdown.locations.length > 2 ? '...' : ''}
+function renderProducts(products) {
+    const totalPages = Math.ceil(products.length / itemsPerPage);
+    const start = (currentPage-1)*itemsPerPage;
+    const pageProducts = products.slice(start, start+itemsPerPage);
+    const grid = document.getElementById('productGrid');
+    if (!pageProducts.length) { grid.innerHTML = '<div class="col-12 text-center py-5"><h5>No products found</h5></div>'; renderPagination(0); return; }
+    grid.innerHTML = '';
+    pageProducts.forEach(p => {
+        const stock = p.current_stock || 0;
+        const min = p.min_stock_level || 0;
+        let stockClass = stock===0?'danger':(stock<=min?'warning':'success');
+        const locationCount = (p.location_breakdown && p.location_breakdown.locations) ? p.location_breakdown.locations.length : 1;
+        const totalStock = (p.location_breakdown && p.location_breakdown.total_stock!==undefined) ? p.location_breakdown.total_stock : stock;
+        const breakdownHtml = (p.location_breakdown && p.location_breakdown.locations) ? `<div class="mt-2"><small class="text-muted">Breakdown:</small><div class="small">${p.location_breakdown.locations.slice(0,2).map(l=>`${escapeHtml(l.location_name)}: ${l.quantity}`).join(' | ')}${p.location_breakdown.locations.length>2?'...':''}</div></div>` : '';
+        grid.innerHTML += `
+            <div class="col-md-3 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-${stockClass} text-white"><div class="d-flex justify-content-between"><strong>${escapeHtml(p.name)}</strong><span class="badge bg-light text-dark">${escapeHtml(p.sku)||'N/A'}</span></div></div>
+                    <div class="card-body">
+                        <div class="text-center mb-3"><h3 class="text-${stockClass}">${formatNumber(totalStock)}</h3><small class="text-muted">Total Stock</small></div>
+                        <div class="mb-2"><small class="text-muted">Locations: ${locationCount}</small></div>
+                        <div class="d-flex justify-content-between"><small>Cost: ${formatCurrency(p.cost_price)}</small><small>Sell: ${formatCurrency(p.selling_price)}</small></div>
+                        ${breakdownHtml}
                     </div>
-                </div>
-            ` : '';
-            
-            grid.innerHTML += `
-                <div class="col-md-3 mb-4">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-header bg-${stockClass} text-white">
-                            <div class="d-flex justify-content-between">
-                                <strong>${escapeHtml(product.name)}</strong>
-                                <span class="badge bg-light text-dark">${escapeHtml(product.sku) || 'N/A'}</span>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="text-center mb-3">
-                                <h3 class="text-${stockClass}">${formatNumber(totalStock)}</h3>
-                                <small class="text-muted">Total Stock</small>
-                            </div>
-                            <div class="mb-2">
-                                <small class="text-muted">Locations: ${locationCount}</small>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <small>Cost: ${formatCurrency(product.cost_price)}</small>
-                                <small>Sell: ${formatCurrency(product.selling_price)}</small>
-                            </div>
-                            ${breakdownHtml}
-                        </div>
-                        <div class="card-footer bg-transparent">
-                            <div class="btn-group w-100">
-                                <button type="button" class="btn btn-sm btn-outline-primary view-product-btn" data-product-id="${product.id}">
-                                    <i class="bi bi-eye"></i> View
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-success transfer-product-btn" data-product-id="${product.id}">
-                                    <i class="bi bi-arrow-left-right"></i> Transfer
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-warning adjust-stock-btn" data-product-id="${product.id}">
-                                    <i class="bi bi-pencil"></i> Adjust
-                                </button>
-                            </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-sm btn-outline-primary view-product" data-id="${p.id}">View</button>
+                            <button class="btn btn-sm btn-outline-success transfer-product" data-id="${p.id}" data-name="${escapeHtml(p.name)}">Transfer</button>
+                            <button class="btn btn-sm btn-outline-warning adjust-product" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-stock="${stock}">Adjust</button>
                         </div>
                     </div>
                 </div>
-            `;
-        });
-        
-        renderPagination(totalPages);
-        
-        // Attach event listeners for dynamically created buttons
-        document.querySelectorAll('.view-product-btn').forEach(btn => {
-            btn.addEventListener('click', () => viewProduct(parseInt(btn.dataset.productId)));
-        });
-        document.querySelectorAll('.transfer-product-btn').forEach(btn => {
-            btn.addEventListener('click', () => quickTransfer(parseInt(btn.dataset.productId)));
-        });
-        document.querySelectorAll('.adjust-stock-btn').forEach(btn => {
-            btn.addEventListener('click', () => adjustStock(parseInt(btn.dataset.productId)));
-        });
-    }
-
-    function renderPagination(totalPages) {
-        const pagination = document.getElementById('pagination');
-        pagination.innerHTML = '';
-        
-        if (totalPages <= 1) return;
-        
-        pagination.innerHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" id="prevPageLink">Previous</a>
-        </li>`;
-        
-        const startPage = Math.max(1, currentPage - 2);
-        const endPage = Math.min(totalPages, startPage + 4);
-        
-        for (let i = startPage; i <= endPage; i++) {
-            pagination.innerHTML += `<li class="page-item ${currentPage === i ? 'active' : ''}">
-                <a class="page-link" href="#" data-page="${i}">${i}</a>
-            </li>`;
-        }
-        
-        pagination.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <a class="page-link" href="#" id="nextPageLink">Next</a>
-        </li>`;
-        
-        // Attach event listeners
-        document.querySelectorAll('#pagination .page-link[data-page]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                changePage(parseInt(link.dataset.page));
-            });
-        });
-        
-        document.getElementById('prevPageLink')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (currentPage > 1) changePage(currentPage - 1);
-        });
-        
-        document.getElementById('nextPageLink')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (currentPage < totalPages) changePage(currentPage + 1);
-        });
-    }
-
-    function changePage(page) {
-        currentPage = page;
-        renderProducts(currentFilteredProducts);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function viewProduct(productId) {
-        const product = allProducts.find(p => p.id === productId);
-        if (!product) return;
-        
-        document.getElementById('detailProductName').textContent = product.name || '';
-        document.getElementById('detailSku').textContent = product.sku || 'N/A';
-        document.getElementById('detailCategory').textContent = product.category || 'N/A';
-        document.getElementById('detailSupplier').textContent = product.supplier || 'N/A';
-        document.getElementById('detailLocation').textContent = product.location || 'Main';
-        document.getElementById('detailCostPrice').textContent = formatCurrency(product.cost_price);
-        document.getElementById('detailSellingPrice').textContent = formatCurrency(product.selling_price);
-        document.getElementById('detailMinStock').textContent = product.min_stock_level || 0;
-        
-        const tbody = document.querySelector('#detailLocations tbody');
-        tbody.innerHTML = '';
-        
-        if (product.location_breakdown && product.location_breakdown.locations) {
-            product.location_breakdown.locations.forEach(loc => {
-                tbody.innerHTML += `<tr><td>${escapeHtml(loc.location_name)}</td><td>${loc.quantity}</td><td>${loc.reserved || 0}</td></tr>`;
-            });
-        } else {
-            tbody.innerHTML += `<tr><td colspan="3">No location data</td></tr>`;
-        }
-        
-        const modalEl = document.getElementById('productDetailModal');
-        const modal = new bootstrap.Modal(modalEl);
-        
-        // Store product ID for transfer button
-        const transferBtn = document.getElementById('transferFromDetailBtn');
-        const oldHandler = transferBtn.onclick;
-        transferBtn.replaceWith(transferBtn.cloneNode(true));
-        const newTransferBtn = document.getElementById('transferFromDetailBtn');
-        newTransferBtn.addEventListener('click', () => {
-            modal.hide();
-            quickTransfer(productId);
-        });
-        
-        modal.show();
-    }
-
-    function quickTransfer(productId) {
-        sessionStorage.setItem('transferProductId', productId);
-        window.location.href = '/inventory/dashboard';
-    }
-
-    function adjustStock(productId) {
-        // Find and click the adjust button on the main inventory page
-        window.location.href = '/inventory';
-    }
-
-    function resetFilters() {
-        document.getElementById('searchInput').value = '';
-        document.getElementById('stockFilter').value = '';
-        document.getElementById('sortBy').value = 'name';
-        applyFiltersAndRender();
-    }
-
-    function goToLocationDashboard() {
-        window.location.href = '/inventory/dashboard';
-    }
-
-    function openAddProductModal() {
-        // Trigger the add product modal on the main inventory page
-        window.location.href = '/inventory';
-    }
-
-    // Set up event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-        loadProducts();
-        
-        document.getElementById('searchInput')?.addEventListener('input', () => {
-            currentPage = 1;
-            applyFiltersAndRender();
-        });
-        document.getElementById('stockFilter')?.addEventListener('change', () => {
-            currentPage = 1;
-            applyFiltersAndRender();
-        });
-        document.getElementById('sortBy')?.addEventListener('change', () => {
-            applyFiltersAndRender();
-        });
-        document.getElementById('resetFiltersBtn')?.addEventListener('click', resetFilters);
-        document.getElementById('locationDashboardBtn')?.addEventListener('click', goToLocationDashboard);
-        document.getElementById('addProductCatalogBtn')?.addEventListener('click', openAddProductModal);
+            </div>`;
     });
-})();
+    renderPagination(totalPages);
+    attachCardEventListeners();
+}
+
+function attachCardEventListeners() {
+    document.querySelectorAll('.view-product').forEach(btn => btn.addEventListener('click', () => viewProduct(btn.dataset.id)));
+    document.querySelectorAll('.transfer-product').forEach(btn => btn.addEventListener('click', () => openTransferForProduct(btn.dataset.id, btn.dataset.name)));
+    document.querySelectorAll('.adjust-product').forEach(btn => btn.addEventListener('click', () => openAdjustModal(btn.dataset.id, btn.dataset.name, btn.dataset.stock)));
+}
+
+function renderPagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    if (totalPages <= 1) return;
+    for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+        const li = document.createElement('li'); li.className = `page-item ${i===currentPage?'active':''}`;
+        const a = document.createElement('a'); a.className = 'page-link'; a.href='#'; a.innerText=i;
+        a.addEventListener('click', (e) => { e.preventDefault(); currentPage=i; renderProducts(currentFilteredProducts); window.scrollTo({top:0,behavior:'smooth'}); });
+        li.appendChild(a); pagination.appendChild(li);
+    }
+}
+
+function viewProduct(productId) {
+    const product = allProducts.find(p => p.id == productId);
+    if (!product) return;
+    document.getElementById('detailProductName').textContent = product.name;
+    document.getElementById('detailSku').textContent = product.sku || 'N/A';
+    document.getElementById('detailCategory').textContent = product.category || 'N/A';
+    document.getElementById('detailSupplier').textContent = product.supplier || 'N/A';
+    document.getElementById('detailLocation').textContent = product.location || 'Main';
+    document.getElementById('detailCostPrice').textContent = formatCurrency(product.cost_price);
+    document.getElementById('detailSellingPrice').textContent = formatCurrency(product.selling_price);
+    document.getElementById('detailMinStock').textContent = product.min_stock_level || 0;
+    const tbody = document.querySelector('#detailLocations tbody');
+    tbody.innerHTML = '';
+    if (product.location_breakdown && product.location_breakdown.locations && product.location_breakdown.locations.length) {
+        product.location_breakdown.locations.forEach(loc => {
+            tbody.innerHTML += `<tr><td>${escapeHtml(loc.location_name)}</td><td>${loc.quantity}</td><td>${loc.reserved||0}</td></tr>`;
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">No location data – product may not be assigned to any location. Please edit and assign a location.</td></tr>';
+    }
+    const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+    modal.show();
+    // Store product ID for transfer button
+    document.getElementById('transferFromDetailBtn').onclick = () => { modal.hide(); openTransferForProduct(productId, product.name); };
+}
+
+function openTransferForProduct(productId, productName) {
+    // Open transfer modal on dashboard with pre-filled product
+    sessionStorage.setItem('transferProductId', productId);
+    sessionStorage.setItem('transferProductName', productName);
+    window.location.href = '/inventory/dashboard';
+}
+
+function openAdjustModal(productId, productName, currentStock) {
+    document.getElementById('adjustProductId').value = productId;
+    document.getElementById('adjustProductName').value = productName;
+    document.getElementById('adjustCurrentStock').value = currentStock;
+    document.getElementById('adjustQuantity').value = '';
+    document.getElementById('adjustType').value = 'add';
+    document.getElementById('adjustReason').value = '';
+    document.getElementById('adjustMsg').classList.add('d-none');
+    new bootstrap.Modal(document.getElementById('adjustStockModal')).show();
+}
+
+document.getElementById('confirmAdjustBtn')?.addEventListener('click', function() {
+    const productId = document.getElementById('adjustProductId').value;
+    const adjustType = document.getElementById('adjustType').value;
+    let quantity = parseFloat(document.getElementById('adjustQuantity').value);
+    const reason = document.getElementById('adjustReason').value || 'Manual adjustment';
+    if (isNaN(quantity) || quantity <= 0) { alert('Please enter a valid quantity'); return; }
+    let delta = 0;
+    if (adjustType === 'add') delta = quantity;
+    else if (adjustType === 'remove') delta = -quantity;
+    else if (adjustType === 'set') {
+        const current = parseFloat(document.getElementById('adjustCurrentStock').value);
+        delta = quantity - current;
+    }
+    fetch(`/api/v1/inventory/${productId}/stock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delta: delta, reason: reason }),
+        credentials: 'same-origin'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.message) {
+            alert('Stock updated successfully');
+            bootstrap.Modal.getInstance(document.getElementById('adjustStockModal')).hide();
+            loadProducts(); // refresh
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => { alert('Network error'); });
+});
+
+function resetFilters() { document.getElementById('searchInput').value=''; document.getElementById('stockFilter').value=''; document.getElementById('sortBy').value='name'; applyFiltersAndRender(); }
+function goToLocationDashboard() { window.location.href='/inventory/dashboard'; }
+function openAddProductModal() { window.location.href='/inventory'; }
+
+document.getElementById('searchInput')?.addEventListener('input', () => { currentPage=1; applyFiltersAndRender(); });
+document.getElementById('stockFilter')?.addEventListener('change', () => { currentPage=1; applyFiltersAndRender(); });
+document.getElementById('sortBy')?.addEventListener('change', () => { applyFiltersAndRender(); });
+document.getElementById('resetFiltersBtn')?.addEventListener('click', resetFilters);
+document.getElementById('locationDashboardBtn')?.addEventListener('click', goToLocationDashboard);
+document.getElementById('addProductCatalogBtn')?.addEventListener('click', openAddProductModal);
+document.addEventListener('DOMContentLoaded', loadProducts);
 </script>
 {% endblock %}

@@ -5,6 +5,7 @@ import io
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify, Response, current_app
 from sqlalchemy import text
 from app.services.inventory import InventoryManager
+from app.services.location_inventory import LocationInventoryManager
 from app.services.utils import random_success_message
 from app.services.db import DB_ENGINE
 from app.extensions import limiter
@@ -188,12 +189,37 @@ def add_product():
         flash('❌ Selling price cannot be less than cost price.', 'error')
         return redirect(url_for('inventory.inventory'))
 
-    product_id = InventoryManager.add_product(user_id, account_id, product_data)
-    if product_id:
-        flash('✅ Product added successfully!', 'success')
-    else:
-        flash('❌ Error adding product. SKU might already exist.', 'error')
-    return redirect(url_for('inventory.inventory'))
+        product_id = InventoryManager.add_product(user_id, account_id, product_data)
+        if product_id:
+            # Assign product to default location (Main)
+            try:
+                # Ensure default location exists for this account
+                with DB_ENGINE.begin() as conn:
+                    loc = conn.execute(text("""
+                        SELECT id FROM locations 
+                        WHERE account_id = :aid AND location_name = 'Main' AND is_active = TRUE
+                    """), {"aid": account_id}).first()
+                    if not loc:
+                        # Create Main location
+                        loc = conn.execute(text("""
+                            INSERT INTO locations (account_id, location_name, location_code, location_type)
+                            VALUES (:aid, 'Main', 'MAIN', 'warehouse')
+                            RETURNING id
+                        """), {"aid": account_id})
+                        location_id = loc.scalar()
+                    else:
+                        location_id = loc[0]
+                
+                # Add product to this location with initial stock
+                LocationInventoryManager.add_product_to_location(
+                    product_id, location_id, product_data['current_stock'], user_id
+                )
+            except Exception as e:
+                current_app.logger.error(f"Failed to assign product to location: {e}")
+                # Don't fail the whole operation, just log
+            flash('✅ Product added successfully!', 'success')
+        else:
+            flash('❌ Error adding product. SKU might already exist.', 'error')
 
 @inventory_bp.route("/update_product", methods=['POST'])
 @role_required('owner', 'assistant')
@@ -558,10 +584,31 @@ def bulk_upload():
             # Try to add product
             product_id = InventoryManager.add_product(user_id, account_id, product_data)
             if product_id:
+                # Assign to default location
+                try:
+                    with DB_ENGINE.begin() as conn:
+                        loc = conn.execute(text("""
+                            SELECT id FROM locations 
+                            WHERE account_id = :aid AND location_name = 'Main' AND is_active = TRUE
+                        """), {"aid": account_id}).first()
+                        if not loc:
+                            loc = conn.execute(text("""
+                                INSERT INTO locations (account_id, location_name, location_code, location_type)
+                                VALUES (:aid, 'Main', 'MAIN', 'warehouse')
+                                RETURNING id
+                            """), {"aid": account_id})
+                            location_id = loc.scalar()
+                        else:
+                            location_id = loc[0]
+                    LocationInventoryManager.add_product_to_location(
+                        product_id, location_id, product_data['current_stock'], user_id
+                    )
+                except Exception as e:
+                    current_app.logger.error(f"Bulk upload location assignment failed: {e}")
                 results['success'] += 1
             else:
                 results['failure'] += 1
-                results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']}) – duplicate or invalid data")
+                results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']})")
 
         session.pop('bulk_upload_data', None)
 
