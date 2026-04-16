@@ -16,7 +16,10 @@ from app.services.cache import get_user_profile_cached
 inventory_bp = Blueprint('inventory', __name__)
 
 
-# Helper functions
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
 def _safe_int(val, default):
     try:
         return int(float(val)) if val not in (None, '') else default
@@ -29,11 +32,35 @@ def _safe_float(val, default):
     except (ValueError, TypeError):
         return default
 
+def _get_or_create_main_location(conn, account_id):
+    """
+    Return the ID of the 'Main' location for this account, creating it if it
+    doesn't exist yet.
+
+    Uses a single atomic PostgreSQL upsert so there is no race condition and no
+    UniqueViolation regardless of is_active state or concurrent requests.
+
+    The ON CONFLICT targets the unique constraint on (account_id, location_code).
+    The DO UPDATE is a no-op touch (sets location_name to itself) so that
+    RETURNING id is always populated — both on INSERT and on conflict.
+    """
+    row = conn.execute(text("""
+        INSERT INTO locations (account_id, location_name, location_code, location_type, is_active)
+        VALUES (:aid, 'Main', 'MAIN', 'warehouse', TRUE)
+        ON CONFLICT (account_id, location_code)
+        DO UPDATE SET location_name = EXCLUDED.location_name
+        RETURNING id
+    """), {"aid": account_id}).fetchone()
+    return row[0] if row else None
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 @inventory_bp.route("/inventory")
 @role_required('owner', 'assistant')
 def inventory():
-    # NOTE: session check removed — @role_required handles it
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     account_id = session['account_id']
@@ -84,7 +111,6 @@ def inventory():
 @inventory_bp.route("/inventory_reports")
 @role_required('owner', 'accountant')
 def inventory_reports():
-    # NOTE: session check removed — @role_required handles it
     try:
         from app.services.reports import InventoryReports
         account_id = session['account_id']
@@ -109,13 +135,10 @@ def inventory_reports():
 @inventory_bp.route("/inventory/dashboard")
 @role_required('owner', 'assistant')
 def inventory_dashboard():
-    """Location Dashboard View"""
-    # NOTE: session check removed — @role_required handles it
     from app.services.auth import get_api_key_for_user
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     api_key = get_api_key_for_user(session['user_id'])
-
     return render_template("inventory_dashboard.html",
                            currency_symbol=currency_symbol,
                            api_key=api_key,
@@ -125,13 +148,10 @@ def inventory_dashboard():
 @inventory_bp.route("/inventory/catalog")
 @role_required('owner', 'assistant')
 def inventory_catalog():
-    """Product Catalog View"""
-    # NOTE: session check removed — @role_required handles it
     from app.services.auth import get_api_key_for_user
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     api_key = get_api_key_for_user(session['user_id'])
-
     return render_template("inventory_catalog.html",
                            currency_symbol=currency_symbol,
                            api_key=api_key,
@@ -141,15 +161,6 @@ def inventory_catalog():
 @inventory_bp.route("/add_product", methods=['POST'])
 @role_required('owner', 'assistant')
 def add_product():
-    # NOTE: session check removed — @role_required handles it
-
-    # CRITICAL BUG FIXED: In the original code, the entire block that calls
-    # InventoryManager.add_product() was placed INSIDE the
-    # `if selling_price < cost_price` branch, after the `return` statement.
-    # This made it completely unreachable — products were NEVER saved through
-    # this form regardless of what the user entered.
-    # The fix: validate first, return early on error, then save unconditionally.
-
     user_id = session['user_id']
     account_id = session['account_id']
 
@@ -173,36 +184,23 @@ def add_product():
         'weight_kg': _safe_float(request.form.get('weight_kg'), None),
     }
 
-    # Validation — return early on error so the save logic below is always reached
     if product_data['selling_price'] < product_data['cost_price']:
         flash('❌ Selling price cannot be less than cost price.', 'error')
         return redirect(url_for('inventory.inventory'))
 
-    # Save the product
     product_id = InventoryManager.add_product(user_id, account_id, product_data)
     if product_id:
         try:
             with DB_ENGINE.begin() as conn:
-                loc = conn.execute(text("""
-                    SELECT id FROM locations
-                    WHERE account_id = :aid AND location_name = 'Main' AND is_active = TRUE
-                """), {"aid": account_id}).first()
-                if not loc:
-                    loc_result = conn.execute(text("""
-                        INSERT INTO locations (account_id, location_name, location_code, location_type)
-                        VALUES (:aid, 'Main', 'MAIN', 'warehouse')
-                        RETURNING id
-                    """), {"aid": account_id})
-                    location_id = loc_result.scalar()
-                else:
-                    location_id = loc[0]
+                location_id = _get_or_create_main_location(conn, account_id)
 
-            LocationInventoryManager.add_product_to_location(
-                product_id, location_id, product_data['current_stock'], user_id
-            )
+            if location_id:
+                LocationInventoryManager.add_product_to_location(
+                    product_id, location_id, product_data['current_stock'], user_id
+                )
         except Exception as e:
-            current_app.logger.error(f"Failed to assign product to location: {e}")
-            # Non-fatal: product is saved, location assignment failed
+            # Non-fatal: product is saved, only location mapping failed
+            current_app.logger.error(f"Failed to assign product {product_id} to location: {e}")
 
         flash('✅ Product added successfully!', 'success')
     else:
@@ -214,7 +212,6 @@ def add_product():
 @inventory_bp.route("/update_product", methods=['POST'])
 @role_required('owner', 'assistant')
 def update_product():
-    # NOTE: session check removed — @role_required handles it
     user_id = session['user_id']
     account_id = session['account_id']
     product_id = request.form.get('product_id')
@@ -277,7 +274,6 @@ def update_product():
 @inventory_bp.route("/delete_product", methods=['POST'])
 @role_required('owner', 'assistant')
 def delete_product():
-    # NOTE: session check removed — @role_required handles it
     user_id = session['user_id']
     account_id = session['account_id']
     product_id = request.form.get('product_id')
@@ -295,7 +291,6 @@ def delete_product():
 @inventory_bp.route("/api/inventory_items")
 @role_required('owner', 'assistant')
 def get_inventory_items_api():
-    # NOTE: session check removed — @role_required handles it
     account_id = session['account_id']
     with DB_ENGINE.connect() as conn:
         items = conn.execute(text("""
@@ -321,7 +316,6 @@ def get_inventory_items_api():
 @limiter.limit("10 per minute")
 @role_required('owner', 'assistant')
 def adjust_stock_audit():
-    # NOTE: session check removed — @role_required handles it
     user_id = session['user_id']
     account_id = session['account_id']
     product_id = request.form.get('product_id')
@@ -342,20 +336,15 @@ def adjust_stock_audit():
         product_name = product['name']
 
         if adjustment_type == 'add_stock':
-            delta = +quantity
-            movement_type = 'stock_in'
+            delta, movement_type = +quantity, 'stock_in'
         elif adjustment_type == 'remove_stock':
-            delta = -quantity
-            movement_type = 'stock_out'
+            delta, movement_type = -quantity, 'stock_out'
         elif adjustment_type == 'damaged':
-            delta = -quantity
-            movement_type = 'damaged'
+            delta, movement_type = -quantity, 'damaged'
         elif adjustment_type == 'found_stock':
-            delta = +quantity
-            movement_type = 'found'
+            delta, movement_type = +quantity, 'found'
         elif adjustment_type == 'set_stock':
-            delta = quantity - current_stock
-            movement_type = 'adjustment'
+            delta, movement_type = quantity - current_stock, 'adjustment'
         else:
             flash('❌ Invalid adjustment type', 'error')
             return redirect(url_for('inventory.inventory'))
@@ -379,15 +368,13 @@ def adjust_stock_audit():
             if updates:
                 with DB_ENGINE.begin() as conn:
                     set_clause = ', '.join(f"{k} = :{k}" for k in updates)
-                    params = updates.copy()
-                    params.update({"product_id": product_id, "aid": account_id})
+                    params = {**updates, "product_id": product_id, "aid": account_id}
                     conn.execute(text(
                         f"UPDATE inventory_items SET {set_clause} WHERE id = :product_id AND account_id = :aid"
                     ), params)
 
         if success:
-            new_stock = current_stock + delta
-            flash(f'✅ {product_name} adjusted! Stock: {current_stock} → {new_stock}', 'success')
+            flash(f'✅ {product_name} adjusted! Stock: {current_stock} → {current_stock + delta}', 'success')
         else:
             flash('❌ Failed to update stock (negative not allowed)', 'error')
         return redirect(url_for('inventory.inventory'))
@@ -401,7 +388,6 @@ def adjust_stock_audit():
 @inventory_bp.route("/download_inventory_report")
 @role_required('owner', 'accountant')
 def download_inventory_report():
-    # NOTE: session check removed — @role_required handles it
     account_id = session['account_id']
     inventory_data = InventoryManager.get_inventory_report(account_id)
     output = io.StringIO()
@@ -431,8 +417,6 @@ def download_inventory_report():
 @limiter.limit("15 per hour")
 @role_required('owner', 'assistant')
 def bulk_upload():
-    # NOTE: session check removed — @role_required handles it
-
     if request.method == 'GET':
         return render_template('bulk_upload.html', nonce=g.nonce)
 
@@ -547,29 +531,18 @@ def bulk_upload():
             if product_id:
                 try:
                     with DB_ENGINE.begin() as conn:
-                        loc = conn.execute(text("""
-                            SELECT id FROM locations
-                            WHERE account_id = :aid AND location_name = 'Main' AND is_active = TRUE
-                        """), {"aid": account_id}).first()
-                        if not loc:
-                            loc_result = conn.execute(text("""
-                                INSERT INTO locations (account_id, location_name, location_code, location_type)
-                                VALUES (:aid, 'Main', 'MAIN', 'warehouse')
-                                RETURNING id
-                            """), {"aid": account_id})
-                            location_id = loc_result.scalar()
-                        else:
-                            location_id = loc[0]
-                    LocationInventoryManager.add_product_to_location(
-                        product_id, location_id, product_data['current_stock'], user_id
-                    )
+                        location_id = _get_or_create_main_location(conn, account_id)
+                    if location_id:
+                        LocationInventoryManager.add_product_to_location(
+                            product_id, location_id, product_data['current_stock'], user_id
+                        )
                 except Exception as e:
-                    current_app.logger.error(f"Bulk upload location assignment failed: {e}")
+                    current_app.logger.error(f"Bulk upload location assignment failed for product {product_id}: {e}")
                 results['success'] += 1
             else:
                 results['failure'] += 1
                 results['errors'].append(
-                    f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']})"
+                    f"Row {row_num}: Failed to add '{product_data['name']}' (SKU: {product_data['sku']})"
                 )
 
         session.pop('bulk_upload_data', None)
