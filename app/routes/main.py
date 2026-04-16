@@ -1,4 +1,5 @@
 #app/routes/main
+import os
 from flask import Blueprint, render_template, jsonify, session, g, current_app, redirect, url_for
 from sqlalchemy import text
 from datetime import datetime
@@ -46,20 +47,35 @@ def system_status():
 
 @main_bp.route('/admin/backup')
 def admin_backup():
-    """Manual database backup trigger (admin only)"""
+    """Manual database backup trigger.
+    
+    Access is controlled by the ADMIN_EMAILS environment variable.
+    Set it on Railway as a comma-separated list, e.g.:
+        ADMIN_EMAILS=you@example.com,other@example.com
+    """
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    # Simple admin check (first user is admin)
-    if session['user_id'] != 1:
-        return jsonify({'error': 'Admin only'}), 403
+    # Load allowed admin emails from environment — never hardcode user IDs
+    raw = os.getenv('ADMIN_EMAILS', '')
+    allowed_emails = {e.strip().lower() for e in raw.split(',') if e.strip()}
+
+    user_email = session.get('user_email', '').strip().lower()
+
+    if not allowed_emails or user_email not in allowed_emails:
+        current_app.logger.warning(
+            f"Unauthorized backup attempt by user_id={session['user_id']} email={user_email}"
+        )
+        return jsonify({'error': 'Forbidden'}), 403
 
     try:
         import subprocess
-        result = subprocess.run(['python', 'backup_db.py'],
-                              capture_output=True,
-                              text=True,
-                              timeout=30)
+        result = subprocess.run(
+            ['python', 'backup_db.py'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
 
         if result.returncode == 0:
             return jsonify({
@@ -75,17 +91,12 @@ def admin_backup():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
 
-@main_bp.route('/debug')
-def debug():
-    """Debug route to check what's working"""
-    debug_info = {
-        'session': dict(session),
-        'routes': [str(rule) for rule in app.url_map.iter_rules()],
-        'user_authenticated': bool(session.get('user_id'))
-    }
-    return jsonify(debug_info)
+
+# NOTE: /debug route has been removed — it exposed full session contents
+# (user_id, role, account_id, session_token) to any unauthenticated request.
+# If you need debug info, log it server-side via current_app.logger.
+
 
 @main_bp.route('/')
 def home():
@@ -96,7 +107,6 @@ def home():
         return redirect(url_for('auth.login'))
 
 
-# new route and methods
 @main_bp.route("/dashboard")
 def dashboard():
     if 'user_id' not in session:
@@ -195,32 +205,42 @@ def dashboard():
             "min": r.min_stock_level
         } for r in reorder_rows]
 
-        # 8. Market basket analysis
+        # 8. Market basket analysis — single query with JOINs (was N+1: up to 20 queries per load)
         basket_rows = conn.execute(text("""
-            SELECT a.product_id AS prod1, b.product_id AS prod2, COUNT(*) AS times
+            SELECT
+                a.product_id   AS prod1_id,
+                i1.name        AS prod1_name,
+                COALESCE(i1.sku, '—') AS prod1_sku,
+                b.product_id   AS prod2_id,
+                i2.name        AS prod2_name,
+                COALESCE(i2.sku, '—') AS prod2_sku,
+                COUNT(*)       AS times
             FROM invoice_items a
-            JOIN inventory_items i1 ON a.product_id = i1.id
-                AND i1.account_id = :aid AND i1.is_active = TRUE
-            JOIN invoice_items b ON a.invoice_id = b.invoice_id AND a.product_id < b.product_id
-            JOIN inventory_items i2 ON b.product_id = i2.id
-                AND i2.account_id = :aid AND i2.is_active = TRUE
+            JOIN inventory_items i1
+                ON a.product_id = i1.id
+                AND i1.account_id = :aid
+                AND i1.is_active = TRUE
+            JOIN invoice_items b
+                ON a.invoice_id = b.invoice_id
+                AND a.product_id < b.product_id
+            JOIN inventory_items i2
+                ON b.product_id = i2.id
+                AND i2.account_id = :aid
+                AND i2.is_active = TRUE
             JOIN user_invoices ui ON a.invoice_id = ui.id
             WHERE ui.account_id = :aid
-            GROUP BY prod1, prod2
+            GROUP BY a.product_id, i1.name, i1.sku, b.product_id, i2.name, i2.sku
             ORDER BY times DESC
             LIMIT 5
         """), {"aid": account_id}).fetchall()
 
-        market_basket = []
-        for r in basket_rows:
-            prod1_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar()
-            prod1_sku = conn.execute(text("SELECT sku FROM inventory_items WHERE id = :id"), {"id": r.prod1}).scalar() or '—'
-            prod2_name = conn.execute(text("SELECT name FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar()
-            prod2_sku = conn.execute(text("SELECT sku FROM inventory_items WHERE id = :id"), {"id": r.prod2}).scalar() or '—'
-            market_basket.append({
-                "pair": f"{prod1_name} ({prod1_sku}) & {prod2_name} ({prod2_sku})",
+        market_basket = [
+            {
+                "pair": f"{r.prod1_name} ({r.prod1_sku}) & {r.prod2_name} ({r.prod2_sku})",
                 "times": r.times
-            })
+            }
+            for r in basket_rows
+        ]
 
         # 9. Cached AI tip
         ai_tip = conn.execute(text("""
@@ -289,18 +309,6 @@ def dashboard():
         "tax_liability": tax,
         "costs": expenses
     }
-
-    # Email alerts (only for owner, only once per dashboard load)
-##    if session.get('role') == 'owner':
-##        with DB_ENGINE.connect() as conn:
-##            owner_emails = [row[0] for row in conn.execute(text("""
-##                SELECT email FROM users WHERE account_id = :aid AND role = 'owner'
-##            """), {"aid": account_id})]
-##        if owner_emails:
-##            from app.services.email_alerts import send_overdue_invoice_reminders
-##            overdue_sent = send_overdue_invoice_reminders(account_id, owner_emails)
-##            if overdue_sent:
-##                flash(f"📧 Sent {overdue_sent} invoice reminder(s).", "info")
 
     return render_template(
         "dashboard.html",

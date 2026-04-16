@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 import io
 from app.services.db import DB_ENGINE
-from app import generate_simple_qr
+from app.utils.qr import generate_simple_qr
 from app.extensions import limiter
 from app.context_processors import CURRENCY_SYMBOLS
 from app.services.utils import random_success_message

@@ -9,10 +9,11 @@ from app.services.inventory import InventoryManager
 from app.services.invoice_logic_po import prepare_po_data
 from app.services.qr_engine import generate_qr_base64
 from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
+# Single import at module level — removed duplicate import inside purchase_orders()
 from app.services.purchases import get_purchase_orders, get_purchase_order, save_purchase_order
 from app.services.suppliers import SupplierManager
 from app.services.cache import get_user_profile_cached
-from app import generate_simple_qr
+from app.utils.qr import generate_simple_qr
 from app.extensions import limiter
 from app.context_processors import CURRENCY_SYMBOLS
 from app.decorators import role_required
@@ -23,17 +24,17 @@ purchases_bp = Blueprint('purchases', __name__)
 @purchases_bp.route("/create_purchase_order")
 @role_required('owner', 'assistant')
 def create_purchase_order():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+    # NOTE: session check removed — @role_required above already handles it
     account_id = session['account_id']
     inventory_items = InventoryManager.get_inventory_items(account_id)
     suppliers = SupplierManager.get_suppliers(account_id)
     today_str = datetime.today().strftime('%Y-%m-%d')
-    return render_template("create_po.html", 
-                         inventory_items=inventory_items, 
-                         suppliers=suppliers, 
-                         today=today_str, 
-                         nonce=g.nonce)
+    return render_template("create_po.html",
+                           inventory_items=inventory_items,
+                           suppliers=suppliers,
+                           today=today_str,
+                           nonce=g.nonce)
+
 
 # 2. Process PO creation
 @purchases_bp.route('/create_po_process', methods=['POST'])
@@ -57,7 +58,6 @@ def create_po_process():
 
         if po_data:
             from app.services.session_storage import SessionStorage
-            # Update supplier volume – now using account_id
             SupplierManager.update_volume(account_id, request.form.get('supplier_id'), po_data['grand_total'])
             session_ref = SessionStorage.store_large_data(user_id, 'last_po', po_data)
             session['last_po_ref'] = session_ref
@@ -70,6 +70,7 @@ def create_po_process():
         current_app.logger.error(f"PO creation error: {str(e)}", exc_info=True)
         flash("❌ An unexpected error occurred", "error")
         return redirect(url_for('purchases.create_purchase_order'))
+
 
 # 3. PO Preview
 @purchases_bp.route('/po/preview/<po_number>')
@@ -95,7 +96,6 @@ def po_preview(po_number):
         po_data['po_number'] = po_number
         po_data['invoice_number'] = po_number
 
-        # Enrich supplier details if missing
         if not po_data.get('supplier_email') or not po_data.get('supplier_phone'):
             suppliers = SupplierManager.get_suppliers(account_id)
             match = next((s for s in suppliers if s['name'] == po_data.get('supplier_name')), None)
@@ -103,7 +103,6 @@ def po_preview(po_number):
                 po_data['supplier_email'] = match.get('email', '')
                 po_data['supplier_phone'] = match.get('phone', '')
 
-        # Enrich items with product details
         inventory_items = InventoryManager.get_inventory_items(account_id)
         product_lookup = {str(p['id']): p for p in inventory_items}
         product_lookup.update({int(k): v for k, v in product_lookup.items() if str(k).isdigit()})
@@ -133,6 +132,7 @@ def po_preview(po_number):
         flash("Error loading purchase order", "error")
         return redirect(url_for('purchases.purchase_orders'))
 
+
 # 4. Goods Received Note (Receive PO)
 @purchases_bp.route("/po/mark_received/<po_number>", methods=['GET', 'POST'])
 def mark_po_received(po_number):
@@ -151,17 +151,20 @@ def mark_po_received(po_number):
             flash("⚠️ This Purchase Order has already been fully received", "warning")
             return redirect(url_for('purchases.purchase_orders'))
 
-        # Fetch already received quantities
+        # FIX: Aggregate by po_number only (not user_id).
+        # The original code used WHERE user_id = :uid which meant receipts entered
+        # by one team member (e.g. the owner) were invisible to another (e.g. an
+        # assistant), causing the remaining-qty calculation to be wrong in a team.
+        # user_id is still stored in the INSERT below for audit purposes.
         with DB_ENGINE.connect() as conn:
             receipts = conn.execute(text("""
                 SELECT product_id, SUM(received_qty) as total_received
                 FROM po_receipts
-                WHERE user_id = :uid AND po_number = :po_number
+                WHERE po_number = :po_number
                 GROUP BY product_id
-            """), {"uid": user_id, "po_number": po_number}).fetchall()
+            """), {"po_number": po_number}).fetchall()
         received_map = {r[0]: r[1] for r in receipts}
 
-        # Prepare items
         items = po_data.get('items', [])
         inventory_items = InventoryManager.get_inventory_items(account_id)
         product_map = {item['id']: item['name'] for item in inventory_items}
@@ -170,7 +173,7 @@ def mark_po_received(po_number):
             product_id = item['product_id']
             try:
                 pid = int(product_id)
-            except:
+            except (ValueError, TypeError):
                 pid = product_id
             item['ordered_qty'] = item.get('qty', 0)
             item['received_so_far'] = received_map.get(pid, 0)
@@ -223,7 +226,7 @@ def mark_po_received(po_number):
                         INSERT INTO po_receipts (user_id, po_number, product_id, received_qty, received_date, notes)
                         VALUES (:user_id, :po_number, :product_id, :qty, :date, :notes)
                     """), {
-                        "user_id": user_id,
+                        "user_id": user_id,        # kept: records who physically received
                         "po_number": po_number,
                         "product_id": rec['product_id'],
                         "qty": rec['qty'],
@@ -231,30 +234,31 @@ def mark_po_received(po_number):
                         "notes": f"Received via PO {po_number}"
                     })
 
-        # Determine new status
+        # Determine new status — again aggregate by po_number, not user_id
         with DB_ENGINE.connect() as conn:
             new_receipts = conn.execute(text("""
                 SELECT product_id, SUM(received_qty) as total_received
                 FROM po_receipts
-                WHERE user_id = :user_id AND po_number = :po_number
+                WHERE po_number = :po_number
                 GROUP BY product_id
-            """), {"user_id": user_id, "po_number": po_number}).fetchall()
+            """), {"po_number": po_number}).fetchall()
         new_received_map = {r[0]: r[1] for r in new_receipts}
 
-        all_fully_received = True
-        for item in items:
-            pid = int(item['product_id'])
-            total_received = new_received_map.get(pid, 0)
-            if total_received < item['ordered_qty']:
-                all_fully_received = False
-                break
+        all_fully_received = all(
+            new_received_map.get(int(item['product_id']), 0) >= item['ordered_qty']
+            for item in items
+        )
 
         new_status = 'Received' if all_fully_received else 'Partial'
+
+        # FIX: was filtering by user_id which would silently fail when an assistant
+        # receives goods for a PO that the owner created (different user_ids).
+        # Must filter by account_id to match how purchase_orders are stored.
         with DB_ENGINE.begin() as conn:
             conn.execute(text("""
                 UPDATE purchase_orders SET status = :status
-                WHERE user_id = :user_id AND po_number = :po_number
-            """), {"user_id": user_id, "po_number": po_number, "status": new_status})
+                WHERE account_id = :aid AND po_number = :po_number
+            """), {"aid": account_id, "po_number": po_number, "status": new_status})
 
         if all_fully_received:
             flash(f"✅ PO {po_number} fully received! {added_units} units added to stock.", "success")
@@ -268,6 +272,7 @@ def mark_po_received(po_number):
         flash("❌ An error occurred while processing receipt.", "error")
         return redirect(url_for('purchases.purchase_orders'))
 
+
 # 5. Email PO to supplier (placeholder)
 @purchases_bp.route('/po/email/<po_number>', methods=['POST'])
 def email_po_to_supplier(po_number):
@@ -276,10 +281,12 @@ def email_po_to_supplier(po_number):
     flash(f'PO {po_number} email functionality coming soon!', 'info')
     return jsonify({'success': True, 'message': 'Email queued'})
 
+
 # 6. Print preview
 @purchases_bp.route('/po/print/<po_number>')
 def print_po_preview(po_number):
     return redirect(url_for('purchases.po_preview', po_number=po_number))
+
 
 # 7. List purchase orders
 @purchases_bp.route("/purchase_orders")
@@ -287,7 +294,8 @@ def purchase_orders():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     try:
-        from app.services.purchases import get_purchase_orders
+        # NOTE: duplicate 'from app.services.purchases import get_purchase_orders'
+        # that was here has been removed — it is already imported at module level above.
         account_id = session['account_id']
         page = request.args.get('page', 1, type=int)
         limit = 10

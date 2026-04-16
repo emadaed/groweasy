@@ -27,8 +27,9 @@ def complete_purchase_order(po_number):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# NOTE: @csrf.exempt removed — this is a state-changing POST that modifies the
+# database. There is no valid reason to exempt it from CSRF protection.
 @api_bp.route('/api/purchase_order/<po_number>/cancel', methods=['POST'])
-@csrf.exempt
 def cancel_purchase_order(po_number):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401

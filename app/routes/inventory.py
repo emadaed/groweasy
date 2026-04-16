@@ -10,8 +10,11 @@ from app.services.utils import random_success_message
 from app.services.db import DB_ENGINE
 from app.extensions import limiter
 from app.decorators import role_required
+from app.context_processors import CURRENCY_SYMBOLS
+from app.services.cache import get_user_profile_cached
 
 inventory_bp = Blueprint('inventory', __name__)
+
 
 # Helper functions
 def _safe_int(val, default):
@@ -26,57 +29,43 @@ def _safe_float(val, default):
     except (ValueError, TypeError):
         return default
 
+
 @inventory_bp.route("/inventory")
 @role_required('owner', 'assistant')
 def inventory():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    from app.context_processors import CURRENCY_SYMBOLS
-    from app.services.cache import get_user_profile_cached
-    from app.services.inventory import InventoryManager
-    from app.services.db import DB_ENGINE
-    from sqlalchemy import text
-    
+    # NOTE: session check removed — @role_required handles it
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     account_id = session['account_id']
-    
-    # Get low stock alerts (lightweight)
+
     low_stock_alerts = InventoryManager.get_low_stock_alerts(account_id)
-    
-    # Summary counts - using COALESCE to handle NULL min_stock_level
+
     with DB_ENGINE.connect() as conn:
-        # Total active products
         total = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items 
+            SELECT COUNT(*) FROM inventory_items
             WHERE account_id = :aid AND is_active = TRUE
         """), {"aid": account_id}).scalar() or 0
-        
-        # In stock: current_stock > COALESCE(min_stock_level, 0) AND current_stock > 0
+
         in_stock = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items 
-            WHERE account_id = :aid AND is_active = TRUE 
-            AND current_stock > COALESCE(min_stock_level, 0) 
+            SELECT COUNT(*) FROM inventory_items
+            WHERE account_id = :aid AND is_active = TRUE
+            AND current_stock > COALESCE(min_stock_level, 0)
             AND current_stock > 0
         """), {"aid": account_id}).scalar() or 0
-        
-        # Low stock: current_stock <= COALESCE(min_stock_level, 0) AND current_stock > 0
+
         low_stock = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items 
-            WHERE account_id = :aid AND is_active = TRUE 
-            AND current_stock <= COALESCE(min_stock_level, 0) 
+            SELECT COUNT(*) FROM inventory_items
+            WHERE account_id = :aid AND is_active = TRUE
+            AND current_stock <= COALESCE(min_stock_level, 0)
             AND current_stock > 0
         """), {"aid": account_id}).scalar() or 0
-        
-        # Out of stock: current_stock = 0
+
         out_of_stock = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items 
-            WHERE account_id = :aid AND is_active = TRUE 
+            SELECT COUNT(*) FROM inventory_items
+            WHERE account_id = :aid AND is_active = TRUE
             AND current_stock = 0
         """), {"aid": account_id}).scalar() or 0
-    
-    # Create a simple namespace object for the template
+
     class Summary:
         pass
     inventory_summary = Summary()
@@ -84,23 +73,22 @@ def inventory():
     inventory_summary.in_stock = in_stock
     inventory_summary.low_stock = low_stock
     inventory_summary.out_of_stock = out_of_stock
-    
-    return render_template("inventory.html", 
-                         currency_symbol=currency_symbol,
-                         low_stock_alerts=low_stock_alerts,
-                         inventory_summary=inventory_summary,
-                         nonce=g.nonce)
+
+    return render_template("inventory.html",
+                           currency_symbol=currency_symbol,
+                           low_stock_alerts=low_stock_alerts,
+                           inventory_summary=inventory_summary,
+                           nonce=g.nonce)
+
 
 @inventory_bp.route("/inventory_reports")
 @role_required('owner', 'accountant')
 def inventory_reports():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+    # NOTE: session check removed — @role_required handles it
     try:
-        from app.services.reports import InventoryReports        
+        from app.services.reports import InventoryReports
         account_id = session['account_id']
 
-        # Get all report data
         bcg_matrix = InventoryReports.get_bcg_matrix(account_id)
         turnover = InventoryReports.get_stock_turnover(account_id, days=30)
         profitability = InventoryReports.get_profitability_analysis(account_id)
@@ -117,54 +105,54 @@ def inventory_reports():
         flash("Reports temporarily unavailable", "info")
         return redirect(url_for('inventory.inventory'))
 
+
 @inventory_bp.route("/inventory/dashboard")
 @role_required('owner', 'assistant')
 def inventory_dashboard():
     """Location Dashboard View"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    from app.context_processors import CURRENCY_SYMBOLS
-    from app.services.cache import get_user_profile_cached
+    # NOTE: session check removed — @role_required handles it
     from app.services.auth import get_api_key_for_user
-    
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     api_key = get_api_key_for_user(session['user_id'])
-    
-    return render_template("inventory_dashboard.html", 
-                         currency_symbol=currency_symbol,
-                         api_key=api_key,
-                         nonce=g.nonce)
+
+    return render_template("inventory_dashboard.html",
+                           currency_symbol=currency_symbol,
+                           api_key=api_key,
+                           nonce=g.nonce)
+
 
 @inventory_bp.route("/inventory/catalog")
 @role_required('owner', 'assistant')
 def inventory_catalog():
     """Product Catalog View"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    from app.context_processors import CURRENCY_SYMBOLS
-    from app.services.cache import get_user_profile_cached
+    # NOTE: session check removed — @role_required handles it
     from app.services.auth import get_api_key_for_user
-    
     user_profile = get_user_profile_cached(session['user_id'])
     currency_symbol = CURRENCY_SYMBOLS.get(user_profile.get('preferred_currency', 'PKR'), 'Rs.')
     api_key = get_api_key_for_user(session['user_id'])
-    
+
     return render_template("inventory_catalog.html",
-                         currency_symbol=currency_symbol,
-                         api_key=api_key,
-                         nonce=g.nonce)
+                           currency_symbol=currency_symbol,
+                           api_key=api_key,
+                           nonce=g.nonce)
+
 
 @inventory_bp.route("/add_product", methods=['POST'])
 @role_required('owner', 'assistant')
 def add_product():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+    # NOTE: session check removed — @role_required handles it
+
+    # CRITICAL BUG FIXED: In the original code, the entire block that calls
+    # InventoryManager.add_product() was placed INSIDE the
+    # `if selling_price < cost_price` branch, after the `return` statement.
+    # This made it completely unreachable — products were NEVER saved through
+    # this form regardless of what the user entered.
+    # The fix: validate first, return early on error, then save unconditionally.
 
     user_id = session['user_id']
     account_id = session['account_id']
+
     product_data = {
         'name': request.form.get('name'),
         'sku': request.form.get('sku'),
@@ -185,59 +173,56 @@ def add_product():
         'weight_kg': _safe_float(request.form.get('weight_kg'), None),
     }
 
+    # Validation — return early on error so the save logic below is always reached
     if product_data['selling_price'] < product_data['cost_price']:
         flash('❌ Selling price cannot be less than cost price.', 'error')
         return redirect(url_for('inventory.inventory'))
 
-        product_id = InventoryManager.add_product(user_id, account_id, product_data)
-        if product_id:
-            # Assign product to default location (Main)
-            try:
-                # Ensure default location exists for this account
-                with DB_ENGINE.begin() as conn:
-                    loc = conn.execute(text("""
-                        SELECT id FROM locations 
-                        WHERE account_id = :aid AND location_name = 'Main' AND is_active = TRUE
-                    """), {"aid": account_id}).first()
-                    if not loc:
-                        # Create Main location
-                        loc = conn.execute(text("""
-                            INSERT INTO locations (account_id, location_name, location_code, location_type)
-                            VALUES (:aid, 'Main', 'MAIN', 'warehouse')
-                            RETURNING id
-                        """), {"aid": account_id})
-                        location_id = loc.scalar()
-                    else:
-                        location_id = loc[0]
-                
-                # Add product to this location with initial stock
-                LocationInventoryManager.add_product_to_location(
-                    product_id, location_id, product_data['current_stock'], user_id
-                )
-            except Exception as e:
-                current_app.logger.error(f"Failed to assign product to location: {e}")
-                # Don't fail the whole operation, just log
-            flash('✅ Product added successfully!', 'success')
-        else:
-            flash('❌ Error adding product. SKU might already exist.', 'error')
+    # Save the product
+    product_id = InventoryManager.add_product(user_id, account_id, product_data)
+    if product_id:
+        try:
+            with DB_ENGINE.begin() as conn:
+                loc = conn.execute(text("""
+                    SELECT id FROM locations
+                    WHERE account_id = :aid AND location_name = 'Main' AND is_active = TRUE
+                """), {"aid": account_id}).first()
+                if not loc:
+                    loc_result = conn.execute(text("""
+                        INSERT INTO locations (account_id, location_name, location_code, location_type)
+                        VALUES (:aid, 'Main', 'MAIN', 'warehouse')
+                        RETURNING id
+                    """), {"aid": account_id})
+                    location_id = loc_result.scalar()
+                else:
+                    location_id = loc[0]
+
+            LocationInventoryManager.add_product_to_location(
+                product_id, location_id, product_data['current_stock'], user_id
+            )
+        except Exception as e:
+            current_app.logger.error(f"Failed to assign product to location: {e}")
+            # Non-fatal: product is saved, location assignment failed
+
+        flash('✅ Product added successfully!', 'success')
+    else:
+        flash('❌ Error adding product. SKU might already exist.', 'error')
+
+    return redirect(url_for('inventory.inventory'))
+
 
 @inventory_bp.route("/update_product", methods=['POST'])
 @role_required('owner', 'assistant')
 def update_product():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
+    # NOTE: session check removed — @role_required handles it
     user_id = session['user_id']
     account_id = session['account_id']
     product_id = request.form.get('product_id')
-    
+
     if not product_id:
         flash("Product ID missing", "error")
         return redirect(url_for('inventory.inventory'))
-    
-    # Verify product belongs to user's account
-    from app.services.db import DB_ENGINE
-    from sqlalchemy import text
+
     with DB_ENGINE.connect() as conn:
         row = conn.execute(text("""
             SELECT id FROM inventory_items WHERE id = :pid AND account_id = :aid
@@ -245,8 +230,7 @@ def update_product():
         if not row:
             flash("Product not found", "error")
             return redirect(url_for('inventory.inventory'))
-    
-    # Prepare update data
+
     update_data = {
         'name': request.form.get('name'),
         'sku': request.form.get('sku'),
@@ -262,7 +246,7 @@ def update_product():
         'batch_number': request.form.get('batch_number'),
         'description': request.form.get('description'),
     }
-    
+
     try:
         with DB_ENGINE.begin() as conn:
             conn.execute(text("""
@@ -282,22 +266,18 @@ def update_product():
                     description = :description,
                     updated_at = NOW()
                 WHERE id = :pid AND account_id = :aid
-            """), {
-                **update_data,
-                'pid': product_id,
-                'aid': account_id
-            })
+            """), {**update_data, 'pid': product_id, 'aid': account_id})
         flash("Product updated successfully", "success")
     except Exception as e:
         flash(f"Update failed: {str(e)}", "error")
-    
+
     return redirect(url_for('inventory.inventory'))
+
 
 @inventory_bp.route("/delete_product", methods=['POST'])
 @role_required('owner', 'assistant')
 def delete_product():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+    # NOTE: session check removed — @role_required handles it
     user_id = session['user_id']
     account_id = session['account_id']
     product_id = request.form.get('product_id')
@@ -311,18 +291,18 @@ def delete_product():
         flash('❌ Error removing product – it may already be deleted.', 'error')
     return redirect(url_for('inventory.inventory'))
 
+
 @inventory_bp.route("/api/inventory_items")
 @role_required('owner', 'assistant')
 def get_inventory_items_api():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
+    # NOTE: session check removed — @role_required handles it
     account_id = session['account_id']
     with DB_ENGINE.connect() as conn:
         items = conn.execute(text("""
             SELECT id, name, sku, selling_price, current_stock, unit_type
             FROM inventory_items
-            WHERE account_id = :aid 
-              AND is_active = TRUE 
+            WHERE account_id = :aid
+              AND is_active = TRUE
               AND current_stock > 0
             ORDER BY name
         """), {"aid": account_id}).fetchall()
@@ -336,12 +316,12 @@ def get_inventory_items_api():
     } for item in items]
     return jsonify(inventory_data)
 
+
 @inventory_bp.route("/adjust_stock_audit", methods=['POST'])
 @limiter.limit("10 per minute")
 @role_required('owner', 'assistant')
 def adjust_stock_audit():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+    # NOTE: session check removed — @role_required handles it
     user_id = session['user_id']
     account_id = session['account_id']
     product_id = request.form.get('product_id')
@@ -401,7 +381,9 @@ def adjust_stock_audit():
                     set_clause = ', '.join(f"{k} = :{k}" for k in updates)
                     params = updates.copy()
                     params.update({"product_id": product_id, "aid": account_id})
-                    conn.execute(text(f"UPDATE inventory_items SET {set_clause} WHERE id = :product_id AND account_id = :aid"), params)
+                    conn.execute(text(
+                        f"UPDATE inventory_items SET {set_clause} WHERE id = :product_id AND account_id = :aid"
+                    ), params)
 
         if success:
             new_stock = current_stock + delta
@@ -415,11 +397,11 @@ def adjust_stock_audit():
         flash('❌ Error updating product', 'error')
         return redirect(url_for('inventory.inventory'))
 
+
 @inventory_bp.route("/download_inventory_report")
 @role_required('owner', 'accountant')
 def download_inventory_report():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+    # NOTE: session check removed — @role_required handles it
     account_id = session['account_id']
     inventory_data = InventoryManager.get_inventory_report(account_id)
     output = io.StringIO()
@@ -431,19 +413,10 @@ def download_inventory_report():
     ])
     for item in inventory_data:
         writer.writerow([
-            item['name'],
-            item['sku'],
-            item['barcode'],
-            item['category'],
-            item['current_stock'],
-            item['unit_type'],
-            item['min_stock'],
-            item['cost_price'],
-            item['selling_price'],
-            item['supplier'],
-            item['location'],
-            item['is_perishable'],
-            item['expiry_date'],
+            item['name'], item['sku'], item['barcode'], item['category'],
+            item['current_stock'], item['unit_type'], item['min_stock'],
+            item['cost_price'], item['selling_price'], item['supplier'],
+            item['location'], item['is_perishable'], item['expiry_date'],
             item['batch_number']
         ])
     output.seek(0)
@@ -453,12 +426,12 @@ def download_inventory_report():
         headers={"Content-Disposition": "attachment;filename=inventory_report.csv"}
     )
 
+
 @inventory_bp.route('/bulk_upload', methods=['GET', 'POST'])
 @limiter.limit("15 per hour")
 @role_required('owner', 'assistant')
 def bulk_upload():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+    # NOTE: session check removed — @role_required handles it
 
     if request.method == 'GET':
         return render_template('bulk_upload.html', nonce=g.nonce)
@@ -474,11 +447,8 @@ def bulk_upload():
             flash('❌ Only CSV files are allowed.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
-        # Read the entire file content as text
         file_content = file.stream.read().decode('utf-8-sig')
 
-        # Create a reader to parse the CSV
-        import csv
         from io import StringIO
         stream = StringIO(file_content)
         reader = csv.DictReader(stream)
@@ -487,15 +457,13 @@ def bulk_upload():
             flash('❌ CSV is empty or malformed.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
-        # Validate headers
         required_headers = {'name', 'sku'}
         if not required_headers.issubset(fieldnames):
             flash('❌ CSV must contain at least "name" and "sku" columns.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
-        # Preview first 10 rows (with validation)
         preview_rows = []
-        row_num = 1  # after header
+        row_num = 1
         for row in reader:
             row_num += 1
             errors = []
@@ -503,11 +471,9 @@ def bulk_upload():
                 errors.append('Missing name')
             if not row.get('sku', '').strip():
                 errors.append('Missing SKU')
-            # Check duplicate SKU in this file
             existing_skus = [r.get('sku') for r in preview_rows if r.get('sku')]
             if row.get('sku') in existing_skus:
                 errors.append('Duplicate SKU in file')
-            # Check against DB for existing SKU
             with DB_ENGINE.connect() as conn:
                 existing = conn.execute(
                     text("SELECT id FROM inventory_items WHERE account_id = :aid AND sku = :sku"),
@@ -525,10 +491,9 @@ def bulk_upload():
             if len(preview_rows) >= 10:
                 break
 
-        # Store the raw CSV content in session (as string)
         session['bulk_upload_data'] = {
             'file_content': file_content,
-            'row_count': row_num - 1  # total rows in file (excluding header)
+            'row_count': row_num - 1
         }
 
         return render_template('bulk_upload_preview.html',
@@ -542,8 +507,6 @@ def bulk_upload():
             flash('❌ No upload data found. Please upload again.', 'error')
             return redirect(url_for('inventory.bulk_upload'))
 
-        # Create a fresh reader directly from the stored CSV string
-        import csv
         from io import StringIO
         stream = StringIO(stored['file_content'])
         reader = csv.DictReader(stream)
@@ -553,7 +516,6 @@ def bulk_upload():
         account_id = session['account_id']
 
         for row_num, row in enumerate(reader, start=2):
-            # Clean keys and values
             cleaned_row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
 
             product_data = {
@@ -581,23 +543,21 @@ def bulk_upload():
                 results['errors'].append(f"Row {row_num}: Missing name or SKU")
                 continue
 
-            # Try to add product
             product_id = InventoryManager.add_product(user_id, account_id, product_data)
             if product_id:
-                # Assign to default location
                 try:
                     with DB_ENGINE.begin() as conn:
                         loc = conn.execute(text("""
-                            SELECT id FROM locations 
+                            SELECT id FROM locations
                             WHERE account_id = :aid AND location_name = 'Main' AND is_active = TRUE
                         """), {"aid": account_id}).first()
                         if not loc:
-                            loc = conn.execute(text("""
+                            loc_result = conn.execute(text("""
                                 INSERT INTO locations (account_id, location_name, location_code, location_type)
                                 VALUES (:aid, 'Main', 'MAIN', 'warehouse')
                                 RETURNING id
                             """), {"aid": account_id})
-                            location_id = loc.scalar()
+                            location_id = loc_result.scalar()
                         else:
                             location_id = loc[0]
                     LocationInventoryManager.add_product_to_location(
@@ -608,7 +568,9 @@ def bulk_upload():
                 results['success'] += 1
             else:
                 results['failure'] += 1
-                results['errors'].append(f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']})")
+                results['errors'].append(
+                    f"Row {row_num}: Failed to add product '{product_data['name']}' (SKU: {product_data['sku']})"
+                )
 
         session.pop('bulk_upload_data', None)
 
@@ -625,6 +587,7 @@ def bulk_upload():
         flash('❌ Invalid action.', 'error')
         return redirect(url_for('inventory.bulk_upload'))
 
+
 @inventory_bp.route('/bulk_upload_results')
 def bulk_upload_results():
     if 'user_id' not in session:
@@ -632,19 +595,20 @@ def bulk_upload_results():
     errors = session.pop('bulk_upload_errors', [])
     return render_template('bulk_upload_results.html', errors=errors, nonce=g.nonce)
 
+
 @inventory_bp.route('/sample_products.csv')
 def download_sample_csv():
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        'name','sku','barcode','category','description','current_stock',
-        'min_stock_level','cost_price','selling_price','supplier','location',
-        'unit_type','is_perishable','expiry_date','batch_number','pack_size','weight_kg'
+        'name', 'sku', 'barcode', 'category', 'description', 'current_stock',
+        'min_stock_level', 'cost_price', 'selling_price', 'supplier', 'location',
+        'unit_type', 'is_perishable', 'expiry_date', 'batch_number', 'pack_size', 'weight_kg'
     ])
     writer.writerow([
-        'Fresh Milk','MILK-001','7891234567890','Dairy','1L full cream milk','50',
-        '10','200.00','250.00','Milk Corp','Cold Room A',
-        'weight','Yes','2026-04-15','BATCH-202603','1.0','1.0'
+        'Fresh Milk', 'MILK-001', '7891234567890', 'Dairy', '1L full cream milk', '50',
+        '10', '200.00', '250.00', 'Milk Corp', 'Cold Room A',
+        'weight', 'Yes', '2026-04-15', 'BATCH-202603', '1.0', '1.0'
     ])
     output.seek(0)
     return Response(output.getvalue(), mimetype='text/csv',
