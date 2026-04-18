@@ -15,7 +15,7 @@ from app.services.invoice_logic import prepare_invoice_data
 from app.services.invoice_logic_po import prepare_po_data
 from app.services.qr_engine import generate_qr_base64
 from app.services.pdf_engine import generate_pdf, HAS_WEASYPRINT
-from app.services.services import InvoiceService
+from app.services.invoice_service import InvoiceService
 from app.services.number_generator import NumberGenerator
 from app.services.purchases import save_purchase_order
 from app.decorators import role_required
@@ -400,7 +400,7 @@ def invoice_history():
 @sales_bp.route('/invoice/status/<user_id>')
 def status(user_id):
     try:
-        from app.services.services import InvoiceService
+        from app.services.invoice_service import InvoiceService
         service = InvoiceService(int(user_id))
         result = service.redis_client.get(f"preview:{user_id}")
         if result:
