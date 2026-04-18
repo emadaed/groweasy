@@ -162,7 +162,6 @@ class InventoryManager:
         except Exception as e:
             logger.error(f"Error adding product: {e}", exc_info=True)
             return None
-# Add to existing InventoryManager class
 
     @staticmethod
     def add_product_with_location(user_id, account_id, product_data, location_data=None):

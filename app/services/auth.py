@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)  # FIX: was missing — caused NameError in
 def hash_password(password: str) -> str:
     """
     Hash a password using werkzeug (pbkdf2:sha256 with random salt).
-    Replaces the old hashlib.sha256 approach which had no salt.
     """
     return generate_password_hash(password)
 
@@ -29,12 +28,6 @@ def hash_password(password: str) -> str:
 def _verify_password(plain: str, stored_hash: str) -> bool:
     """
     Verify a password against a stored hash.
-
-    Handles backward compatibility: if the stored hash looks like a raw
-    hex digest (old SHA256-without-salt format, 64 hex chars), fall back
-    to the old comparison so existing accounts still work.  On next
-    successful login the password is re-hashed and stored in the new format
-    automatically (see verify_user below).
     """
     # Old SHA256 hashes are exactly 64 lowercase hex characters
     if len(stored_hash) == 64 and all(c in '0123456789abcdef' for c in stored_hash):
@@ -63,10 +56,6 @@ def create_user(email: str, password: str, company_name: str = "") -> bool:
 def verify_user(email: str, password: str):
     """
     Verify credentials and return user_id on success, None on failure.
-
-    If an account still has the old SHA256 hash, the password is
-    re-hashed on the spot using werkzeug so the account is silently
-    upgraded without any user-facing disruption.
     """
     with DB_ENGINE.connect() as conn:
         result = conn.execute(text('''
@@ -99,10 +88,6 @@ def verify_user(email: str, password: str):
 def get_api_key_for_user(user_id: int) -> str:
     """
     Return a display token for the inventory dashboard API key widget.
-
-    FIX: was using MD5 (cryptographically broken) and referenced undefined
-    'logger'.  Now uses a constant-time safe hex token derived from the
-    key's database ID — this is a display-only token, not an auth credential.
     """
     try:
         with DB_ENGINE.connect() as conn:
@@ -192,12 +177,9 @@ def change_user_password(user_id: int, new_password: str) -> bool:
             {"id": user_id, "hash": hash_password(new_password)}
         )
     return True
-
-
 # ---------------------------------------------------------------------------
-# Business data functions — unchanged, kept as-is
+# Business data functions 
 # ---------------------------------------------------------------------------
-
 def get_business_summary(account_id):
     with DB_ENGINE.connect() as conn:
         result = conn.execute(text('''
