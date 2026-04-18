@@ -59,8 +59,8 @@ class SessionStorage:
             with DB_ENGINE.begin() as conn:
                 conn.execute(text("""
                     DELETE FROM session_storage
-                    WHERE user_id = :user_id AND data_type = :data_type
-                    OR expires_at <= NOW()
+                    WHERE user_id = :user_id AND (data_type = :data_type
+                    OR expires_at <= NOW())
                 """), {
                     "user_id": user_id,
                     "data_type": data_type
