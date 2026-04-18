@@ -90,8 +90,6 @@ def create_app():
     app.register_blueprint(suppliers_bp)
     from app.routes.users import users_bp
     app.register_blueprint(users_bp)
-##    from app.routes.ai import ai_bp
-##    app.register_blueprint(ai_bp)
     from app.routes.reports import reports_bp
     app.register_blueprint(reports_bp)
     from app.routes.api_v1 import api_v1_bp

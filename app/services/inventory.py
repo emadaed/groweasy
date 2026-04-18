@@ -451,19 +451,42 @@ class InventoryManager:
 
     @staticmethod
     def get_inventory_items(account_id):
+        """
+        Fetch all active inventory items with their location breakdowns.        
+        """
         try:
             with DB_ENGINE.connect() as conn:
-                result = conn.execute(text('''
-                    SELECT id, name, sku, category, current_stock, min_stock_level,
-                           cost_price, selling_price, supplier, location
-                    FROM inventory_items
-                    WHERE account_id = :aid AND is_active = TRUE
-                    ORDER BY name
-                '''), {"aid": account_id})
-                items = []
-                for row in result:
-                    item = {
-                        'id': row.id,
+                # Single query: products + all their location stock in one shot
+                rows = conn.execute(text("""
+                    SELECT
+                        i.id, i.name, i.sku, i.category, i.current_stock,
+                        i.min_stock_level, i.cost_price, i.selling_price,
+                        i.supplier, i.location,
+                        l.id          AS loc_id,
+                        l.location_name,
+                        l.location_code,
+                        l.location_type,
+                        pl.quantity   AS loc_qty,
+                        pl.reserved_quantity
+                    FROM inventory_items i
+                    LEFT JOIN product_locations pl ON pl.product_id = i.id
+                    LEFT JOIN locations l ON l.id = pl.location_id AND l.is_active = TRUE
+                    WHERE i.account_id = :aid AND i.is_active = TRUE
+                    ORDER BY i.name, l.location_name
+                """), {"aid": account_id}).fetchall()
+
+            # Assemble: group location rows per product
+            from collections import defaultdict
+            from decimal import Decimal
+
+            product_map: dict = {}   # product_id -> item dict
+            loc_map: dict = defaultdict(list)  # product_id -> [location dicts]
+
+            for row in rows:
+                pid = row.id
+                if pid not in product_map:
+                    product_map[pid] = {
+                        'id': pid,
                         'name': row.name,
                         'sku': row.sku or 'N/A',
                         'category': row.category or '',
@@ -472,23 +495,33 @@ class InventoryManager:
                         'cost_price': float(row.cost_price) if row.cost_price else 0.0,
                         'selling_price': float(row.selling_price) if row.selling_price else 0.0,
                         'supplier': row.supplier or '',
-                        'location': row.location or 'Main'
+                        'location': row.location or 'Main',
+                        'location_breakdown': None
                     }
-                    # Add location breakdown - THIS IS THE CRITICAL PART
-                    try:
-                        from app.services.location_inventory import LocationInventoryManager
-                        breakdown = LocationInventoryManager.get_product_location_breakdown(row.id)
-                        if breakdown and breakdown.get('locations'):
-                            item['location_breakdown'] = breakdown
-                        else:
-                            item['location_breakdown'] = None
-                    except Exception as e:
-                        logger.error(f"Error getting location breakdown for product {row.id}: {e}")
-                        item['location_breakdown'] = None
-                    items.append(item)
-                return items
+
+                if row.loc_id is not None:
+                    loc_map[pid].append({
+                        'location_id': row.loc_id,
+                        'location_name': row.location_name,
+                        'location_code': row.location_code,
+                        'quantity': float(row.loc_qty) if row.loc_qty else 0.0,
+                        'reserved': float(row.reserved_quantity) if row.reserved_quantity else 0.0,
+                        'type': row.location_type
+                    })
+
+            # Attach location breakdown to each product
+            for pid, locs in loc_map.items():
+                if pid in product_map:
+                    total = sum(l['quantity'] for l in locs)
+                    product_map[pid]['location_breakdown'] = {
+                        'total_stock': total,
+                        'locations': locs
+                    }
+
+            return list(product_map.values())
+
         except Exception as e:
-            logger.error(f"Error fetching inventory: {e}")
+            logger.error(f"Error fetching inventory items: {e}", exc_info=True)
             return []
         
     @staticmethod

@@ -89,6 +89,7 @@ def login():
         user_id = verify_user(email, password)
         if user_id:
             from app.services.session_manager import SessionManager
+            SessionManager.cleanup_expired_sessions(older_than_hours=48)
 
             if not SessionManager.check_location_restrictions(user_id, request.remote_addr):
                 flash('❌ Login not allowed from this location', 'error')
