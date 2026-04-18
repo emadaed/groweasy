@@ -1,34 +1,30 @@
 # app/services/purchases.py
-from app.services.db import DB_ENGINE
-from sqlalchemy import text
 import json
-from datetime import datetime
 import logging
+from datetime import datetime
+from sqlalchemy import text
+from app.services.db import DB_ENGINE
 
 logger = logging.getLogger(__name__)
 
+
 def ensure_purchase_table_migrated():
-    from app.services.db import DB_ENGINE
-    from sqlalchemy import text
+    """Add any missing columns to purchase_orders (idempotent)."""
     try:
         with DB_ENGINE.begin() as conn:
             conn.execute(text('''
-                ALTER TABLE purchase_orders 
+                ALTER TABLE purchase_orders
                 ADD COLUMN IF NOT EXISTS supplier_id INTEGER;
             '''))
             conn.execute(text('''
-                ALTER TABLE purchase_orders 
+                ALTER TABLE purchase_orders
                 ADD COLUMN IF NOT EXISTS grand_total DECIMAL(15, 2);
             '''))
     except Exception as e:
-        print(f"Migration Notice (Purchase Orders): {e}")
+        logger.debug(f"Purchase order migration notice: {e}")
+
 
 def save_purchase_order(user_id, account_id, order_data):
-    from app.services.db import DB_ENGINE
-    from sqlalchemy import text
-    import json
-    from datetime import datetime
-
     ensure_purchase_table_migrated()
     try:
         with DB_ENGINE.begin() as conn:
@@ -45,9 +41,11 @@ def save_purchase_order(user_id, account_id, order_data):
             order_json = json.dumps(order_data)
 
             conn.execute(text('''
-                INSERT INTO purchase_orders 
-                (user_id, account_id, po_number, supplier_id, supplier_name, order_date, delivery_date, grand_total, order_data)
-                VALUES (:user_id, :aid, :po_number, :supplier_id, :supplier_name, :order_date, :delivery_date, :grand_total, :order_json)
+                INSERT INTO purchase_orders
+                (user_id, account_id, po_number, supplier_id, supplier_name,
+                 order_date, delivery_date, grand_total, order_data)
+                VALUES (:user_id, :aid, :po_number, :supplier_id, :supplier_name,
+                        :order_date, :delivery_date, :grand_total, :order_json)
             '''), {
                 "user_id": user_id,
                 "aid": account_id,
@@ -62,7 +60,7 @@ def save_purchase_order(user_id, account_id, order_data):
 
             if supplier_id:
                 conn.execute(text('''
-                    UPDATE suppliers SET 
+                    UPDATE suppliers SET
                         order_count = order_count + 1,
                         total_purchased = total_purchased + :grand_total,
                         updated_at = CURRENT_TIMESTAMP
@@ -72,12 +70,13 @@ def save_purchase_order(user_id, account_id, order_data):
                     "id": int(supplier_id),
                     "aid": account_id
                 })
-                print(f"✅ Purchase Order Linked & Supplier {supplier_name} stats updated.")
+                logger.info(f"PO {po_number} saved; supplier '{supplier_name}' stats updated")
 
         return True
     except Exception as e:
-        print(f"❌ Final Save Error: {e}")
+        logger.error(f"save_purchase_order failed: {e}", exc_info=True)
         return False
+
 
 def get_purchase_orders(account_id, limit=50, offset=0):
     with DB_ENGINE.connect() as conn:
@@ -97,7 +96,6 @@ def get_purchase_orders(account_id, limit=50, offset=0):
         except (json.JSONDecodeError, TypeError):
             order_data = {}
         items = order_data.get('items', [])
-        item_count = len(items) if isinstance(items, list) else 0
         result.append({
             'id': order[0],
             'po_number': order[1],
@@ -108,9 +106,10 @@ def get_purchase_orders(account_id, limit=50, offset=0):
             'status': order[6],
             'created_at': order[7],
             'data': order_data,
-            'item_count': item_count
+            'item_count': len(items) if isinstance(items, list) else 0
         })
     return result
+
 
 def get_purchase_order(account_id, po_number):
     try:
@@ -123,14 +122,16 @@ def get_purchase_order(account_id, po_number):
                 return json.loads(result[0])
         return None
     except Exception as e:
-        logger.error(f"Error fetching PO: {e}")
+        logger.error(f"Error fetching PO {po_number}: {e}")
         return None
 
+
 def get_purchase_orders_api(account_id, limit=100, offset=0):
-    """Return a list of POs with basic info."""
+    """Return a list of POs with basic info for the API."""
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text("""
-            SELECT id, po_number, supplier_name, order_date, delivery_date, grand_total, status, created_at
+            SELECT id, po_number, supplier_name, order_date, delivery_date,
+                   grand_total, status, created_at
             FROM purchase_orders
             WHERE account_id = :aid
             ORDER BY order_date DESC
@@ -147,11 +148,13 @@ def get_purchase_orders_api(account_id, limit=100, offset=0):
         'created_at': r[7].isoformat() if r[7] else None
     } for r in rows]
 
+
 def get_purchase_order_by_number_api(account_id, po_number):
-    """Fetch a single PO by its number."""
+    """Fetch a single PO by number for the API."""
     with DB_ENGINE.connect() as conn:
         row = conn.execute(text("""
-            SELECT id, po_number, supplier_name, order_date, delivery_date, grand_total, status, created_at, order_data
+            SELECT id, po_number, supplier_name, order_date, delivery_date,
+                   grand_total, status, created_at, order_data
             FROM purchase_orders
             WHERE account_id = :aid AND po_number = :po_number
         """), {"aid": account_id, "po_number": po_number}).first()
@@ -165,6 +168,6 @@ def get_purchase_order_by_number_api(account_id, po_number):
             'grand_total': float(row[5]),
             'status': row[6],
             'created_at': row[7].isoformat() if row[7] else None,
-            'order_data': row[8]  # full JSON if needed
+            'order_data': row[8]
         }
     return None

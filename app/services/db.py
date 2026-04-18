@@ -1,7 +1,10 @@
-# app/services/db.py - DB Engine (Railway Postgres- /SQLite) - UPDATED
-from sqlalchemy import create_engine, text
+# app/services/db.py
 import os
+import logging
+from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///users.db')
 DB_ENGINE = create_engine(
@@ -10,47 +13,19 @@ DB_ENGINE = create_engine(
     pool_size=10,
     max_overflow=20,
     pool_recycle=300,
-
 )
 
-print(f"✅ Database connected: {DATABASE_URL[:50]}...")
+logger.info(f"Database connected: {DATABASE_URL[:50]}...")
 
-import os
 
 def init_database():
-    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///users.db')
+    """Dead code — never called. Kept for reference only."""
+    pass
 
-    if 'sqlite' in DATABASE_URL:
-        # SQLite syntax
-        session_storage_sql = """
-            CREATE TABLE IF NOT EXISTS session_storage (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                session_key TEXT NOT NULL,
-                data_type TEXT NOT NULL,
-                data TEXT NOT NULL,
-                expires_at TIMESTAMP DEFAULT (DATETIME('now', '+24 hours')),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """
-    else:
-        # PostgreSQL syntax
-        session_storage_sql = """
-            CREATE TABLE IF NOT EXISTS session_storage (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                session_key TEXT NOT NULL,
-                data_type TEXT NOT NULL,
-                data TEXT NOT NULL,
-                expires_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '24 hours',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """
 
 def create_all_tables():
-    """Create all required tables with correct schema"""
+    """Create all required tables with correct schema."""
     with DB_ENGINE.begin() as conn:
-        # Core tables
         conn.execute(text('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -154,7 +129,6 @@ def create_all_tables():
             );
         '''))
 
-        # Session and logging tables
         conn.execute(text('''
             CREATE TABLE IF NOT EXISTS user_sessions (
                 id SERIAL PRIMARY KEY,
@@ -184,7 +158,6 @@ def create_all_tables():
             );
         '''))
 
-        # Create table for AI Insights (The "ERP Cache")
         conn.execute(text('''
             CREATE TABLE IF NOT EXISTS ai_insights (
                 id SERIAL PRIMARY KEY,
@@ -198,9 +171,8 @@ def create_all_tables():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         '''))
-        print("✅ AI Insights table verified (Robust)")
-        
-        # Session storage for large data
+        logger.info("AI Insights table verified")
+
         conn.execute(text('''
             CREATE TABLE IF NOT EXISTS session_storage (
                 id SERIAL PRIMARY KEY,
@@ -213,12 +185,12 @@ def create_all_tables():
             );
         '''))
 
-        print("✅ All tables created successfully")
+        logger.info("All tables created/verified successfully")
+
 
 def create_missing_tables():
-    """Create any tables that might be missing"""
+    """Create any auxiliary tables that might be missing."""
     with DB_ENGINE.begin() as conn:
-        # Check and create missing auxiliary tables
         tables = [
             ('customers', '''
                 CREATE TABLE IF NOT EXISTS customers (
@@ -265,16 +237,15 @@ def create_missing_tables():
         for table_name, create_sql in tables:
             try:
                 conn.execute(text(create_sql))
-                print(f"✅ Verified/Created table: {table_name}")
+                logger.debug(f"Verified/created table: {table_name}")
             except Exception as e:
-                print(f"⚠️ Table {table_name} error: {e}")
+                logger.warning(f"Table {table_name} setup issue: {e}")
 
-        # Special handling for po_receipts to avoid concurrency issues
+        # po_receipts handled separately due to historical concurrency issues
         try:
-            # Check if table already exists
             result = conn.execute(text("""
                 SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
+                    SELECT FROM information_schema.tables
                     WHERE table_name = 'po_receipts'
                 )
             """)).scalar()
@@ -291,42 +262,40 @@ def create_missing_tables():
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """))
-                print("✅ Created table: po_receipts")
+                logger.info("Created table: po_receipts")
             else:
-                print("✅ Table po_receipts already exists")
+                logger.debug("Table po_receipts already exists")
         except Exception as e:
-            print(f"⚠️ Table po_receipts error: {e}")
+            logger.warning(f"po_receipts table issue: {e}")
+
 
 def apply_inventory_constraints():
-    """Apply inventory constraints"""
+    """Apply inventory uniqueness constraints."""
     try:
         with DB_ENGINE.begin() as conn:
-            # Ensure unique constraint exists
             conn.execute(text('''
                 DO $$
                 BEGIN
                     IF NOT EXISTS (
-                        SELECT 1 FROM pg_constraint
-                        WHERE conname = 'unique_user_sku'
+                        SELECT 1 FROM pg_constraint WHERE conname = 'unique_user_sku'
                     ) THEN
                         ALTER TABLE inventory_items
                         ADD CONSTRAINT unique_user_sku UNIQUE (user_id, sku);
                     END IF;
                 END $$;
             '''))
-            print("✅ Inventory constraints verified")
+            logger.info("Inventory constraints verified")
     except Exception as e:
-        print(f"⚠️ Constraint check: {e}")
+        logger.warning(f"Constraint check issue: {e}")
+
 
 def fix_reference_id_column():
-    """Ensure reference_id is TEXT type"""
+    """Ensure reference_id in stock_movements is TEXT type."""
     try:
         with DB_ENGINE.begin() as conn:
-            # Check if column exists and is correct type
             conn.execute(text('''
                 DO $$
                 BEGIN
-                    -- Check if column exists and needs altering
                     IF EXISTS (
                         SELECT 1 FROM information_schema.columns
                         WHERE table_name = 'stock_movements'
@@ -338,16 +307,16 @@ def fix_reference_id_column():
                     END IF;
                 END $$;
             '''))
-            print("✅ Reference ID column verified")
+            logger.info("Reference ID column verified")
     except Exception as e:
-        print(f"⚠️ Column fix: {e}")
+        logger.warning(f"Column fix issue: {e}")
 
-# Initialize database on import
+
+# Run on import
 try:
     create_all_tables()
     create_missing_tables()
     apply_inventory_constraints()
     fix_reference_id_column()
 except Exception as e:
-    print(f"⚠️ Initial database setup failed: {e}")
-
+    logger.error(f"Initial database setup failed: {e}", exc_info=True)
