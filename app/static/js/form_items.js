@@ -1,7 +1,7 @@
-// form_items.js - Location-aware inventory search
+// form_items.js - Location-aware inventory search (fixed duplicate item issue)
 class InvoiceFormManager {
     constructor() {
-        this.inventoryData = [];         // Will hold products for the selected location
+        this.inventoryData = [];
         this.usedProductIds = new Set();
         this.currencySymbol = window.userCurrencySymbol || 'Rs.';
         this.currentLocationId = window.defaultLocationId || null;
@@ -14,14 +14,12 @@ class InvoiceFormManager {
         this.updateEmptyState();
         this.updateGrandTotal();
 
-        // Load initial location products if a default location exists
         if (this.currentLocationId) {
             this.loadProductsForLocation(this.currentLocationId);
             const locationSelect = document.getElementById('invoiceLocationId');
             if (locationSelect) locationSelect.value = this.currentLocationId;
         }
 
-        // Listen to location change
         const locationSelect = document.getElementById('invoiceLocationId');
         if (locationSelect) {
             locationSelect.addEventListener('change', (e) => {
@@ -41,7 +39,7 @@ class InvoiceFormManager {
         fetch(`/api/v1/locations/${locationId}/products?per_page=500`, { credentials: 'same-origin' })
             .then(res => res.json())
             .then(data => {
-                const products = data.products || [];  // <-- key change
+                const products = data.products || [];
                 this.inventoryData = products.filter(p => p.stock_at_location > 0).map(p => ({
                     id: p.id,
                     name: p.name,
@@ -86,7 +84,7 @@ class InvoiceFormManager {
                 const product = this.inventoryData.find(p => p.id == productId);
                 if (product) {
                     this.addInventoryItem(
-                        product.id,
+                        product.id,      // number, will be normalized to string inside method
                         product.name,
                         product.price,
                         product.stock,
@@ -117,7 +115,7 @@ class InvoiceFormManager {
                 if (searchInput) {
                     searchInput.value = '';
                     searchInput.focus();
-                    const results = document.getElementById('inventoryResults');
+                    const results = document.getElementById('modalInventoryResults'); // FIX: use correct ID
                     if (results) results.style.display = 'none';
                 }
             });
@@ -130,7 +128,8 @@ class InvoiceFormManager {
 
         dropdown.innerHTML = '<option value="">Select product...</option>';
         this.inventoryData.forEach(item => {
-            if (this.usedProductIds.has(item.id)) return;
+            // FIX: convert item.id to string for Set check
+            if (this.usedProductIds.has(String(item.id))) return;
             const option = document.createElement('option');
             option.value = item.id;
             let label = item.name;
@@ -147,7 +146,9 @@ class InvoiceFormManager {
     }
 
     searchInventory(searchTerm) {
-        const resultsDiv = document.getElementById('inventoryResults');
+        // FIX: target correct results container based on which search input triggered
+        const isModal = document.activeElement?.id === 'modalSearch';
+        const resultsDiv = isModal ? document.getElementById('modalInventoryResults') : document.getElementById('inventoryResults');
         if (!resultsDiv) return;
 
         if (!searchTerm.trim() || !this.currentLocationId) {
@@ -162,10 +163,10 @@ class InvoiceFormManager {
         const filteredItems = this.inventoryData.filter(item =>
             (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
              (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-            !this.usedProductIds.has(item.id)
+            !this.usedProductIds.has(String(item.id))   // FIX: string conversion
         );
 
-        this.displaySearchResults(filteredItems);
+        this.displaySearchResults(filteredItems, resultsDiv);
     }
 
     showAllInventory() {
@@ -173,12 +174,12 @@ class InvoiceFormManager {
             this.showToast('Please select a location first', 'warning');
             return;
         }
-        const availableItems = this.inventoryData.filter(item => !this.usedProductIds.has(item.id));
-        this.displaySearchResults(availableItems);
+        const availableItems = this.inventoryData.filter(item => !this.usedProductIds.has(String(item.id))); // FIX: string conversion
+        const resultsDiv = document.getElementById('inventoryResults');
+        if (resultsDiv) this.displaySearchResults(availableItems, resultsDiv);
     }
 
-    displaySearchResults(items) {
-        const resultsDiv = document.getElementById('inventoryResults');
+    displaySearchResults(items, resultsDiv) {
         if (!resultsDiv) return;
 
         if (items.length === 0) {
@@ -230,7 +231,9 @@ class InvoiceFormManager {
     }
 
     addInventoryItem(productId, productName, productPrice, productStock, productSku = '', unitType = 'piece') {
-        if (this.usedProductIds.has(productId)) {
+        // FIX: normalize productId to string for consistent Set operations
+        const normalizedId = String(productId);
+        if (this.usedProductIds.has(normalizedId)) {
             this.showToast('This item is already in the invoice', 'warning');
             return;
         }
@@ -238,7 +241,7 @@ class InvoiceFormManager {
         const itemsContainer = document.getElementById('itemsContainer');
         if (!itemsContainer) return;
 
-        this.usedProductIds.add(productId);
+        this.usedProductIds.add(normalizedId);
 
         const qtyAttributes = this.getQuantityAttributes(unitType);
         const initialQty = (unitType === 'piece') ? '1' : '1.00';
@@ -253,7 +256,7 @@ class InvoiceFormManager {
                 <small class="text-muted d-block">
                     Unit: ${this.getUnitLabel(unitType)} • Stock: ${productStock} ${this.getUnitLabel(unitType)}
                 </small>
-                <input type="hidden" name="item_id[]" value="${productId}">
+                <input type="hidden" name="item_id[]" value="${normalizedId}">
                 <input type="hidden" name="item_unit_type[]" value="${unitType}">
             </div>
             <div class="col-md-2">
@@ -284,8 +287,11 @@ class InvoiceFormManager {
         this.updateInventoryDropdown();
         this.updateGrandTotal();
 
+        // Hide results containers
         const resultsDiv = document.getElementById('inventoryResults');
         if (resultsDiv) resultsDiv.style.display = 'none';
+        const modalResultsDiv = document.getElementById('modalInventoryResults');
+        if (modalResultsDiv) modalResultsDiv.style.display = 'none';
         const searchInput = document.getElementById('modalSearch') || document.getElementById('inventorySearch');
         if (searchInput) searchInput.value = '';
     }
@@ -362,7 +368,8 @@ class InvoiceFormManager {
 
         const productIdInput = row.querySelector('input[name="item_id[]"]');
         if (productIdInput) {
-            this.usedProductIds.delete(productIdInput.value);
+            // FIX: delete using string to match stored format
+            this.usedProductIds.delete(String(productIdInput.value));
         }
 
         row.remove();
@@ -377,7 +384,7 @@ class InvoiceFormManager {
         if (!dropdown || !dropdown.value) return;
         const opt = dropdown.options[dropdown.selectedIndex];
         this.addInventoryItem(
-            opt.value,
+            opt.value,           // string, will be normalized inside method
             opt.dataset.name,
             opt.dataset.price,
             opt.dataset.stock,
