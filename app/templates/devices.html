@@ -4,9 +4,10 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>📱 Active Devices</h2>
-        <a href="{{ url_for('settings.revoke_all_devices') }}" class="btn btn-danger" id="revokeAllBtn">
-            🚫 Logout All Others
-        </a>
+        <form method="POST" action="{{ url_for('settings.revoke_all_devices') }}" style="display:inline;" id="revokeAllForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger" id="revokeAllBtn">🚫 Logout All Others</button>
+        </form>
     </div>
 
     <div class="row">
@@ -31,9 +32,11 @@
                             <p class="mb-0 text-muted"><small>Logged in: {{ session.created_at }}</small></p>
                         </div>
                         {% if session.token != current_token %}
-                        <a href="{{ url_for('settings.revoke_device', token=session.token) }}" class="btn btn-sm btn-danger logout-device-btn" data-token="{{ session.token }}">
-                            Logout
-                        </a>
+                        <form method="POST" action="{{ url_for('settings.revoke_device', token=session.token) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-danger logout-device-btn"
+                                    data-token="{{ session.token }}">Logout</button>
+                        </form>
                         {% endif %}
                     </div>
                 </div>
@@ -44,22 +47,17 @@
 </div>
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle Revoke All button
-    const revokeAllBtn = document.getElementById('revokeAllBtn');
-    if (revokeAllBtn) {
-        revokeAllBtn.addEventListener('click', function(e) {
-            if (!confirm('Logout all other devices?')) {
-                e.preventDefault();
-            }
+    // Handle Revoke All form
+    const revokeAllForm = document.getElementById('revokeAllForm');
+    if (revokeAllForm) {
+        revokeAllForm.addEventListener('submit', function(e) {
+            if (!confirm('Logout all other devices?')) e.preventDefault();
         });
     }
-
-    // Handle individual logout buttons
+    // Handle individual logout forms
     document.querySelectorAll('.logout-device-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            if (!confirm('Logout this device?')) {
-                e.preventDefault();
-            }
+        btn.closest('form').addEventListener('submit', function(e) {
+            if (!confirm('Logout this device?')) e.preventDefault();
         });
     });
 });

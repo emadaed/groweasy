@@ -12,7 +12,7 @@
                 </div>
                 <div class="card-body text-center">
                     <div class="mb-4">
-                        <i class="fas fa-envelope fa-4x text-success mb-3"></i>
+                        <i class="bi bi-envelope-check-fill text-success" style="font-size:3.5rem;"></i>
                         <h5>Password Reset Instructions Sent</h5>
                     </div>
 
@@ -21,13 +21,7 @@
                         <strong>{{ email }}</strong>
                     </p>
 
-                    <div class="alert alert-info">
-                        <small>
-                            <strong>Development Mode:</strong><br>
-                            In production, you would receive an email with a secure reset link.
-                            For now, please contact support or use your current password.
-                        </small>
-                    </div>
+<!-- dev-mode note removed — email reset is now live -->
 
                     <div class="mt-4">
                         <a href="{{ url_for('auth.login') }}" class="btn btn-success">Back to Login</a>

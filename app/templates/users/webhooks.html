@@ -27,7 +27,7 @@
                             <tr>
                                 <td>{{ hook.url }}</td>
                                 <td>{{ hook.events|join(', ') }}</td>
-                                <td>{{ hook.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ hook.created_at.strftime('%Y-%m-%d %H:%M') if hook.created_at else '—' }}</td>
                                 <td>
                                     <form action="{{ url_for('users.delete_webhook_route', webhook_id=hook.id) }}" method="POST" style="display:inline;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

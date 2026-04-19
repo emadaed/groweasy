@@ -27,11 +27,11 @@
                             {% for key in keys %}
                             <tr>
                                 <td>{{ key.name }}</td>
-                                <td>{{ key.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ key.created_at.strftime('%Y-%m-%d %H:%M') if key.created_at else '—' }}</td>
                                 <td>{{ key.last_used_at.strftime('%Y-%m-%d %H:%M') if key.last_used_at else 'Never' }}</td>
                                 <td>
                                     {% if key.expires_at %}
-                                        {{ key.expires_at.strftime('%Y-%m-%d') }}
+                                        {{ key.expires_at.strftime('%Y-%m-%d') if key.expires_at else '—' }}
                                     {% else %}
                                         Never
                                     {% endif %}
@@ -39,7 +39,8 @@
                                 <td>
                                     <form action="{{ url_for('users.revoke_api_key', key_id=key.id) }}" method="POST" style="display:inline;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Revoke this API key? It will stop working immediately.')">Revoke</button>
+                                        <button type="submit" class="btn btn-sm btn-danger"
+                                                onclick="return confirm('Revoke this API key? It will stop working immediately.')">Revoke</button>
                                     </form>
                                 </td>
                             </tr>
@@ -69,7 +70,7 @@
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
                         <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i> The key will be shown only once after creation. Make sure to copy it.
+                            <i class="bi bi-exclamation-triangle-fill"></i> The key will be shown only once after creation. Make sure to copy it.
                         </div>
                     </div>
                     <div class="modal-footer">
