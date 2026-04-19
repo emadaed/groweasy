@@ -75,7 +75,7 @@
                             <td>{{ movement.quantity }}</td>
                             <td>{{ movement.reference_id or '—' }}</td>
                             <td>{{ movement.notes or '—' }}</td>
-                            <td>{{ movement.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ movement.created_at.strftime('%Y-%m-%d %H:%M') if movement.created_at else '—' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

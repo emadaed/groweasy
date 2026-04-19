@@ -244,48 +244,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     // FIX: Use regular data access, not .get('get', '')
                     const items = data.items || [];
 
+                    // FIX: escape all API data before inserting into innerHTML
+                    function esc(s) {
+                        if (s === null || s === undefined) return '';
+                        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                    }
+                    const statusClass = data.status === 'completed' || data.status === 'Received' ? 'success' : data.status === 'pending' ? 'warning' : 'info';
+                    const itemRows = items.map(item =>
+                        `<tr><td>${esc(item.name)}</td><td>${esc(item.qty)}</td><td>${esc(item.price)}</td><td>${esc(item.total)}</td></tr>`
+                    ).join('');
                     document.getElementById('poDetailsContent').innerHTML = `
                         <div class="row">
                             <div class="col-md-6">
                                 <h6>Supplier Information</h6>
-                                <p><strong>Name:</strong> ${data.supplier_name || ''}</p>
-                                <p><strong>Contact:</strong> ${data.supplier_phone || 'N/A'}</p>
-                                <p><strong>Email:</strong> ${data.supplier_email || 'N/A'}</p>
+                                <p><strong>Name:</strong> ${esc(data.supplier_name)}</p>
+                                <p><strong>Contact:</strong> ${esc(data.supplier_phone) || 'N/A'}</p>
+                                <p><strong>Email:</strong> ${esc(data.supplier_email) || 'N/A'}</p>
                             </div>
                             <div class="col-md-6">
                                 <h6>Order Details</h6>
-                                <p><strong>PO Number:</strong> ${data.po_number || ''}</p>
-                                <p><strong>Date:</strong> ${data.order_date || ''}</p>
-                                <p><strong>Status:</strong> <span class="badge bg-${data.status === 'completed' ? 'success' : data.status === 'pending' ? 'warning' : 'info'}">${data.status || ''}</span></p>
+                                <p><strong>PO Number:</strong> ${esc(data.po_number)}</p>
+                                <p><strong>Date:</strong> ${esc(data.po_date || data.order_date)}</p>
+                                <p><strong>Status:</strong> <span class="badge bg-${statusClass}">${esc(data.status)}</span></p>
                             </div>
                         </div>
                         <hr>
-                        <h6>Items</h6>
+                        <h6>Items (${items.length})</h6>
                         <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${items.map(item => `
-                                    <tr>
-                                        <td>${item.name || ''}</td>
-                                        <td>${item.qty || 0}</td>
-                                        <td>${item.price || 0}</td>
-                                        <td>${item.total || 0}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="3" class="text-end"><strong>Grand Total:</strong></td>
-                                    <td><strong>${data.grand_total || 0}</strong></td>
-                                </tr>
-                            </tfoot>
+                            <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                            <tbody>${itemRows}</tbody>
+                            <tfoot><tr><td colspan="3" class="text-end"><strong>Grand Total:</strong></td><td><strong>${esc(data.grand_total)}</strong></td></tr></tfoot>
                         </table>
                     `;
 
@@ -333,9 +321,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const poNumber = this.dataset.poNumber;
             const reason = prompt('Please provide a reason for cancellation:');
             if (reason) {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
                 fetch(`/api/purchase_order/${poNumber}/cancel`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
                     body: JSON.stringify({ reason: reason })
                 })
                 .then(response => response.json())

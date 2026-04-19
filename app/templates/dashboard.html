@@ -137,13 +137,12 @@
                 <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
                     {% for alert in expiry_alerts %}
                     <small class="d-block mb-1">
-                        <strong>{{ alert.name }}</strong> 
+                        <strong>{{ alert.name }}</strong>
                         <span class="text-muted">(SKU: {{ alert.sku }})</span>:
-                        Expires in <strong>{{ alert.days_left }} days</strong> 
-                        ({{ alert.expiry_date }}) – Stock: {{ alert.stock }} 
-                        {{ 'kg' if alert.unit_type == 'weight' else 'L' if alert.unit_type == 'volume' else 'pcs' }}
+                        Expires <strong>{{ alert.expiry_date }}</strong>
                     </small>
                     {% endfor %}
+                    {# NOTE: days_left, stock, unit_type removed — add them to expiry_list in main.py if needed #}
                 </div>
             </div>
         </div>
@@ -164,7 +163,7 @@
                         <div class="col-md-4 text-center">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <i class="fas fa-building fa-3x text-primary mb-3"></i>
+                                    <i class="bi bi-building bi-3x text-primary mb-3" style="font-size:3rem;"></i>
                                     <h5>1. Company Settings</h5>
                                     <p>Add your logo, tax details, and business info.</p>
                                     <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-primary">Go to Settings</a>
@@ -174,7 +173,7 @@
                         <div class="col-md-4 text-center">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <i class="fas fa-boxes fa-3x text-success mb-3"></i>
+                                    <i class="bi bi-boxes text-success mb-3" style="font-size:3rem;"></i>
                                     <h5>2. Add Your First Product</h5>
                                     <p>Create an inventory item to start selling.</p>
                                     <a href="{{ url_for('inventory.inventory') }}" class="btn btn-outline-success">Add Product</a>
@@ -184,7 +183,7 @@
                         <div class="col-md-4 text-center">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <i class="fas fa-file-invoice-dollar fa-3x text-warning mb-3"></i>
+                                    <i class="bi bi-file-earmark-text text-warning mb-3" style="font-size:3rem;"></i>
                                     <h5>3. Create Your First Invoice</h5>
                                     <p>Generate a professional invoice for a client.</p>
                                     <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-outline-warning">Create Invoice</a>
@@ -193,7 +192,7 @@
                         </div>
                     </div>
                     <div class="alert alert-info mt-4 mb-0">
-                        <i class="fas fa-lightbulb"></i> <strong>Pro tip:</strong> Once you add a product or create an invoice, this wizard won't appear again.
+                        <i class="bi bi-lightbulb-fill"></i> <strong>Pro tip:</strong> Once you add a product or create an invoice, this wizard won't appear again.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -210,7 +209,7 @@
             <div class="card border-0 shadow-sm bg-success bg-opacity-10">
                 <div class="card-body">
                     <h6 class="text-success">💡 AI Growth Tip</h6>
-                    <p class="mb-0">{{ ai_tip | safe }}</p>
+                    <p class="mb-0">{{ ai_tip }}</p>  {# FIX: XSS filter removed — AI content is now escaped by Jinja2 #}
                 </div>
             </div>
         </div>

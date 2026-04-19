@@ -156,17 +156,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = cb.dataset.name;
             const price = cb.dataset.price;
 
+            // FIX: use textContent for name to prevent XSS via product names containing HTML
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>
-                    <input type="hidden" name="item_id[]" value="${id}">
-                    ${name}
+                    <input type="hidden" name="item_id[]" value="${parseInt(id)}">
+                    <span class="item-name-cell"></span>
                 </td>
                 <td><input type="number" name="item_qty[]" value="1" min="1" class="form-control"></td>
-                <td><input type="number" name="item_price[]" value="${price}" step="0.01" class="form-control"></td>
-                <td class="total">${parseFloat(price).toFixed(2)}</td>
+                <td><input type="number" name="item_price[]" value="${parseFloat(price) || 0}" step="0.01" class="form-control"></td>
+                <td class="total">${(parseFloat(price) || 0).toFixed(2)}</td>
                 <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
             `;
+            row.querySelector('.item-name-cell').textContent = name;
             tbody.appendChild(row);
             cb.checked = false; // Uncheck for next time
         });
@@ -193,4 +195,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

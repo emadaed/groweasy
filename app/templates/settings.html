@@ -107,6 +107,7 @@
                         <div class="card-body">
                             <form method="POST">
                                 <input type="hidden" name="change_password" value="1">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                                 <div class="mb-3">
                                     <label class="form-label">Current Password</label>
@@ -141,16 +142,10 @@
                             <div class="card-body">
                                 <a href="{{ url_for('settings.devices') }}" class="btn btn-primary">Manage Devices</a>
                                 <p class="small text-muted mt-2">View and revoke access from other devices</p>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('users.api_keys') }}">
-                                        <i class="fas fa-key"></i> API Keys
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('users.list_webhooks') }}">
-                                        <i class="fas fa-plug"></i> Webhooks
-                                    </a>
-                                </li>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    <li><a href="{{ url_for('users.api_keys') }}"><i class="bi bi-key-fill"></i> API Keys</a></li>
+                                    <li><a href="{{ url_for('users.list_webhooks') }}"><i class="bi bi-plug-fill"></i> Webhooks</a></li>
+                                </ul>
                             </div>
                         </div>
                     </div>
