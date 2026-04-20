@@ -1,193 +1,477 @@
 {% extends "base.html" %}
-
-{% block title %}Inventory Reports{% endblock %}
+{% block title %}Inventory Analytics{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <h2>📊 Inventory Analytics & Reports</h2>
+<style nonce="{{ nonce }}">
+/* ── Page Shell ──────────────────────────────────────────────────── */
+.analytics-page { background: #f0f4f8; min-height: 100vh; padding: 2rem 1.5rem; }
+.page-hero {
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    border-radius: 18px;
+    padding: 2rem 2.5rem;
+    margin-bottom: 2rem;
+    color: #fff;
+}
+.page-hero h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; margin: 0; }
+.page-hero p { opacity: 0.7; margin: 0.3rem 0 0; font-size: 0.95rem; }
+.hero-badge {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.8);
+}
 
-    <!-- BCG Matrix -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h4>📈 BCG Matrix Analysis</h4>
+/* ── Section Title ───────────────────────────────────────────────── */
+.section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+/* ── BCG Quadrant Grid ───────────────────────────────────────────── */
+.bcg-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+}
+.bcg-quadrant {
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.bcg-quadrant::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    opacity: 0.08;
+    background: currentColor;
+}
+.bcg-stars    { background: linear-gradient(135deg, #0f766e, #14b8a6); color: #fff; }
+.bcg-cows     { background: linear-gradient(135deg, #1d4ed8, #3b82f6); color: #fff; }
+.bcg-question { background: linear-gradient(135deg, #b45309, #f59e0b); color: #fff; }
+.bcg-dogs     { background: linear-gradient(135deg, #9f1239, #f43f5e); color: #fff; }
+
+.bcg-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.8;
+    margin-bottom: 0.8rem;
+}
+.bcg-quadrant h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+    color: #fff;
+}
+.bcg-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    backdrop-filter: blur(4px);
+}
+.bcg-item-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.bcg-pills { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.bcg-pill {
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.bcg-empty {
+    opacity: 0.5;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1rem 0;
+}
+.bcg-count {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.2rem;
+}
+.bcg-axis-label {
+    font-size: 0.65rem;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ── Turnover Table ──────────────────────────────────────────────── */
+.analytics-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+.analytics-card-header {
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.analytics-card-header h5 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.turnover-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 2fr 1fr;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid #f8fafc;
+    transition: background 0.15s;
+}
+.turnover-row:hover { background: #f8fafc; }
+.turnover-row.header {
+    background: #f8fafc;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+.product-cell { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+.product-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 0.1rem; }
+.number-cell { font-variant-numeric: tabular-nums; font-size: 0.9rem; color: #475569; }
+.velocity-bar { display: flex; align-items: center; gap: 0.6rem; }
+.bar-track {
+    flex: 1;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 99px;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.8s cubic-bezier(.4,0,.2,1);
+}
+.bar-fast   { background: linear-gradient(90deg, #059669, #34d399); }
+.bar-mod    { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.bar-slow   { background: linear-gradient(90deg, #dc2626, #f87171); }
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 20px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.chip-fast   { background: #dcfce7; color: #166534; }
+.chip-mod    { background: #fef3c7; color: #92400e; }
+.chip-slow   { background: #fee2e2; color: #991b1b; }
+
+/* ── Profitability Table ─────────────────────────────────────────── */
+.profit-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid #f8fafc;
+}
+.profit-row:hover { background: #f8fafc; }
+.profit-row.header {
+    background: #f8fafc;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+}
+.profit-bar-track {
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 99px;
+    overflow: hidden;
+    position: relative;
+}
+.profit-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+}
+.profit-amount { font-weight: 700; color: #1e293b; font-size: 0.9rem; }
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .bcg-grid { grid-template-columns: 1fr; }
+    .turnover-row, .profit-row { grid-template-columns: 1fr 1fr; }
+    .turnover-row > :nth-child(n+4), .profit-row > :nth-child(n+3) { display: none; }
+}
+</style>
+
+<div class="analytics-page">
+
+    <!-- Hero Header -->
+    <div class="page-hero d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h1>📊 Inventory Analytics</h1>
+            <p>BCG portfolio analysis, stock velocity, and profitability intelligence</p>
         </div>
-
-        <!-- Stars -->
-        <div class="col-md-6 mb-3">
-            <div class="card border-success">
-                <div class="card-header bg-success text-white">
-                    <h5>⭐ Stars (High Sales, High Margin)</h5>
-                </div>
-                <div class="card-body">
-                    {% if bcg_matrix.stars %}
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Units Sold</th>
-                                    <th>Margin %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in bcg_matrix.stars[:5] %}
-                                <tr>
-                                    <td>{{ item.name }}</td>
-                                    <td>{{ item.units_sold }}</td>
-                                    <td>{{ "%.1f"|format(item.profit_margin) }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p class="text-muted">No star products yet</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Cash Cows -->
-        <div class="col-md-6 mb-3">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h5>💰 Cash Cows (High Volume)</h5>
-                </div>
-                <div class="card-body">
-                    {% if bcg_matrix.cash_cows %}
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Units Sold</th>
-                                    <th>Margin %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in bcg_matrix.cash_cows[:5] %}
-                                <tr>
-                                    <td>{{ item.name }}</td>
-                                    <td>{{ item.units_sold }}</td>
-                                    <td>{{ "%.1f"|format(item.profit_margin) }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p class="text-muted">No cash cow products yet</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Question Marks -->
-        <div class="col-md-6 mb-3">
-            <div class="card border-warning">
-                <div class="card-header bg-warning">
-                    <h5>❓ Question Marks (Potential)</h5>
-                </div>
-                <div class="card-body">
-                    {% if bcg_matrix.question_marks %}
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Units Sold</th>
-                                    <th>Margin %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in bcg_matrix.question_marks[:5] %}
-                                <tr>
-                                    <td>{{ item.name }}</td>
-                                    <td>{{ item.units_sold }}</td>
-                                    <td>{{ "%.1f"|format(item.profit_margin) }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p class="text-muted">No question mark products</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Dogs -->
-        <div class="col-md-6 mb-3">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h5>🐕 Dogs (Low Performers)</h5>
-                </div>
-                <div class="card-body">
-                    {% if bcg_matrix.dogs %}
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Units Sold</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in bcg_matrix.dogs[:5] %}
-                                <tr>
-                                    <td>{{ item.name }}</td>
-                                    <td>{{ item.units_sold }}</td>
-                                    <td><span class="badge bg-danger">Consider removing</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p class="text-muted">No underperforming products</p>
-                    {% endif %}
-                </div>
-            </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <span class="hero-badge">Last 90 days · BCG Matrix</span>
+            <span class="hero-badge">Last 30 days · Velocity</span>
+            <a href="{{ url_for('inventory.inventory') }}" class="btn btn-sm btn-light">
+                ← Back to Inventory
+            </a>
         </div>
     </div>
 
-    <!-- Stock Turnover -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>🔄 Stock Turnover (Last 30 Days)</h5>
+    <!-- ── BCG MATRIX ──────────────────────────────────────────── -->
+    <div class="section-title">
+        <span>🎯</span> BCG Portfolio Matrix
+    </div>
+
+    {% set star_count = bcg_matrix.stars|length %}
+    {% set cow_count = bcg_matrix.cash_cows|length %}
+    {% set qm_count = bcg_matrix.question_marks|length %}
+    {% set dog_count = bcg_matrix.dogs|length %}
+
+    <div class="bcg-grid">
+
+        <!-- STARS -->
+        <div class="bcg-quadrant bcg-stars">
+            <div class="bcg-label">⭐ Stars · High Sales · High Margin</div>
+            <div class="bcg-count">{{ star_count }}</div>
+            <div class="bcg-axis-label mb-3">Your best performers — protect and grow these</div>
+            {% if bcg_matrix.stars %}
+                {% for item in bcg_matrix.stars[:4] %}
+                <div class="bcg-item">
+                    <span class="bcg-item-name">{{ item.name }}</span>
+                    <div class="bcg-pills">
+                        <span class="bcg-pill">{{ item.units_sold|int }} sold</span>
+                        <span class="bcg-pill">{{ "%.0f"|format(item.profit_margin) }}%</span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    {% if turnover %}
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Current Stock</th>
-                                    <th>Units Sold</th>
-                                    <th>Turnover Ratio</th>
-                                    <th>Days to Sell</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in turnover %}
-                                <tr>
-                                    <td>{{ item.name }}</td>
-                                    <td>{{ item.current_stock }}</td>
-                                    <td>{{ item.units_sold }}</td>
-                                    <td>{{ item.turnover_ratio }}</td>
-                                    <td>{{ item.days_to_sell }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if item.status == 'Fast' else 'warning' if item.status == 'Moderate' else 'danger' }}">
-                                            {{ item.status }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p class="text-muted">No stock movement data available</p>
-                    {% endif %}
+                {% endfor %}
+                {% if star_count > 4 %}<div class="bcg-axis-label mt-2 text-center">+{{ star_count - 4 }} more</div>{% endif %}
+            {% else %}
+                <div class="bcg-empty">No products qualify yet.<br>Sell more of your high-margin items.</div>
+            {% endif %}
+        </div>
+
+        <!-- CASH COWS -->
+        <div class="bcg-quadrant bcg-cows">
+            <div class="bcg-label">🐄 Cash Cows · High Volume · Lower Margin</div>
+            <div class="bcg-count">{{ cow_count }}</div>
+            <div class="bcg-axis-label mb-3">Reliable revenue engines — keep them stocked</div>
+            {% if bcg_matrix.cash_cows %}
+                {% for item in bcg_matrix.cash_cows[:4] %}
+                <div class="bcg-item">
+                    <span class="bcg-item-name">{{ item.name }}</span>
+                    <div class="bcg-pills">
+                        <span class="bcg-pill">{{ item.units_sold|int }} sold</span>
+                        <span class="bcg-pill">{{ "%.0f"|format(item.profit_margin) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if cow_count > 4 %}<div class="bcg-axis-label mt-2 text-center">+{{ cow_count - 4 }} more</div>{% endif %}
+            {% else %}
+                <div class="bcg-empty">None yet. High-volume items with thin margins appear here.</div>
+            {% endif %}
+        </div>
+
+        <!-- QUESTION MARKS -->
+        <div class="bcg-quadrant bcg-question">
+            <div class="bcg-label">❓ Question Marks · High Margin · Low Volume</div>
+            <div class="bcg-count">{{ qm_count }}</div>
+            <div class="bcg-axis-label mb-3">High potential — invest in marketing these</div>
+            {% if bcg_matrix.question_marks %}
+                {% for item in bcg_matrix.question_marks[:4] %}
+                <div class="bcg-item">
+                    <span class="bcg-item-name">{{ item.name }}</span>
+                    <div class="bcg-pills">
+                        <span class="bcg-pill">{{ item.units_sold|int }} sold</span>
+                        <span class="bcg-pill">{{ "%.0f"|format(item.profit_margin) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if qm_count > 4 %}<div class="bcg-axis-label mt-2 text-center">+{{ qm_count - 4 }} more</div>{% endif %}
+            {% else %}
+                <div class="bcg-empty">None yet. Niche high-margin items appear here.</div>
+            {% endif %}
+        </div>
+
+        <!-- DOGS -->
+        <div class="bcg-quadrant bcg-dogs">
+            <div class="bcg-label">🐕 Dogs · Low Volume · Low Margin</div>
+            <div class="bcg-count">{{ dog_count }}</div>
+            <div class="bcg-axis-label mb-3">Review pricing or consider discontinuing</div>
+            {% if bcg_matrix.dogs %}
+                {% for item in bcg_matrix.dogs[:4] %}
+                <div class="bcg-item">
+                    <span class="bcg-item-name">{{ item.name }}</span>
+                    <div class="bcg-pills">
+                        <span class="bcg-pill">{{ item.units_sold|int }} sold</span>
+                        <span class="bcg-pill">{{ "%.0f"|format(item.profit_margin) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if dog_count > 4 %}<div class="bcg-axis-label mt-2 text-center">+{{ dog_count - 4 }} more</div>{% endif %}
+            {% else %}
+                <div class="bcg-empty">Great — no underperforming products.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── STOCK VELOCITY ──────────────────────────────────────── -->
+    <div class="section-title">
+        <span>🔄</span> Stock Velocity (Last 30 Days)
+    </div>
+
+    {% if turnover %}
+    {% set max_sold = turnover|map(attribute='units_sold')|max %}
+    <div class="analytics-card">
+        <div class="analytics-card-header">
+            <h5>How fast is each product moving?</h5>
+            <div class="d-flex gap-2">
+                <span class="status-chip chip-fast">● Fast mover</span>
+                <span class="status-chip chip-mod">● Moderate</span>
+                <span class="status-chip chip-slow">● Slow</span>
+            </div>
+        </div>
+        <div class="turnover-row header">
+            <div>Product</div>
+            <div>In Stock</div>
+            <div>Sold (30d)</div>
+            <div>Velocity</div>
+            <div>Status</div>
+        </div>
+        {% for item in turnover %}
+        {% set bar_pct = (item.units_sold / max_sold * 100)|int if max_sold > 0 else 0 %}
+        {% set bar_class = 'bar-fast' if item.status == 'Fast' else ('bar-mod' if item.status == 'Moderate' else 'bar-slow') %}
+        {% set chip_class = 'chip-fast' if item.status == 'Fast' else ('chip-mod' if item.status == 'Moderate' else 'chip-slow') %}
+        <div class="turnover-row">
+            <div>
+                <div class="product-cell">{{ item.name }}</div>
+                <div class="product-sub">{{ "%.1f"|format(item.turnover_ratio) }}x ratio · {{ item.days_to_sell|int }}d to sell out</div>
+            </div>
+            <div class="number-cell">{{ item.current_stock|int }}</div>
+            <div class="number-cell">{{ item.units_sold|int }}</div>
+            <div class="velocity-bar">
+                <div class="bar-track">
+                    <div class="bar-fill {{ bar_class }}" style="width: {{ bar_pct }}%"></div>
+                </div>
+                <span style="font-size:0.75rem; color:#64748b; white-space:nowrap;">{{ bar_pct }}%</span>
+            </div>
+            <div>
+                <span class="status-chip {{ chip_class }}">{{ item.status }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="analytics-card">
+        <div class="analytics-card-header"><h5>Stock Velocity</h5></div>
+        <div class="p-4 text-center text-muted">No sales movement data yet. Create some invoices to see velocity.</div>
+    </div>
+    {% endif %}
+
+    <!-- ── PROFITABILITY ───────────────────────────────────────── -->
+    {% if profitability %}
+    <div class="section-title">
+        <span>💰</span> Top Profit Contributors
+    </div>
+    {% set max_profit = profitability|map(attribute='total_profit')|max %}
+    <div class="analytics-card">
+        <div class="analytics-card-header">
+            <h5>Which products make you the most money?</h5>
+        </div>
+        <div class="profit-row header">
+            <div>Product</div>
+            <div>Units Sold</div>
+            <div>Profit / Unit</div>
+            <div>Total Profit Contribution</div>
+        </div>
+        {% for item in profitability %}
+        {% set bar_pct = (item.total_profit / max_profit * 100)|int if max_profit > 0 else 0 %}
+        <div class="profit-row">
+            <div class="product-cell">{{ item.name }}</div>
+            <div class="number-cell">{{ item.units_sold|int }}</div>
+            <div class="number-cell">{{ currency_symbol }}{{ "%.2f"|format(item.profit_per_unit) }}</div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="profit-bar-track flex-grow-1">
+                        <div class="profit-bar-fill" style="width: {{ bar_pct }}%"></div>
+                    </div>
+                    <span class="profit-amount">{{ currency_symbol }}{{ "%.0f"|format(item.total_profit) }}</span>
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
+    {% endif %}
+
+    <!-- ── SLOW MOVERS ─────────────────────────────────────────── -->
+    {% if slow_movers %}
+    <div class="section-title">
+        <span>🐌</span> Slow Movers (90+ Days No Sale)
+    </div>
+    <div class="analytics-card">
+        <div class="analytics-card-header">
+            <h5>Products at risk of becoming deadstock</h5>
+        </div>
+        <div class="profit-row header" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+            <div>Product</div>
+            <div>Stock</div>
+            <div>Last Sale</div>
+            <div>Days Inactive</div>
+        </div>
+        {% for item in slow_movers[:10] %}
+        <div class="profit-row" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+            <div class="product-cell">{{ item.name }}</div>
+            <div class="number-cell">{{ item.current_stock|int }}</div>
+            <div class="number-cell" style="font-size:0.82rem;">{{ item.last_sale_date }}</div>
+            <div>
+                <span class="status-chip {{ 'chip-slow' if item.days_inactive > 60 else 'chip-mod' }}">
+                    {{ item.days_inactive }}d
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
