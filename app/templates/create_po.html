@@ -1,203 +1,456 @@
 {% extends "base.html" %}
-
 {% block title %}Create Purchase Order{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h2 class="text-center mb-4">Create Purchase Order</h2>
+<style nonce="{{ nonce }}">
+.po-page { padding: 1.5rem; background: #f0f4f8; min-height: 100vh; }
+.po-hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
+    border-radius: 18px; padding: 1.8rem 2rem; color: #fff;
+    margin-bottom: 1.5rem;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+}
+.po-hero h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.po-hero p  { margin: 0.2rem 0 0; opacity: 0.65; font-size: 0.88rem; }
+
+.po-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
+    margin-bottom: 1.2rem;
+    overflow: hidden;
+}
+.po-card-header {
+    padding: 0.9rem 1.4rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 0.6rem;
+    font-weight: 700; font-size: 0.92rem; color: #1e293b;
+}
+.po-card-header .num {
+    background: #1d4ed8; color: #fff;
+    border-radius: 50%; width: 22px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 800;
+}
+.po-card-body { padding: 1.4rem; }
+.field-label { font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+
+/* Supplier card */
+.supplier-option {
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-bottom: 0.5rem;
+}
+.supplier-option:hover, .supplier-option.selected { border-color: #1d4ed8; background: #eff6ff; }
+.supplier-option .s-name { font-weight: 700; color: #1e293b; font-size: 0.9rem; }
+.supplier-option .s-meta { font-size: 0.75rem; color: #64748b; }
+
+/* Items table */
+.items-tbl { width: 100%; border-collapse: collapse; }
+.items-tbl th {
+    background: #1e3a5f; color: #fff;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    text-align: left;
+}
+.items-tbl td { padding: 0.7rem 0.8rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.items-tbl tr:last-child td { border-bottom: none; }
+.item-total-cell { font-weight: 700; color: #1d4ed8; font-size: 0.92rem; }
+
+/* Totals summary */
+.totals-box {
+    background: linear-gradient(135deg,#1e3a5f,#1d4ed8);
+    border-radius: 12px; color: #fff; padding: 1.4rem;
+}
+.totals-line { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.5rem; opacity: 0.85; }
+.totals-grand { display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 800; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.25); }
+
+.btn-po-submit {
+    background: linear-gradient(135deg,#059669,#10b981);
+    border: none; border-radius: 10px;
+    color: #fff; font-weight: 700; font-size: 1rem;
+    padding: 0.9rem 2.5rem;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+    transition: all 0.15s;
+}
+.btn-po-submit:hover { background: linear-gradient(135deg,#047857,#059669); transform: translateY(-1px); color:#fff; }
+</style>
+
+<div class="po-page">
+    <div class="po-hero">
+        <div>
+            <h2><i class="bi bi-cart-plus me-2"></i>Create Purchase Order</h2>
+            <p>Select supplier, add items, and confirm your order</p>
+        </div>
+        <a href="{{ url_for('purchases.purchase_orders') }}" class="btn btn-sm"
+           style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;">
+            ← All POs
+        </a>
+    </div>
 
     <form method="POST" action="{{ url_for('purchases.create_po_process') }}" id="poForm">
-        <div class="row">
-            <div class="col-md-6">
-                <h5>Supplier</h5>
-                <select name="supplier_id" id="supplier_select" class="form-select mb-2" required>
-                    <option value="">-- Select Registered Vendor --</option>
-                    {% for s in suppliers %}
-                    <option value="{{ s.id }}" 
-                            data-name="{{ s.name }}" 
-                            data-address="{{ s.address }}"
-                            data-email="{{ s.email }}"
-                            data-phone="{{ s.phone }}">
-                        {{ s.name }}
-                    </option>
-                    {% endfor %}
-                </select>                
-                <input type="hidden" name="supplier_name" id="hidden_supplier_name">
-                <input type="hidden" name="supplier_address" id="hidden_supplier_address">
-                <input type="hidden" name="supplier_email" id="hidden_supplier_email">
-                <input type="hidden" name="supplier_phone" id="hidden_supplier_phone">                                
-                
-            </div>            
-            <div class="col-md-6">
-                <h5>PO Details</h5>
-                <input type="date" class="form-control mb-3" name="po_date" value="{{ today }}" required>
-                <input type="date" class="form-control mb-3" name="delivery_date">
-                <select class="form-select mb-3" name="delivery_method">
-                    <option>Pickup</option>
-                    <option>Courier</option>
-                    <option>Supplier Delivery</option>
-                </select>
-                <input type="number" class="form-control mb-3" name="sales_tax" value="17" step="0.1">
-                <select class="form-select mb-3" name="shipping_terms">
-                    <option>FOB Destination</option>
-                    <option>FOB Origin</option>
-                    <option>CIF</option>
-                </select>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="supplier_name"    id="hidden_supplier_name">
+        <input type="hidden" name="supplier_address" id="hidden_supplier_address">
+        <input type="hidden" name="supplier_email"   id="hidden_supplier_email">
+        <input type="hidden" name="supplier_phone"   id="hidden_supplier_phone">
+
+        <div class="row g-3">
+            <!-- LEFT COLUMN -->
+            <div class="col-lg-8">
+
+                <!-- Step 1: Supplier -->
+                <div class="po-card">
+                    <div class="po-card-header">
+                        <span class="num">1</span> Supplier
+                    </div>
+                    <div class="po-card-body">
+                        <div class="field-label mb-2">Select Registered Vendor</div>
+                        <select name="supplier_id" id="supplier_select" class="form-select mb-3" required>
+                            <option value="">— Choose a supplier —</option>
+                            {% for s in suppliers %}
+                            <option value="{{ s.id }}"
+                                    data-name="{{ s.name|e }}"
+                                    data-address="{{ s.address|e }}"
+                                    data-email="{{ s.email|e }}"
+                                    data-phone="{{ s.phone|e }}">
+                                {{ s.name }}{% if s.phone %} · {{ s.phone }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+
+                        <!-- Supplier info preview -->
+                        <div id="supplierPreview" style="display:none;"
+                             class="p-3 rounded-3 border" style="background:#f8fafc;">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="field-label">Name</div>
+                                    <div id="prevName" class="fw-semibold text-dark"></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="field-label">Phone</div>
+                                    <div id="prevPhone" class="text-secondary"></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="field-label">Email</div>
+                                    <div id="prevEmail" class="text-secondary" style="font-size:0.83rem;"></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="field-label">Address</div>
+                                    <div id="prevAddress" class="text-secondary" style="font-size:0.83rem;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Items -->
+                <div class="po-card">
+                    <div class="po-card-header">
+                        <span class="num">2</span> Order Items
+                        <button type="button" class="btn btn-sm btn-primary ms-auto"
+                                data-bs-toggle="modal" data-bs-target="#inventoryModal">
+                            <i class="bi bi-plus-circle me-1"></i> Add from Inventory
+                        </button>
+                    </div>
+                    <div class="po-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="items-tbl" id="itemsTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40%;">Product</th>
+                                        <th>SKU</th>
+                                        <th style="width:100px;">Qty</th>
+                                        <th style="width:130px;">Unit Price</th>
+                                        <th style="width:100px;">Total</th>
+                                        <th style="width:40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsTbody">
+                                    <tr id="emptyRow">
+                                        <td colspan="6" class="text-center text-muted py-4 small">
+                                            <i class="bi bi-cart3 me-1"></i>No items yet — click "Add from Inventory"
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 d-flex justify-content-end">
+                            <div class="text-end">
+                                <div class="field-label">Subtotal</div>
+                                <div id="subtotalDisplay" class="fs-5 fw-bold text-dark">{{ currency_symbol }}0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-        </div>
-        
-        <hr>
 
-        <h5>Items</h5>
-        <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#inventoryModal">
-            Add from Inventory
-        </button>
+            <!-- RIGHT COLUMN -->
+            <div class="col-lg-4">
 
-        <table class="table" id="itemsTable">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                </tbody>
-        </table>
+                <!-- Step 3: PO Details -->
+                <div class="po-card">
+                    <div class="po-card-header">
+                        <span class="num">3</span> Order Details
+                    </div>
+                    <div class="po-card-body">
+                        <div class="mb-3">
+                            <div class="field-label">PO Date *</div>
+                            <input type="date" class="form-control form-control-sm" name="po_date" value="{{ today }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Expected Delivery</div>
+                            <input type="date" class="form-control form-control-sm" name="delivery_date">
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Delivery Method</div>
+                            <select class="form-select form-select-sm" name="delivery_method">
+                                <option>Pickup</option>
+                                <option>Courier</option>
+                                <option>Supplier Delivery</option>
+                            </select>
+                        </div>
+                        <!-- FIX: these fields were missing from the form but shown on PDF -->
+                        <div class="mb-3">
+                            <div class="field-label">Sales Tax (%)</div>
+                            <input type="number" class="form-control form-control-sm" name="sales_tax"
+                                   value="17" min="0" max="100" step="0.1">
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Shipping Terms</div>
+                            <select class="form-select form-select-sm" name="shipping_terms">
+                                <option>FOB Destination</option>
+                                <option>FOB Origin</option>
+                                <option>CIF</option>
+                                <option>DDP</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Notes</div>
+                            <textarea class="form-control form-control-sm" name="po_notes" rows="2"
+                                      placeholder="Special instructions…"></textarea>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="text-center">
-            <button type="submit" class="btn btn-success btn-lg">Create PO</button>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Totals -->
+                <div class="po-card">
+                    <div class="po-card-body">
+                        <div class="totals-box">
+                            <div class="totals-line"><span>Subtotal</span><span id="totSubtotal">{{ currency_symbol }}0.00</span></div>
+                            <div class="totals-line"><span>Tax (17%)</span><span id="totTax">{{ currency_symbol }}0.00</span></div>
+                            <div class="totals-grand"><span>Total</span><span id="totGrand">{{ currency_symbol }}0.00</span></div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-po-submit w-100">
+                                <i class="bi bi-check-circle me-2"></i>Create Purchase Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </form>
 </div>
 
+<!-- Inventory Selection Modal -->
 <div class="modal fade" id="inventoryModal">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5>Add from Inventory</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header" style="background:#1e3a5f;color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-box-seam me-2"></i>Add from Inventory</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Select</th>
-                            <th>Name</th>
-                             <th>SKU</th>    
-                            <th>Stock</th>
-                            <th>Cost Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in inventory_items %}
-                        <tr>
-                            <td><input type="checkbox" class="item-check" data-id="{{ item.id }}" data-name="{{ item.name }}" data-sku="{{ item.sku }}" data-price="{{ item.cost_price }}"></td>
-                            <td>{{ item.name }}</td>
-                            <td>{{ item.sku }}</td>   <!-- new -->
-                            <td>{{ item.current_stock }}</td>
-                            <td>{{ item.cost_price }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <input type="text" id="modalItemSearch" class="form-control form-control-sm mb-3"
+                       placeholder="Search products…">
+                <div class="table-responsive" style="max-height:380px;overflow-y:auto;">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th><input type="checkbox" id="selectAll" class="form-check-input"></th>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Stock</th>
+                                <th>Cost Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryModalBody">
+                            {% for item in inventory_items %}
+                            <tr class="inv-row">
+                                <td>
+                                    <input type="checkbox" class="form-check-input item-check"
+                                           data-id="{{ item.id }}"
+                                           data-name="{{ item.name|e }}"
+                                           data-sku="{{ item.sku|e }}"
+                                           data-price="{{ item.cost_price }}">
+                                </td>
+                                <td class="fw-semibold">{{ item.name }}</td>
+                                <td><code>{{ item.sku or '—' }}</code></td>
+                                <td>{{ item.current_stock }}</td>
+                                <td>{{ currency_symbol }}{{ "%.2f"|format(item.cost_price) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="addInventoryItems">Add Selected</button>
+                <span id="selectedCount" class="text-muted small me-auto">0 selected</span>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm fw-semibold" id="addInventoryItems">
+                    <i class="bi bi-plus-circle me-1"></i> Add Selected
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script nonce="{{ nonce }}">
-document.addEventListener('DOMContentLoaded', function() {
-    const tbody = document.querySelector('#itemsTable tbody');
-    const supplierSelect = document.getElementById('supplier_select');
-    const hiddenNameInput = document.getElementById('hidden_supplier_name');
-    const hiddenEmailInput = document.getElementById('hidden_supplier_email');
-    const hiddenPhoneInput = document.getElementById('hidden_supplier_phone');
-    const hiddenAddressInput = document.getElementById('hidden_supplier_address');
+document.addEventListener('DOMContentLoaded', function () {
+    const currency = '{{ currency_symbol }}';
+    const tbody    = document.getElementById('itemsTbody');
+    const taxInput = document.querySelector('[name="sales_tax"]');
 
-    // 1. SAFE MODAL HANDLING (Fixes the "Stuck" Issue)
-    function hideModal(modalId) {
-        const modalElement = document.getElementById(modalId);
-        if (modalElement) {
-            // Try to get existing instance, otherwise create one to close it
-            let modalInstance = bootstrap.Modal.getInstance(modalElement);
-            if (!modalInstance) {
-                modalInstance = new bootstrap.Modal(modalElement);
-            }
-            modalInstance.hide();
-            
-            // Cleanup: Manually remove backdrops if Bootstrap fails to
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(b => b.remove());
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }
-    }
+    /* ── Supplier select sync ─────────────────────────────── */
+    const supplierSel = document.getElementById('supplier_select');
+    const preview     = document.getElementById('supplierPreview');
+    supplierSel.addEventListener('change', function () {
+        const opt = this.options[this.selectedIndex];
+        if (!opt.value) { preview.style.display='none'; return; }
+        document.getElementById('hidden_supplier_name').value    = opt.dataset.name    || '';
+        document.getElementById('hidden_supplier_address').value = opt.dataset.address || '';
+        document.getElementById('hidden_supplier_email').value   = opt.dataset.email   || '';
+        document.getElementById('hidden_supplier_phone').value   = opt.dataset.phone   || '';
+        document.getElementById('prevName').textContent    = opt.dataset.name    || '—';
+        document.getElementById('prevPhone').textContent   = opt.dataset.phone   || '—';
+        document.getElementById('prevEmail').textContent   = opt.dataset.email   || '—';
+        document.getElementById('prevAddress').textContent = opt.dataset.address || '—';
+        preview.style.display = 'block';
+    });
 
-    // 2. CSP-COMPLIANT SUPPLIER SYNC
-    if (supplierSelect) {
-        supplierSelect.addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            if (selectedOption && selectedOption.value) {
-                document.getElementById('hidden_supplier_name').value = selectedOption.getAttribute('data-name') || "";
-                document.getElementById('hidden_supplier_email').value = selectedOption.getAttribute('data-email') || "";
-                document.getElementById('hidden_supplier_phone').value = selectedOption.getAttribute('data-phone') || "";
-                document.getElementById('hidden_supplier_address').value = selectedOption.getAttribute('data-address') || "";
-            }
+    /* ── Modal search filter ──────────────────────────────── */
+    document.getElementById('modalItemSearch').addEventListener('input', function () {
+        const term = this.value.toLowerCase();
+        document.querySelectorAll('#inventoryModalBody .inv-row').forEach(row => {
+            const name = row.querySelector('.fw-semibold').textContent.toLowerCase();
+            const sku  = row.querySelector('code').textContent.toLowerCase();
+            row.style.display = (name.includes(term) || sku.includes(term)) ? '' : 'none';
         });
-    }
-    // 3. INVENTORY ITEM ADDITION
-    document.getElementById('addInventoryItems').addEventListener('click', function() {
-        const checkedItems = document.querySelectorAll('.item-check:checked');
-        
-        checkedItems.forEach(cb => {
-            const id = cb.dataset.id;
-            const name = cb.dataset.name;
-            const price = cb.dataset.price;
+    });
 
-            // FIX: use textContent for name to prevent XSS via product names containing HTML
-            const row = document.createElement('tr');
+    /* ── Select all checkbox ──────────────────────────────── */
+    document.getElementById('selectAll').addEventListener('change', function () {
+        document.querySelectorAll('.item-check').forEach(cb => { cb.checked = this.checked; });
+        updateSelectedCount();
+    });
+    document.querySelectorAll('.item-check').forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+    function updateSelectedCount() {
+        const n = document.querySelectorAll('.item-check:checked').length;
+        document.getElementById('selectedCount').textContent = n + ' selected';
+    }
+
+    /* ── Add selected items to table ─────────────────────── */
+    document.getElementById('addInventoryItems').addEventListener('click', function () {
+        const checked = document.querySelectorAll('.item-check:checked');
+        const existing = new Set(
+            [...document.querySelectorAll('[name="item_id[]"]')].map(i => i.value)
+        );
+
+        checked.forEach(cb => {
+            if (existing.has(String(cb.dataset.id))) return; // skip if already added
+            const price = parseFloat(cb.dataset.price) || 0;
+            const row   = document.createElement('tr');
             row.innerHTML = `
                 <td>
-                    <input type="hidden" name="item_id[]" value="${parseInt(id)}">
-                    <span class="item-name-cell"></span>
+                    <span class="fw-semibold item-name-safe"></span>
+                    <input type="hidden" name="item_id[]" value="${cb.dataset.id}">
                 </td>
-                <td><input type="number" name="item_qty[]" value="1" min="1" class="form-control"></td>
-                <td><input type="number" name="item_price[]" value="${parseFloat(price) || 0}" step="0.01" class="form-control"></td>
-                <td class="total">${(parseFloat(price) || 0).toFixed(2)}</td>
-                <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
-            `;
-            row.querySelector('.item-name-cell').textContent = name;
+                <td><code class="item-sku-safe"></code></td>
+                <td>
+                    <input type="number" name="item_qty[]" value="1" min="1"
+                           class="form-control form-control-sm qty-input" style="width:75px;">
+                </td>
+                <td>
+                    <input type="number" name="item_price[]" value="${price.toFixed(2)}"
+                           step="0.01" min="0"
+                           class="form-control form-control-sm price-input" style="width:110px;">
+                </td>
+                <td class="item-total-cell total-cell">${currency}${price.toFixed(2)}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-row px-2">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            // Set name/sku via textContent to prevent XSS
+            row.querySelector('.item-name-safe').textContent = cb.dataset.name;
+            row.querySelector('.item-sku-safe').textContent  = cb.dataset.sku || '—';
             tbody.appendChild(row);
-            cb.checked = false; // Uncheck for next time
+            cb.checked = false;
         });
 
-        // Use the safe hide function
-        hideModal('inventoryModal');
+        // Hide empty state row
+        const emptyRow = document.getElementById('emptyRow');
+        if (emptyRow && tbody.querySelectorAll('tr:not(#emptyRow)').length > 0) {
+            emptyRow.style.display = 'none';
+        }
+
+        // Hide modal cleanly
+        const modalEl = document.getElementById('inventoryModal');
+        const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInst.hide();
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+
+        recalcTotals();
+        updateSelectedCount();
     });
 
-    // 4. DYNAMIC CALCULATION
-    tbody.addEventListener('input', function(e) {
-        if (e.target.name === 'item_qty[]' || e.target.name === 'item_price[]') {
-            const row = e.target.closest('tr');
-            const qty = parseFloat(row.querySelector('[name="item_qty[]"]').value) || 0;
-            const price = parseFloat(row.querySelector('[name="item_price[]"]').value) || 0;
-            row.querySelector('.total').textContent = (qty * price).toFixed(2);
+    /* ── Live recalculation ───────────────────────────────── */
+    tbody.addEventListener('input', function (e) {
+        if (e.target.matches('.qty-input,.price-input')) {
+            const row   = e.target.closest('tr');
+            const qty   = parseFloat(row.querySelector('.qty-input').value)   || 0;
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+            row.querySelector('.total-cell').textContent = currency + (qty * price).toFixed(2);
+            recalcTotals();
         }
     });
-
-    tbody.addEventListener('click', function(e) {
-        if (e.target.classList.contains('remove-row')) {
+    tbody.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-row')) {
             e.target.closest('tr').remove();
+            const remaining = tbody.querySelectorAll('tr:not(#emptyRow)').length;
+            const emptyRow = document.getElementById('emptyRow');
+            if (emptyRow && remaining === 0) emptyRow.style.display = '';
+            recalcTotals();
         }
     });
+    taxInput && taxInput.addEventListener('input', recalcTotals);
+
+    function recalcTotals() {
+        let sub = 0;
+        tbody.querySelectorAll('tr:not(#emptyRow)').forEach(row => {
+            const qty   = parseFloat(row.querySelector('.qty-input')?.value)   || 0;
+            const price = parseFloat(row.querySelector('.price-input')?.value) || 0;
+            sub += qty * price;
+        });
+        const taxRate = parseFloat(taxInput?.value || 17) / 100;
+        const tax     = sub * taxRate;
+        const grand   = sub + tax;
+
+        document.getElementById('subtotalDisplay').textContent = currency + sub.toFixed(2);
+        document.getElementById('totSubtotal').textContent     = currency + sub.toFixed(2);
+        document.getElementById('totTax').textContent          = currency + tax.toFixed(2);
+        document.getElementById('totGrand').textContent        = currency + grand.toFixed(2);
+    }
 });
 </script>
 {% endblock %}

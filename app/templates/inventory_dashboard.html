@@ -1,174 +1,312 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="container-fluid mt-4">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col">
-            <h2><i class="bi bi-building"></i> Location Dashboard</h2>
-            <p class="text-muted">Real-time inventory status across all locations</p>
+<style nonce="{{ nonce }}">
+/* ── Layout ──────────────────────────────────────────────────────── */
+.dash-page { padding: 1.5rem; background: #f0f4f8; min-height: 100vh; }
+.dash-hero {
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    border-radius: 18px;
+    padding: 1.8rem 2rem;
+    color: #fff;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.dash-hero h2 { margin: 0; font-size: 1.6rem; font-weight: 700; }
+.dash-hero p  { margin: 0.2rem 0 0; opacity: 0.65; font-size: 0.9rem; }
+
+/* ── Location Cards ──────────────────────────────────────────────── */
+.loc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.loc-card {
+    border-radius: 14px;
+    padding: 1.3rem 1.5rem;
+    cursor: pointer;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+    border: 2px solid transparent;
+}
+.loc-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.loc-card-warehouse { background: linear-gradient(135deg,#1d4ed8,#3b82f6); }
+.loc-card-shop      { background: linear-gradient(135deg,#047857,#10b981); }
+.loc-card-storage   { background: linear-gradient(135deg,#7c3aed,#a78bfa); }
+.loc-card-other     { background: linear-gradient(135deg,#0f766e,#14b8a6); }
+.loc-card-name  { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.2rem; }
+.loc-card-code  { font-size: 0.72rem; opacity: 0.7; margin-bottom: 0.8rem; }
+.loc-card-value { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+.loc-card-sub   { font-size: 0.75rem; opacity: 0.75; margin-top: 0.2rem; }
+.loc-card-actions {
+    position: absolute;
+    top: 0.6rem; right: 0.6rem;
+    display: flex; gap: 0.3rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.loc-card:hover .loc-card-actions { opacity: 1; }
+.loc-icon-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: background 0.1s;
+}
+.loc-icon-btn:hover { background: rgba(255,255,255,0.35); }
+.loc-add-card {
+    border-radius: 14px;
+    padding: 1.3rem 1.5rem;
+    border: 2px dashed #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    background: #fff;
+}
+.loc-add-card:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+.loading-shimmer { background: linear-gradient(90deg,#e2e8f0 25%,#f8fafc 50%,#e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 14px; height: 130px; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ── Two-Column Panel ────────────────────────────────────────────── */
+.panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+@media(max-width:768px){ .panel-grid { grid-template-columns: 1fr; } }
+
+.panel {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.panel-header {
+    padding: 1rem 1.3rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.panel-body { padding: 1.2rem; }
+
+/* ── Transfer Form ───────────────────────────────────────────────── */
+.transfer-field label { font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 0.3rem; }
+.transfer-field { margin-bottom: 0.9rem; }
+.suggest-dropdown {
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+.suggest-item {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f8fafc;
+    transition: background 0.1s;
+}
+.suggest-item:hover { background: #f0f9ff; }
+.pos-relative { position: relative; }
+
+/* ── Low Stock ───────────────────────────────────────────────────── */
+.alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #f8fafc;
+    font-size: 0.85rem;
+}
+.alert-item:last-child { border-bottom: none; }
+.alert-name { font-weight: 600; color: #1e293b; }
+.alert-sub { font-size: 0.72rem; color: #94a3b8; }
+.stock-badge {
+    border-radius: 20px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.stock-critical { background: #fee2e2; color: #991b1b; }
+.stock-low      { background: #fef3c7; color: #92400e; }
+
+/* ── Movements Table ─────────────────────────────────────────────── */
+.mv-row {
+    display: grid;
+    grid-template-columns: 90px 1.5fr 1fr 0.7fr 1fr;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.65rem 1.3rem;
+    border-bottom: 1px solid #f8fafc;
+    font-size: 0.82rem;
+}
+.mv-row.hdr { background: #f8fafc; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.mv-row:last-child { border-bottom: none; }
+.mv-chip { border-radius: 20px; padding: 0.15rem 0.55rem; font-size: 0.7rem; font-weight: 700; }
+.mv-in  { background: #dcfce7; color: #166534; }
+.mv-out { background: #fee2e2; color: #991b1b; }
+@media(max-width:640px){ .mv-row { grid-template-columns: 1fr 1fr; } .mv-row > :nth-child(n+3){ display:none;} }
+</style>
+
+<div class="dash-page">
+
+    <!-- Hero -->
+    <div class="dash-hero">
+        <div>
+            <h2><i class="bi bi-building me-2"></i>Location Dashboard</h2>
+            <p id="heroSub">Loading inventory across all locations…</p>
         </div>
-        <div class="col-auto">
-            <button type="button" class="btn btn-primary" id="viewCatalogBtn">
-                <i class="bi bi-box-seam"></i> View Product Catalog
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-light btn-sm fw-semibold" onclick="window.location.href='/inventory/catalog'">
+                <i class="bi bi-grid me-1"></i> Catalog View
             </button>
-            <button type="button" class="btn btn-success" id="openTransferModalBtn">
-                <i class="bi bi-arrow-left-right"></i> Transfer Stock
-            </button>
-            <button type="button" class="btn btn-outline-secondary" id="createLocationBtn" data-bs-toggle="modal" data-bs-target="#createLocationModal">
-                <i class="bi bi-plus-circle"></i> Create Location
+            <button class="btn btn-sm fw-semibold" id="openTransferBtn"
+                    style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;">
+                <i class="bi bi-arrow-left-right me-1"></i> Transfer Stock
             </button>
         </div>
     </div>
 
-    <!-- Location Summary Cards (clickable, with edit/delete) -->
-    <div class="row mb-4" id="locationCards">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="bi bi-map"></i> Stock by Location <small class="text-muted">(click card to view products)</small></h5>
-                </div>
-                <div class="card-body">
-                    <div class="row" id="locationStats">
-                        <div class="col text-center">Loading location data...</div>
-                    </div>
-                </div>
+    <!-- Location Cards -->
+    <div id="locGrid" class="loc-grid">
+        <div class="loading-shimmer"></div>
+        <div class="loading-shimmer"></div>
+        <div class="loading-shimmer"></div>
+    </div>
+
+    <!-- Transfer + Low Stock -->
+    <div class="panel-grid">
+
+        <!-- Quick Transfer -->
+        <div class="panel" id="transferPanel">
+            <div class="panel-header">
+                <i class="bi bi-arrow-left-right text-primary"></i> Quick Transfer
             </div>
-        </div>
-    </div>
-
-    <!-- Quick Transfer Panel (improved) -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Quick Transfer</h5>
+            <div class="panel-body">
+                <!-- Product search -->
+                <div class="transfer-field pos-relative">
+                    <label>Product</label>
+                    <input type="text" id="quickProductSearch" class="form-control form-control-sm"
+                           placeholder="Type name or SKU…" autocomplete="off">
+                    <input type="hidden" id="quickProductId">
+                    <div id="quickSuggestions" class="suggest-dropdown"></div>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            <label class="form-label">Search Product</label>
-                            <input type="text" class="form-control" id="quickProductSearch" placeholder="Type product name or SKU...">
-                            <input type="hidden" id="quickProductId">
-                            <div id="quickProductSuggestions" class="list-group mt-1" style="max-height: 200px; overflow-y: auto; display: none;"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">From Location</label>
-                            <select class="form-select" id="quickFromLocation" required>
-                                <option value="">Select location...</option>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="transfer-field">
+                            <label>From</label>
+                            <select id="quickFromLocation" class="form-select form-select-sm">
+                                <option value="">Select…</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">To Location</label>
-                            <select class="form-select" id="quickToLocation" required>
-                                <option value="">Select location...</option>
+                    </div>
+                    <div class="col-6">
+                        <div class="transfer-field">
+                            <label>To</label>
+                            <select id="quickToLocation" class="form-select form-select-sm">
+                                <option value="">Select…</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" id="quickQuantity" min="1" step="1">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">&nbsp;</label>
-                            <button type="button" class="btn btn-primary w-100" id="executeQuickTransferBtn">
-                                <i class="bi bi-arrow-left-right"></i> Transfer
-                            </button>
-                        </div>
                     </div>
                 </div>
+                <div class="transfer-field">
+                    <label>Quantity</label>
+                    <input type="number" id="quickQuantity" class="form-control form-control-sm" min="1" step="1" placeholder="0">
+                </div>
+                <button id="executeQuickTransferBtn" class="btn btn-primary btn-sm w-100 fw-semibold">
+                    <i class="bi bi-arrow-left-right me-1"></i> Execute Transfer
+                </button>
             </div>
         </div>
 
-        <!-- Low Stock Summary -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-warning">
-                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Low Stock Alerts</h5>
-                </div>
-                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                    <div id="lowStockList">
-                        <div class="text-center">Loading alerts...</div>
-                    </div>
-                </div>
+        <!-- Low Stock -->
+        <div class="panel">
+            <div class="panel-header">
+                <i class="bi bi-exclamation-triangle text-warning"></i> Low Stock Alerts
+            </div>
+            <div class="panel-body" style="max-height:280px;overflow-y:auto;" id="lowStockList">
+                <div class="text-center text-muted py-3 small">Loading…</div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Stock Movements -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="bi bi-clock-history"></i> Recent Stock Movements</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr><th>Date</th><th>Product</th><th>From</th><th>To</th><th>Quantity</th><th>Status</th></tr>
-                            </thead>
-                            <tbody id="recentMovements"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+    <!-- Recent Movements -->
+    <div class="panel mb-3">
+        <div class="panel-header">
+            <i class="bi bi-clock-history text-primary"></i> Recent Stock Movements
+        </div>
+        <div class="mv-row hdr">
+            <div>Date</div>
+            <div>Product</div>
+            <div>Route</div>
+            <div>Qty</div>
+            <div>Status</div>
+        </div>
+        <div id="recentMovements">
+            <div class="text-center text-muted py-4 small">Loading movements…</div>
         </div>
     </div>
+
 </div>
 
-<!-- Transfer Modal -->
+<!-- Transfer Full Modal -->
 <div class="modal fade" id="transferModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Transfer Stock</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title"><i class="bi bi-arrow-left-right me-2"></i>Transfer Stock</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Product</label>
-                    <input type="text" class="form-control" id="transferProductSearch" placeholder="Search product...">
+                <div class="mb-3 pos-relative">
+                    <label class="form-label fw-semibold small">Product</label>
+                    <input type="text" id="transferProductSearch" class="form-control form-control-sm"
+                           placeholder="Search product…" autocomplete="off">
                     <input type="hidden" id="transferProductId">
-                    <div id="transferProductSuggestions" class="list-group mt-1" style="max-height: 150px; overflow-y: auto; display: none;"></div>
+                    <div id="transferSuggestions" class="suggest-dropdown"></div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6"><label>From Location</label><select id="transferFromLocation" class="form-select"></select></div>
-                    <div class="col-md-6"><label>To Location</label><select id="transferToLocation" class="form-select"></select></div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small">From Location</label>
+                        <select id="transferFromLocation" class="form-select form-select-sm"></select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small">To Location</label>
+                        <select id="transferToLocation" class="form-select form-select-sm"></select>
+                    </div>
                 </div>
-                <div class="mt-3"><label>Quantity</label><input type="number" id="transferQuantity" class="form-control" min="1"></div>
-                <div class="mt-3"><label>Notes</label><textarea id="transferNotes" class="form-control" rows="2"></textarea></div>
-                <div class="mt-2 text-muted small" id="availableStockInfo"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitTransferBtn">Execute Transfer</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Location Products Modal (Drill-down with pagination) -->
-<div class="modal fade" id="locationProductsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">Products in <span id="locationNameSpan"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
                 <div class="mb-3">
-                    <input type="text" id="locationProductSearch" class="form-control" placeholder="Search within this location...">
+                    <label class="form-label fw-semibold small">Quantity</label>
+                    <input type="number" id="transferQuantity" class="form-control form-control-sm" min="1" step="0.01">
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Min Level</th><th>Price</th><th>Action</th></tr></thead>
-                        <tbody id="locationProductsTableBody"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
-                    </table>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Notes (optional)</label>
+                    <textarea id="transferNotes" class="form-control form-control-sm" rows="2"></textarea>
                 </div>
-                <nav><ul class="pagination justify-content-center" id="locationProductsPagination"></ul></nav>
+                <div id="stockAvailInfo" class="small text-muted"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="submitTransferBtn" class="btn btn-primary btn-sm fw-semibold">
+                    <i class="bi bi-arrow-left-right me-1"></i> Transfer
+                </button>
             </div>
         </div>
     </div>
@@ -177,16 +315,37 @@
 <!-- Create Location Modal -->
 <div class="modal fade" id="createLocationModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white"><h5 class="modal-title">Create New Location</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <div class="mb-3"><label>Location Name *</label><input type="text" id="newLocationName" class="form-control"></div>
-                <div class="mb-3"><label>Location Code *</label><input type="text" id="newLocationCode" class="form-control"></div>
-                <div class="mb-3"><label>Location Type</label><select id="newLocationType" class="form-select"><option value="shop">Shop</option><option value="warehouse">Warehouse</option><option value="storage">Storage</option></select></div>
-                <div class="mb-3"><label>Address</label><textarea id="newLocationAddress" class="form-control" rows="2"></textarea></div>
-                <div id="createLocationMsg" class="alert d-none"></div>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="confirmCreateLocationBtn">Create</button></div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Location Name *</label>
+                    <input type="text" id="newLocationName" class="form-control form-control-sm" placeholder="e.g. Main Warehouse">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Location Code *</label>
+                    <input type="text" id="newLocationCode" class="form-control form-control-sm" placeholder="e.g. MAIN">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Type</label>
+                    <select id="newLocationType" class="form-select form-select-sm">
+                        <option value="warehouse">Warehouse</option>
+                        <option value="shop">Shop / Retail</option>
+                        <option value="storage">Storage</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Address</label>
+                    <textarea id="newLocationAddress" class="form-control form-control-sm" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary btn-sm fw-semibold" id="confirmCreateLocationBtn">Create Location</button>
+            </div>
         </div>
     </div>
 </div>
@@ -194,305 +353,504 @@
 <!-- Edit Location Modal -->
 <div class="modal fade" id="editLocationModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning"><h5 class="modal-title">Edit Location</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">Edit Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 <input type="hidden" id="editLocationId">
-                <div class="mb-3"><label>Name</label><input type="text" id="editLocationName" class="form-control"></div>
-                <div class="mb-3"><label>Code</label><input type="text" id="editLocationCode" class="form-control"></div>
-                <div class="mb-3"><label>Type</label><select id="editLocationType" class="form-select"><option>shop</option><option>warehouse</option><option>storage</option></select></div>
-                <div class="mb-3"><label>Address</label><textarea id="editLocationAddress" class="form-control" rows="2"></textarea></div>
-                <div id="editLocationMsg" class="alert d-none"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Name</label>
+                    <input type="text" id="editLocationName" class="form-control form-control-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Code</label>
+                    <input type="text" id="editLocationCode" class="form-control form-control-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Type</label>
+                    <select id="editLocationType" class="form-select form-select-sm">
+                        <option value="warehouse">Warehouse</option>
+                        <option value="shop">Shop</option>
+                        <option value="storage">Storage</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Address</label>
+                    <textarea id="editLocationAddress" class="form-control form-control-sm" rows="2"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-danger" id="deleteLocationBtn">Delete</button>
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" id="confirmEditLocationBtn">Save Changes</button>
+                <button class="btn btn-danger btn-sm" id="deleteLocationBtn">Delete</button>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary btn-sm fw-semibold" id="confirmEditLocationBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Products Modal -->
+<div class="modal fade" id="locationProductsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Products in <span id="locationNameSpan"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="locationProductSearch" class="form-control form-control-sm mb-3"
+                       placeholder="Search within this location…">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr><th>Product</th><th>SKU</th><th>Stock</th><th>Min</th><th>Price</th><th></th></tr>
+                        </thead>
+                        <tbody id="locationProductsTableBody">
+                            <tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <nav><ul class="pagination pagination-sm justify-content-center" id="locationProductsPagination"></ul></nav>
             </div>
         </div>
     </div>
 </div>
 
 <script nonce="{{ nonce }}">
-(function() {
+(function () {
+    'use strict';
+
+    /* ── state ─────────────────────────────────────────────────── */
     let locations = [];
-    let allProducts = [];  // for global search suggestions
-    let currentLocationIdForProducts = null;
-    let currentLocationProductsPage = 1;
-    let currentLocationProductsTotalPages = 1;
-    let currentLocationProductsData = [];
+    let allProducts = [];
+    let currentLocationId = null;
+    let locationProductsPage = 1;
+    let locationProductsTotalPages = 1;
+    const currency = '{{ currency_symbol }}';
 
-    // Helper functions
-    function formatNumber(num) { if (num===undefined||num===null) return '0'; const n=parseFloat(num); if(isNaN(n)) return '0'; if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return n.toString(); }
-    function formatCurrency(amount) { const val=parseFloat(amount); if(isNaN(val)) return '{{ currency_symbol }}0.00'; return '{{ currency_symbol }}'+val.toFixed(2); }
-    function getColorForType(type) { const c={'warehouse':'primary','shop':'success','storage':'info','bin':'secondary'}; return c[type]||'dark'; }
-    function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    /* ── utils ─────────────────────────────────────────────────── */
+    function esc(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmt(n)  { const v=parseFloat(n); return isNaN(v)?'0.00':v.toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function fmtN(n) { const v=parseFloat(n); if(isNaN(v)) return '0'; return v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':Math.round(v).toString(); }
 
-    function loadAllData() { loadLocations(); loadLocationStats(); loadLowStockAlerts(); loadRecentMovements(); loadProductsForSearch(); }
+    function toast(msg, type) {
+        if (typeof window.showToast === 'function') {
+            const bg = type==='error'?'#dc2626':type==='warn'?'#d97706':'#059669';
+            window.showToast(msg, bg, 3500);
+        }
+    }
+
+    function colorForType(type) {
+        const map = { warehouse:'warehouse', shop:'shop', storage:'storage' };
+        return map[type] || 'other';
+    }
+
+    /* ── API fetch helper (always sends session cookies) ────────── */
+    function api(url, opts) {
+        // FIX: credentials:'same-origin' ensures session cookie is sent
+        // Without this, all mutation endpoints (transfer, create, delete) returned 401
+        // silently and cards never updated.
+        const defaults = { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } };
+        return fetch(url, Object.assign({}, defaults, opts || {})).then(r => r.json());
+    }
+
+    /* ── load everything ────────────────────────────────────────── */
+    function loadAll() {
+        loadLocations();
+        loadLocationStats();
+        loadLowStock();
+        loadRecentMovements();
+        loadProductsIndex();
+    }
 
     function loadLocations() {
-        fetch('/api/v1/locations',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{ locations=data||[]; populateLocationSelects(); }).catch(console.error);
+        api('/api/v1/locations').then(data => {
+            locations = data || [];
+            populateSelects();
+        }).catch(console.error);
     }
-    function populateLocationSelects() {
-        const selects=['quickFromLocation','quickToLocation','transferFromLocation','transferToLocation'];
-        selects.forEach(id=>{ const sel=document.getElementById(id); if(sel){ sel.innerHTML='<option value="">Select location...</option>'; locations.forEach(l=>{ sel.innerHTML+=`<option value="${l.id}">${escapeHtml(l.location_name)} (${l.location_code||''})</option>`; }); } });
+
+    function populateSelects() {
+        const selects = ['quickFromLocation','quickToLocation','transferFromLocation','transferToLocation'];
+        selects.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const cur = el.value;
+            el.innerHTML = '<option value="">Select…</option>';
+            locations.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id;
+                opt.textContent = l.location_name + (l.location_code ? ` (${l.location_code})` : '');
+                el.appendChild(opt);
+            });
+            if (cur) el.value = cur;
+        });
     }
 
     function loadLocationStats() {
-        fetch('/api/v1/locations/stats',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{
-            const container=document.getElementById('locationStats');
-            if(!data||!data.length){ container.innerHTML='<div class="col text-center">No locations found.</div>'; return; }
-            container.innerHTML='';
-            data.forEach(loc=>{
-                const cardDiv=document.createElement('div'); cardDiv.className='col-md-3 mb-3';
-                cardDiv.innerHTML=`
-                    <div class="card bg-${getColorForType(loc.type)} text-white location-card" data-location-id="${loc.id}" data-location-name="${escapeHtml(loc.location_name)}" style="cursor: pointer;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <h6 class="card-title">${escapeHtml(loc.location_name)}</h6>
-                                <div>
-                                    <i class="bi bi-pencil-square edit-location-icon" data-location-id="${loc.id}" data-location-name="${escapeHtml(loc.location_name)}" data-location-code="${escapeHtml(loc.location_code||'')}" data-location-type="${loc.type}" data-location-address="${escapeHtml(loc.address||'')}" style="cursor:pointer; margin-right:8px;"></i>
-                                    <i class="bi bi-trash delete-location-icon" data-location-id="${loc.id}" style="cursor:pointer;"></i>
-                                </div>
-                            </div>
-                            <h3>${formatCurrency(loc.total_value)}</h3>
-                            <small>${loc.product_count||0} products | ${formatNumber(loc.total_units)} units</small>
-                        </div>
+        const grid = document.getElementById('locGrid');
+        api('/api/v1/locations/stats').then(data => {
+            if (!data || !data.length) {
+                grid.innerHTML = `
+                    <div class="loc-add-card" id="addLocCard">
+                        <i class="bi bi-plus-circle"></i> Add First Location
                     </div>`;
-                container.appendChild(cardDiv);
-                cardDiv.querySelector('.location-card').addEventListener('click', (e) => { if(!e.target.classList.contains('edit-location-icon') && !e.target.classList.contains('delete-location-icon')) showLocationProducts(loc.id, loc.location_name); });
-                cardDiv.querySelector('.edit-location-icon')?.addEventListener('click', (e) => { e.stopPropagation(); openEditLocationModal(loc.id, loc.location_name, loc.location_code, loc.type, loc.address); });
-                cardDiv.querySelector('.delete-location-icon')?.addEventListener('click', (e) => { e.stopPropagation(); if(confirm(`Delete location "${loc.location_name}"? This will remove all stock assignments.`)) deleteLocation(loc.id); });
-            });
-        }).catch(err=>{ console.error(err); document.getElementById('locationStats').innerHTML='<div class="col text-center text-danger">Error loading stats</div>'; });
-    }
+                attachAddCard();
+                document.getElementById('heroSub').textContent = 'No locations yet — add one to start';
+                return;
+            }
 
-    function openEditLocationModal(id, name, code, type, address) {
-        document.getElementById('editLocationId').value=id;
-        document.getElementById('editLocationName').value=name;
-        document.getElementById('editLocationCode').value=code||'';
-        document.getElementById('editLocationType').value=type||'shop';
-        document.getElementById('editLocationAddress').value=address||'';
-        const modal=new bootstrap.Modal(document.getElementById('editLocationModal'));
-        modal.show();
-    }
+            // Update hero subtitle
+            const totalVal = data.reduce((s,l)=>s+(l.total_value||0),0);
+            const totalUnits = data.reduce((s,l)=>s+(l.total_units||0),0);
+            document.getElementById('heroSub').textContent =
+                `${data.length} location${data.length>1?'s':''} · ${fmtN(totalUnits)} total units · ${currency}${fmt(totalVal)} value`;
 
-    function deleteLocation(id) {
-        fetch(`/api/v1/locations/${id}`,{method:'DELETE',credentials:'same-origin'}).then(res=>res.json()).then(data=>{ if(data.message) location.reload(); else alert('Delete failed'); }).catch(err=>alert('Error deleting location'));
-    }
-
-    function saveEditLocation() {
-        const id=document.getElementById('editLocationId').value;
-        const payload={ location_name:document.getElementById('editLocationName').value, location_code:document.getElementById('editLocationCode').value, location_type:document.getElementById('editLocationType').value, address:document.getElementById('editLocationAddress').value };
-        fetch(`/api/v1/locations/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'}).then(res=>res.json()).then(data=>{ if(data.message) location.reload(); else alert('Update failed'); });
-    }
-    document.getElementById('confirmEditLocationBtn')?.addEventListener('click', saveEditLocation);
-    document.getElementById('deleteLocationBtn')?.addEventListener('click', ()=>{ const id=document.getElementById('editLocationId').value; if(confirm('Permanently delete?')) deleteLocation(id); });
-
-    function showLocationProducts(locationId, locationName) {
-        currentLocationIdForProducts = locationId;
-        document.getElementById('locationNameSpan').innerText = locationName;
-        currentLocationProductsPage = 1;
-        loadLocationProductsPage();
-        const modal = new bootstrap.Modal(document.getElementById('locationProductsModal'));
-        modal.show();
-    }
-
-    function loadLocationProductsPage() {
-        const search = document.getElementById('locationProductSearch')?.value || '';
-        fetch(`/api/v1/locations/${currentLocationIdForProducts}/products?page=${currentLocationProductsPage}&per_page=20&search=${encodeURIComponent(search)}`, { credentials:'same-origin' })
-            .then(res=>res.json())
-            .then(data=>{
-                currentLocationProductsTotalPages = data.total_pages || 1;
-                const tbody = document.getElementById('locationProductsTableBody');
-                if(!data.products || data.products.length===0){
-                    tbody.innerHTML='<tr><td colspan="6" class="text-center">No products in this location</td></tr>';
-                } else {
-                    tbody.innerHTML='';
-                    data.products.forEach(p=>{
-                        const stockClass = p.stock_at_location==0?'danger':(p.stock_at_location<=p.min_stock_level?'warning':'success');
-                        tbody.innerHTML+=`
-                            <tr>
-                                <td><strong>${escapeHtml(p.name)}</strong></td>
-                                <td><code>${escapeHtml(p.sku)||'N/A'}</code></td>
-                                <td><span class="badge bg-${stockClass}">${p.stock_at_location}</span></td>
-                                <td>${p.min_stock_level||0}</td>
-                                <td>${formatCurrency(p.selling_price)}</td>
-                                <td><button class="btn btn-sm btn-outline-primary transfer-from-location-btn" data-product-id="${p.id}" data-product-name="${escapeHtml(p.name)}" data-location-id="${currentLocationIdForProducts}">Transfer</button></td>
-                            </tr>`;
-                    });
-                }
-                renderLocationProductsPagination();
-                document.querySelectorAll('.transfer-from-location-btn').forEach(btn=>{
-                    btn.addEventListener('click', ()=>{
-                        const productId=btn.dataset.productId;
-                        const locId=btn.dataset.locationId;
-                        bootstrap.Modal.getInstance(document.getElementById('locationProductsModal')).hide();
-                        setTimeout(()=>{
-                            document.getElementById('transferFromLocation').value=locId;
-                            document.getElementById('transferProductId').value=productId;
-                            document.getElementById('transferProductSearch').value=btn.dataset.productName;
-                            new bootstrap.Modal(document.getElementById('transferModal')).show();
-                        },300);
-                    });
+            grid.innerHTML = '';
+            data.forEach(loc => {
+                const div = document.createElement('div');
+                div.className = `loc-card loc-card-${colorForType(loc.type)}`;
+                div.innerHTML = `
+                    <div class="loc-card-actions">
+                        <button class="loc-icon-btn edit-loc-btn"
+                                data-id="${loc.id}" data-name="${esc(loc.location_name)}"
+                                data-code="${esc(loc.location_code||'')}" data-type="${loc.type||''}"
+                                data-address="${esc(loc.address||'')}"
+                                title="Edit"><i class="bi bi-pencil-square"></i></button>
+                    </div>
+                    <div class="loc-card-code">${esc(loc.location_code||'')} · ${(loc.type||'').toUpperCase()}</div>
+                    <div class="loc-card-name">${esc(loc.location_name)}</div>
+                    <div class="loc-card-value">${currency}${fmtN(loc.total_value||0)}</div>
+                    <div class="loc-card-sub">${loc.product_count||0} products · ${fmtN(loc.total_units||0)} units</div>`;
+                div.addEventListener('click', e => {
+                    if (e.target.closest('.loc-icon-btn')) return;
+                    showLocationProducts(loc.id, loc.location_name);
                 });
-            }).catch(err=>{ console.error(err); document.getElementById('locationProductsTableBody').innerHTML='<tr><td colspan="6" class="text-danger">Error loading</td></tr>'; });
+                div.querySelector('.edit-loc-btn').addEventListener('click', e => {
+                    e.stopPropagation();
+                    openEditModal(loc.id, loc.location_name, loc.location_code, loc.type, loc.address);
+                });
+                grid.appendChild(div);
+            });
+
+            // Add location card at end
+            const addDiv = document.createElement('div');
+            addDiv.className = 'loc-add-card';
+            addDiv.id = 'addLocCard';
+            addDiv.innerHTML = '<i class="bi bi-plus-circle"></i> Add Location';
+            addDiv.addEventListener('click', () => new bootstrap.Modal(document.getElementById('createLocationModal')).show());
+            grid.appendChild(addDiv);
+
+        }).catch(err => {
+            grid.innerHTML = '<div class="text-center text-danger p-3 small">Error loading locations</div>';
+        });
     }
 
-    function renderLocationProductsPagination() {
-        const pagination=document.getElementById('locationProductsPagination');
-        if(!pagination) return;
-        pagination.innerHTML='';
-        if(currentLocationProductsTotalPages<=1) return;
-        for(let i=1;i<=Math.min(currentLocationProductsTotalPages,5);i++){
-            const li=document.createElement('li'); li.className=`page-item ${i===currentLocationProductsPage?'active':''}`;
-            const a=document.createElement('a'); a.className='page-link'; a.href='#'; a.innerText=i;
-            a.addEventListener('click',(e)=>{ e.preventDefault(); currentLocationProductsPage=i; loadLocationProductsPage(); });
-            li.appendChild(a); pagination.appendChild(li);
-        }
+    function attachAddCard() {
+        const el = document.getElementById('addLocCard');
+        if (el) el.addEventListener('click', () => new bootstrap.Modal(document.getElementById('createLocationModal')).show());
     }
-    document.getElementById('locationProductSearch')?.addEventListener('input', ()=>{ currentLocationProductsPage=1; loadLocationProductsPage(); });
 
-    function loadLowStockAlerts() {
-        fetch('/api/v1/inventory/low-stock',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{
-            const container=document.getElementById('lowStockList');
-            if(!data||!data.length){ container.innerHTML='<div class="alert alert-success">No low stock items!</div>'; return; }
-            let html='<div class="list-group">';
-            data.slice(0,10).forEach(item=>{ html+=`<div class="list-group-item"><div class="d-flex justify-content-between"><strong>${escapeHtml(item.name)}</strong><span class="badge bg-warning">${item.current_stock||0}/${item.min_stock_level||0}</span></div><small>SKU: ${escapeHtml(item.sku)||'N/A'}</small></div>`; });
-            html+='</div>'; container.innerHTML=html;
-        }).catch(err=>{ document.getElementById('lowStockList').innerHTML='<div class="alert alert-danger">Error loading alerts</div>'; });
+    function loadLowStock() {
+        const container = document.getElementById('lowStockList');
+        api('/api/v1/inventory/low-stock').then(data => {
+            if (!data || !data.length) {
+                container.innerHTML = '<div class="text-center text-success py-3 small"><i class="bi bi-check-circle-fill me-1"></i>All stock levels healthy</div>';
+                return;
+            }
+            container.innerHTML = data.slice(0,15).map(item => `
+                <div class="alert-item">
+                    <div>
+                        <div class="alert-name">${esc(item.name)}</div>
+                        <div class="alert-sub">${esc(item.sku||'')}</div>
+                    </div>
+                    <span class="stock-badge ${item.current_stock===0?'stock-critical':'stock-low'}">
+                        ${item.current_stock} / ${item.reorder_level||0}
+                    </span>
+                </div>`).join('');
+        }).catch(() => {
+            container.innerHTML = '<div class="text-danger small p-2">Error loading alerts</div>';
+        });
     }
 
     function loadRecentMovements() {
-        fetch('/api/v1/stock-movements/recent',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{
-            const tbody=document.getElementById('recentMovements');
-            if(!data||!data.length){ tbody.innerHTML='<tr><td colspan="6" class="text-center">No movements yet</td></tr>'; return; }
-            tbody.innerHTML='';
-            data.forEach(m=>{ tbody.innerHTML+=`<tr><td>${new Date(m.created_at).toLocaleDateString()}</td><td>${escapeHtml(m.product_name)}</td><td>${escapeHtml(m.from_location)||'N/A'}</td><td>${escapeHtml(m.to_location)||'N/A'}</td><td>${m.quantity||0}</td><td><span class="badge bg-success">${escapeHtml(m.status)||'completed'}</span></td></tr>`; });
-        }).catch(err=>{ document.getElementById('recentMovements').innerHTML='<tr><td colspan="6" class="text-danger">Error loading</td></tr>'; });
+        const container = document.getElementById('recentMovements');
+        api('/api/v1/stock-movements/recent?limit=10').then(data => {
+            if (!data || !data.length) {
+                container.innerHTML = '<div class="text-center text-muted py-3 small">No movements yet</div>';
+                return;
+            }
+            container.innerHTML = data.map(m => {
+                const from = esc(m.from_location||'—');
+                const to   = esc(m.to_location||'—');
+                const qty  = m.quantity||0;
+                const d    = m.created_at ? new Date(m.created_at).toLocaleDateString('en-PK',{day:'2-digit',month:'short'}) : '—';
+                return `
+                    <div class="mv-row">
+                        <div style="font-size:0.78rem;color:#64748b;">${d}</div>
+                        <div style="font-size:0.85rem;font-weight:600;color:#1e293b;">${esc(m.product_name||'—')}</div>
+                        <div style="font-size:0.78rem;color:#64748b;">${from} → ${to}</div>
+                        <div><span class="mv-chip ${qty>=0?'mv-in':'mv-out'}">${qty>=0?'+':''}${qty}</span></div>
+                        <div><span class="mv-chip ${m.status==='completed'?'mv-in':'mv-out'}">${esc(m.status||'—')}</span></div>
+                    </div>`;
+            }).join('');
+        }).catch(() => {
+            container.innerHTML = '<div class="text-danger small p-3">Error loading movements</div>';
+        });
     }
 
-    function loadProductsForSearch() {
-        fetch('/api/v1/inventory?limit=500',{credentials:'same-origin'}).then(res=>res.json()).then(data=>{ allProducts=data.products||[]; }).catch(console.error);
+    function loadProductsIndex() {
+        api('/api/v1/inventory?per_page=500').then(data => {
+            allProducts = (data.products || []);
+        }).catch(console.error);
     }
 
-    // Quick Transfer: searchable product input
-    const quickSearchInput = document.getElementById('quickProductSearch');
-    const quickSuggestions = document.getElementById('quickProductSuggestions');
-    let searchTimeout;
-    quickSearchInput?.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        const term = this.value.trim();
-        if(term.length<2){ quickSuggestions.style.display='none'; return; }
-        searchTimeout = setTimeout(()=>{
-            fetch(`/api/v1/inventory?search=${encodeURIComponent(term)}&limit=10`,{credentials:'same-origin'})
-                .then(res=>res.json())
-                .then(data=>{
-                    const products = data.products || [];
-                    if(!products.length){ quickSuggestions.style.display='none'; return; }
-                    quickSuggestions.innerHTML = products.map(p=>`<a href="#" class="list-group-item list-group-item-action" data-id="${p.id}" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)} (${escapeHtml(p.sku||'N/A')}) - Stock: ${p.current_stock}</a>`).join('');
-                    quickSuggestions.style.display='block';
-                    quickSuggestions.querySelectorAll('a').forEach(a=>{
-                        a.addEventListener('click', (e)=>{
-                            e.preventDefault();
-                            quickSearchInput.value = a.dataset.name;
-                            document.getElementById('quickProductId').value = a.dataset.id;
-                            quickSuggestions.style.display='none';
-                            // Auto-populate From Location with locations where this product has stock
-                            fetch(`/api/v1/products/${a.dataset.id}/locations`,{credentials:'same-origin'})
-                                .then(res=>res.json())
-                                .then(breakdown=>{
-                                    const fromSelect = document.getElementById('quickFromLocation');
-                                    fromSelect.innerHTML = '<option value="">Select location...</option>';
-                                    if(breakdown.locations && breakdown.locations.length){
-                                        breakdown.locations.forEach(loc=>{
-                                            if(loc.quantity>0){
-                                                fromSelect.innerHTML += `<option value="${loc.location_id}" data-stock="${loc.quantity}">${escapeHtml(loc.location_name)} (${loc.quantity} units)</option>`;
-                                            }
-                                        });
-                                        if(breakdown.locations.length===1) fromSelect.value = breakdown.locations[0].location_id;
-                                    } else {
-                                        fromSelect.innerHTML = '<option value="">No stock available</option>';
-                                    }
-                                });
-                        });
-                    });
-                }).catch(console.error);
-        }, 300);
-    });
-    document.addEventListener('click', function(e) { if(!quickSearchInput?.contains(e.target) && !quickSuggestions?.contains(e.target)) quickSuggestions.style.display='none'; });
-
-    // Transfer modal search
-    const transferSearch = document.getElementById('transferProductSearch');
-    const transferSuggestions = document.getElementById('transferProductSuggestions');
-    transferSearch?.addEventListener('input', function() {
-        const term = this.value.trim();
-        if(term.length<2){ transferSuggestions.style.display='none'; return; }
-        fetch(`/api/v1/inventory?search=${encodeURIComponent(term)}&limit=10`,{credentials:'same-origin'})
-            .then(res=>res.json())
-            .then(data=>{
-                const products = data.products || [];
-                if(!products.length){ transferSuggestions.style.display='none'; return; }
-                transferSuggestions.innerHTML = products.map(p=>`<a href="#" class="list-group-item list-group-item-action" data-id="${p.id}" data-name="${escapeHtml(p.name)}">${escapeHtml(p.name)} (${escapeHtml(p.sku||'N/A')})</a>`).join('');
-                transferSuggestions.style.display='block';
-                transferSuggestions.querySelectorAll('a').forEach(a=>{
-                    a.addEventListener('click', (e)=>{
-                        e.preventDefault();
-                        transferSearch.value = a.dataset.name;
-                        document.getElementById('transferProductId').value = a.dataset.id;
-                        transferSuggestions.style.display='none';
-                        fetch(`/api/v1/products/${a.dataset.id}/locations`,{credentials:'same-origin'})
-                            .then(res=>res.json())
-                            .then(breakdown=>{
-                                const fromSelect = document.getElementById('transferFromLocation');
-                                fromSelect.innerHTML = '<option value="">Select location...</option>';
-                                breakdown.locations?.forEach(loc=>{ if(loc.quantity>0) fromSelect.innerHTML+=`<option value="${loc.location_id}" data-stock="${loc.quantity}">${escapeHtml(loc.location_name)} (${loc.quantity})</option>`; });
-                            });
+    /* ── Product search autocomplete ───────────────────────────── */
+    function setupSearch(inputId, hiddenId, suggestId, onSelect) {
+        const input   = document.getElementById(inputId);
+        const hidden  = document.getElementById(hiddenId);
+        const suggest = document.getElementById(suggestId);
+        if (!input) return;
+        let timer;
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            const term = input.value.trim().toLowerCase();
+            if (term.length < 2) { suggest.style.display='none'; return; }
+            timer = setTimeout(() => {
+                const results = allProducts.filter(p =>
+                    p.name.toLowerCase().includes(term) || (p.sku||'').toLowerCase().includes(term)
+                ).slice(0,10);
+                if (!results.length) { suggest.style.display='none'; return; }
+                suggest.innerHTML = results.map(p =>
+                    `<div class="suggest-item" data-id="${p.id}" data-name="${esc(p.name)}">
+                        <strong>${esc(p.name)}</strong>
+                        <span style="color:#94a3b8;font-size:0.75rem;"> · ${esc(p.sku||'')} · Stock: ${p.current_stock}</span>
+                    </div>`
+                ).join('');
+                suggest.style.display = 'block';
+                suggest.querySelectorAll('.suggest-item').forEach(el => {
+                    el.addEventListener('click', () => {
+                        input.value = el.dataset.name;
+                        hidden.value = el.dataset.id;
+                        suggest.style.display = 'none';
+                        onSelect && onSelect(el.dataset.id, el.dataset.name);
                     });
                 });
+            }, 200);
+        });
+        document.addEventListener('click', e => {
+            if (!input.contains(e.target) && !suggest.contains(e.target)) suggest.style.display='none';
+        });
+    }
+
+    function onProductSelectedForTransfer(productId, productName, fromSelectId) {
+        api(`/api/v1/products/${productId}/locations`).then(data => {
+            const fromSel = document.getElementById(fromSelectId);
+            fromSel.innerHTML = '<option value="">Select…</option>';
+            (data.locations||[]).filter(l=>l.quantity>0).forEach(loc => {
+                fromSel.innerHTML += `<option value="${loc.location_id}">${esc(loc.location_name)} (${loc.quantity} units)</option>`;
             });
-    });
-    document.addEventListener('click', function(e) { if(!transferSearch?.contains(e.target) && !transferSuggestions?.contains(e.target)) transferSuggestions.style.display='none'; });
-
-    function executeQuickTransfer() {
-        const productId = document.getElementById('quickProductId').value;
-        const fromLocation = document.getElementById('quickFromLocation').value;
-        const toLocation = document.getElementById('quickToLocation').value;
-        const quantity = document.getElementById('quickQuantity').value;
-        if(!productId||!fromLocation||!toLocation||!quantity){ alert('Please fill all fields'); return; }
-        submitTransferData(productId, fromLocation, toLocation, quantity, '');
+        }).catch(console.error);
     }
 
-    function submitTransferData(productId, fromLocation, toLocation, quantity, notes) {
-        fetch('/api/v1/transfer', {
-            method: 'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ product_id: parseInt(productId), from_location_id: parseInt(fromLocation), to_location_id: parseInt(toLocation), quantity: parseFloat(quantity), notes: notes })
-        }).then(res=>res.json()).then(data=>{ if(data.transfer_number){ alert('Transfer completed!'); location.reload(); } else alert('Transfer failed: '+ (data.error||'Insufficient stock?')); }).catch(err=>{ alert('Transfer failed'); });
+    /* ── Execute transfer ──────────────────────────────────────── */
+    function doTransfer(productId, fromId, toId, qty, notes) {
+        if (!productId||!fromId||!toId||!qty) { toast('Please fill all fields','warn'); return; }
+        if (fromId === toId) { toast('From and To must be different','warn'); return; }
+        api('/api/v1/transfer', {
+            method: 'POST',
+            // FIX: credentials are set by the api() helper above
+            body: JSON.stringify({
+                product_id: parseInt(productId),
+                from_location_id: parseInt(fromId),
+                to_location_id: parseInt(toId),
+                quantity: parseFloat(qty),
+                notes: notes || ''
+            })
+        }).then(data => {
+            if (data.transfer_number) {
+                toast(`✅ Transfer ${data.transfer_number} complete`, 'success');
+                // FIX: refresh cards in-place instead of hard reload
+                loadLocationStats();
+                loadRecentMovements();
+                loadLowStock();
+                // Close modal if open
+                const m = bootstrap.Modal.getInstance(document.getElementById('transferModal'));
+                if (m) m.hide();
+            } else {
+                toast('Transfer failed: ' + (data.error||'Insufficient stock?'), 'error');
+            }
+        }).catch(() => toast('Network error during transfer','error'));
     }
 
-    function showProductCatalog() { window.location.href='/inventory/catalog'; }
-    function openTransferModal() { new bootstrap.Modal(document.getElementById('transferModal')).show(); }
-    function submitTransfer() {
-        const pid=document.getElementById('transferProductId').value, from=document.getElementById('transferFromLocation').value, to=document.getElementById('transferToLocation').value, qty=document.getElementById('transferQuantity').value, notes=document.getElementById('transferNotes').value;
-        if(!pid||!from||!to||!qty){ alert('Please fill all fields'); return; }
-        submitTransferData(pid, from, to, qty, notes);
+    /* ── Location products drill-down ─────────────────────────── */
+    function showLocationProducts(locationId, locationName) {
+        currentLocationId = locationId;
+        document.getElementById('locationNameSpan').textContent = locationName;
+        locationProductsPage = 1;
+        loadLocationProductsPage();
+        new bootstrap.Modal(document.getElementById('locationProductsModal')).show();
     }
 
-    // Create location
-    document.getElementById('confirmCreateLocationBtn')?.addEventListener('click',()=>{
-        const name=document.getElementById('newLocationName').value.trim(), code=document.getElementById('newLocationCode').value.trim(), type=document.getElementById('newLocationType').value, address=document.getElementById('newLocationAddress').value.trim();
-        if(!name||!code){ alert('Name and Code required'); return; }
-        fetch('/api/v1/locations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location_name:name,location_code:code,location_type:type,address:address}),credentials:'same-origin'})
-            .then(res=>res.json()).then(data=>{ if(data.id){ alert('Location created'); location.reload(); } else alert('Error: '+data.error); });
+    function loadLocationProductsPage() {
+        const search = document.getElementById('locationProductSearch')?.value||'';
+        const tbody = document.getElementById('locationProductsTableBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted small">Loading…</td></tr>';
+        api(`/api/v1/locations/${currentLocationId}/products?page=${locationProductsPage}&per_page=20&search=${encodeURIComponent(search)}`)
+            .then(data => {
+                locationProductsTotalPages = data.total_pages||1;
+                const prods = data.products||[];
+                if (!prods.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No products at this location</td></tr>';
+                } else {
+                    tbody.innerHTML = prods.map(p => {
+                        const sc = p.stock_at_location===0?'danger':(p.stock_at_location<=(p.min_stock_level||0)?'warning':'success');
+                        return `<tr>
+                            <td><strong>${esc(p.name)}</strong></td>
+                            <td><code>${esc(p.sku||'—')}</code></td>
+                            <td><span class="badge bg-${sc}">${p.stock_at_location}</span></td>
+                            <td>${p.min_stock_level||0}</td>
+                            <td>${currency}${fmt(p.selling_price)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary transfer-from-loc"
+                                        data-pid="${p.id}" data-loc="${currentLocationId}"
+                                        data-name="${esc(p.name)}">Transfer</button>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                    tbody.querySelectorAll('.transfer-from-loc').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const locModal = bootstrap.Modal.getInstance(document.getElementById('locationProductsModal'));
+                            if (locModal) locModal.hide();
+                            setTimeout(() => {
+                                document.getElementById('transferProductSearch').value = btn.dataset.name;
+                                document.getElementById('transferProductId').value = btn.dataset.pid;
+                                document.getElementById('transferFromLocation').value = btn.dataset.loc;
+                                new bootstrap.Modal(document.getElementById('transferModal')).show();
+                            }, 300);
+                        });
+                    });
+                }
+                renderLocPagination();
+            }).catch(() => { tbody.innerHTML = '<tr><td colspan="6" class="text-danger small">Error</td></tr>'; });
+    }
+
+    function renderLocPagination() {
+        const pg = document.getElementById('locationProductsPagination');
+        pg.innerHTML = '';
+        if (locationProductsTotalPages <= 1) return;
+        for (let i=1; i<=Math.min(locationProductsTotalPages,5); i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i===locationProductsPage?'active':''}`;
+            const a = document.createElement('a');
+            a.className='page-link'; a.href='#'; a.textContent=i;
+            a.addEventListener('click', e=>{ e.preventDefault(); locationProductsPage=i; loadLocationProductsPage(); });
+            li.appendChild(a); pg.appendChild(li);
+        }
+    }
+
+    /* ── Create location ─────────────────────────────────────── */
+    document.getElementById('confirmCreateLocationBtn')?.addEventListener('click', () => {
+        const name = document.getElementById('newLocationName').value.trim();
+        const code = document.getElementById('newLocationCode').value.trim();
+        const type = document.getElementById('newLocationType').value;
+        const addr = document.getElementById('newLocationAddress').value.trim();
+        if (!name||!code) { toast('Name and Code are required','warn'); return; }
+        api('/api/v1/locations', {
+            method: 'POST',
+            body: JSON.stringify({ location_name:name, location_code:code, location_type:type, address:addr })
+        }).then(data => {
+            if (data.id) {
+                toast('✅ Location created!','success');
+                bootstrap.Modal.getInstance(document.getElementById('createLocationModal')).hide();
+                loadAll(); // full refresh
+            } else { toast('Error: '+(data.error||'failed'),'error'); }
+        }).catch(()=>toast('Network error','error'));
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
-        loadAllData();
-        document.getElementById('viewCatalogBtn')?.addEventListener('click', showProductCatalog);
-        document.getElementById('openTransferModalBtn')?.addEventListener('click', openTransferModal);
-        document.getElementById('executeQuickTransferBtn')?.addEventListener('click', executeQuickTransfer);
-        document.getElementById('submitTransferBtn')?.addEventListener('click', submitTransfer);
+    /* ── Edit / delete location ─────────────────────────────── */
+    function openEditModal(id, name, code, type, addr) {
+        document.getElementById('editLocationId').value = id;
+        document.getElementById('editLocationName').value = name||'';
+        document.getElementById('editLocationCode').value = code||'';
+        document.getElementById('editLocationType').value = type||'warehouse';
+        document.getElementById('editLocationAddress').value = addr||'';
+        new bootstrap.Modal(document.getElementById('editLocationModal')).show();
+    }
+    document.getElementById('confirmEditLocationBtn')?.addEventListener('click', () => {
+        const id   = document.getElementById('editLocationId').value;
+        const payload = {
+            location_name: document.getElementById('editLocationName').value,
+            location_code: document.getElementById('editLocationCode').value,
+            location_type: document.getElementById('editLocationType').value,
+            address: document.getElementById('editLocationAddress').value
+        };
+        api(`/api/v1/locations/${id}`, { method:'PUT', body:JSON.stringify(payload) }).then(data => {
+            if (data.message) {
+                toast('✅ Location updated','success');
+                bootstrap.Modal.getInstance(document.getElementById('editLocationModal')).hide();
+                loadLocationStats(); loadLocations();
+            } else { toast('Update failed','error'); }
+        }).catch(()=>toast('Network error','error'));
     });
-})();
+    document.getElementById('deleteLocationBtn')?.addEventListener('click', () => {
+        const id = document.getElementById('editLocationId').value;
+        if (!confirm('Delete this location? All product assignments will be removed.')) return;
+        api(`/api/v1/locations/${id}`, { method:'DELETE' }).then(data => {
+            if (data.message) {
+                toast('Location deleted','success');
+                bootstrap.Modal.getInstance(document.getElementById('editLocationModal')).hide();
+                loadAll();
+            } else { toast('Delete failed','error'); }
+        }).catch(()=>toast('Error','error'));
+    });
+
+    /* ── Location product search ─────────────────────────────── */
+    document.getElementById('locationProductSearch')?.addEventListener('input', () => {
+        locationProductsPage = 1;
+        loadLocationProductsPage();
+    });
+
+    /* ── Wire up transfer buttons ────────────────────────────── */
+    document.getElementById('openTransferBtn')?.addEventListener('click', () =>
+        new bootstrap.Modal(document.getElementById('transferModal')).show()
+    );
+
+    document.getElementById('submitTransferBtn')?.addEventListener('click', () => {
+        doTransfer(
+            document.getElementById('transferProductId').value,
+            document.getElementById('transferFromLocation').value,
+            document.getElementById('transferToLocation').value,
+            document.getElementById('transferQuantity').value,
+            document.getElementById('transferNotes').value
+        );
+    });
+
+    document.getElementById('executeQuickTransferBtn')?.addEventListener('click', () => {
+        doTransfer(
+            document.getElementById('quickProductId').value,
+            document.getElementById('quickFromLocation').value,
+            document.getElementById('quickToLocation').value,
+            document.getElementById('quickQuantity').value,
+            ''
+        );
+    });
+
+    /* ── Setup autocompletes ─────────────────────────────────── */
+    setupSearch('quickProductSearch','quickProductId','quickSuggestions', (id, name) => {
+        onProductSelectedForTransfer(id, name, 'quickFromLocation');
+    });
+    setupSearch('transferProductSearch','transferProductId','transferSuggestions', (id, name) => {
+        onProductSelectedForTransfer(id, name, 'transferFromLocation');
+    });
+
+    /* ── Boot ─────────────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', loadAll);
+
+}());
 </script>
 {% endblock %}

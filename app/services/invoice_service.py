@@ -149,7 +149,10 @@ class InvoiceService:
                     self.errors.append("Your plan does not include purchase orders. Upgrade to Growth or Pro.")
                     return None, self.errors
 
-            po_data['po_number'] = NumberGenerator.generate_po_number(self.account_id)
+            # FIX: removed duplicate generate_po_number() call here.
+            # save_purchase_order() generates the number atomically and sets
+            # po_data['po_number'] in-place — calling it here wasted every other
+            # sequence number, producing PO-1, PO-3, PO-5 instead of PO-1, PO-2, PO-3.
             po_data['invoice_type'] = 'P'
 
             save_purchase_order(self.user_id, self.account_id, po_data)
