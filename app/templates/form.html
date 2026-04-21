@@ -4,186 +4,261 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+<style nonce="{{ nonce }}">
+.invoice-page { padding: 1.5rem; background: #f0f4f8; min-height: 100vh; }
+.invoice-hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
+    border-radius: 18px; padding: 1.8rem 2rem; color: #fff;
+    margin-bottom: 1.5rem;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+}
+.invoice-hero h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.invoice-hero p  { margin: 0.2rem 0 0; opacity: 0.65; font-size: 0.88rem; }
+
+.invoice-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
+    margin-bottom: 1.2rem;
+    overflow: hidden;
+}
+.invoice-card-header {
+    padding: 0.9rem 1.4rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 0.6rem;
+    font-weight: 700; font-size: 0.92rem; color: #1e293b;
+}
+.invoice-card-header .num {
+    background: #1d4ed8; color: #fff;
+    border-radius: 50%; width: 22px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 800;
+}
+.invoice-card-body { padding: 1.4rem; }
+.field-label { font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+
+/* Inventory search results (cards) – used by form_items.js */
+.inv-result-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.8rem;
+    margin-bottom: 0.6rem;
+}
+.inv-result-item:hover { background: #f8fafc; border-color: #1d4ed8; }
+
+/* Items table style (to match PO style) – form_items.js uses dynamic rows, not a table, but we keep the same class for consistency */
+.items-container .item-row {
+    background: #fff;
+    border-radius: 10px;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e9ecef;
+}
+.line-total {
+    font-weight: 700;
+    color: #1d4ed8;
+    font-size: 1rem;
+}
+/* Totals gradient box */
+.totals-box {
+    background: linear-gradient(135deg,#1e3a5f,#1d4ed8);
+    border-radius: 12px; color: #fff; padding: 1.4rem;
+}
+.totals-line { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.5rem; opacity: 0.85; }
+.totals-grand { display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 800; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.25); }
+
+.btn-invoice-submit {
+    background: linear-gradient(135deg,#059669,#10b981);
+    border: none; border-radius: 10px;
+    color: #fff; font-weight: 700; font-size: 1rem;
+    padding: 0.9rem 2.5rem;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+    transition: all 0.15s;
+}
+.btn-invoice-submit:hover { background: linear-gradient(135deg,#047857,#059669); transform: translateY(-1px); color:#fff; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="text-center mb-5">
-        <h2 class="fw-bold">Create Sales Invoice</h2>
-        <p class="text-muted fs-5">Professional & Fast</p>
+<div class="invoice-page">
+    <div class="invoice-hero">
+        <div>
+            <h2><i class="bi bi-receipt me-2"></i>Create Sales Invoice</h2>
+            <p>Professional & location‑aware</p>
+        </div>
+        <a href="{{ url_for('sales.invoice_history') }}" class="btn btn-sm"
+           style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;">
+            ← Invoice History
+        </a>
     </div>
 
-    <form method="POST" action="{{ url_for('sales.invoice_process') }}" enctype="multipart/form-data">
-        <input type="hidden" name="action" value="preview">
+    <form method="POST" action="{{ url_for('sales.invoice_process') }}" enctype="multipart/form-data" id="invoiceForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="invoice_type" value="S">
 
-        <!-- Client Information -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Client Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Client Name *</label>
-                        <input type="text" name="client_name" class="form-control" placeholder="Client or Company Name" required>
+        <div class="row g-3">
+            <!-- LEFT COLUMN (Client, Location, Items) -->
+            <div class="col-lg-8">
+                <!-- Step 1: Client Information -->
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <span class="num">1</span> Client Details
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Client Email</label>
-                        <input type="email" name="client_email" class="form-control" placeholder="client@email.com">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Client Phone</label>
-                        <input type="text" name="client_phone" class="form-control" placeholder="+1 (555) 123-4567">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Invoice Date *</label>
-                        <input type="date" name="invoice_date" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Due Date</label>
-                        <input type="date" name="due_date" class="form-control">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Client Address</label>
-                        <textarea name="client_address" class="form-control" rows="2" placeholder="Street, City, State, ZIP Code"></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Location Selection (Multi-Location Invoice) -->
-        <div class="card mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bi bi-building"></i> Selling From Location</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Select Location *</label>
-                        <select name="location_id" id="invoiceLocationId" class="form-select" required>
-                            <option value="">-- Choose Location --</option>
-                            {% for loc in locations %}
-                                <option value="{{ loc.id }}" {% if default_location_id == loc.id %}selected{% endif %}>
-                                    {{ loc.location_name }} ({{ loc.location_code }})
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">Stock will be deducted from this location</small>
-                    </div>
-                    <div class="col-md-6">
-                        <div id="locationStockInfo" class="alert alert-light border">
-                            Select a location to see available stock.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Inventory Search & Add (now location-aware) -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Add from Inventory</h5>
-            </div>
-            <div class="card-body">
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="inventorySearch" placeholder="Quick search product name...">
-                    <button type="button" class="btn btn-outline-primary" id="showAllInventory">Show All (at selected location)</button>
-                </div>
-                <div id="inventoryResults" class="mt-3"></div>
-
-                <div class="input-group mt-3">
-                    <select class="form-select" id="inventoryDropdown">
-                        <option value="">Select product...</option>
-                    </select>
-                    <button type="button" class="btn btn-primary" id="addInventoryBtn">Add to Invoice</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Line Items -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Line Items</h5>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                    + Add Item
-                </button>
-            </div>
-            <div class="card-body">
-                <div id="itemsContainer"></div>
-                <div id="noItemsMessage" class="text-center py-5 text-muted">
-                    No items added yet — click "+ Add Item" to start
-                </div>
-                <div class="text-end mt-4">
-                    <h4>Total: <span id="grandTotal">0.00</span></h4>
-                </div>
-            </div>
-        </div>
-
-        <!-- Financial & Payment -->
-        <div class="row g-4 mb-4">
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Financial Details</h5>
-                    </div>
-                    <div class="card-body">
+                    <div class="invoice-card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Tax Rate (%)</label>
-                                <input type="number" name="tax_rate" class="form-control" value="0" min="0" max="50" step="0.1">
+                                <div class="field-label">Client Name *</div>
+                                <input type="text" name="client_name" class="form-control" placeholder="Client or Company Name" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Discount Rate (%)</label>
-                                <input type="number" name="discount_rate" class="form-control" value="0" min="0" max="100" step="0.1">
+                                <div class="field-label">Client Email</div>
+                                <input type="email" name="client_email" class="form-control" placeholder="client@email.com">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Delivery Charge ({{ currency_symbol }})</label>
-                                <input type="number" name="delivery_charge" class="form-control" value="0" min="0" step="0.01">
+                                <div class="field-label">Client Phone</div>
+                                <input type="text" name="client_phone" class="form-control" placeholder="+1 (555) 123-4567">
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-label">Client Address</div>
+                                <textarea name="client_address" class="form-control" rows="2" placeholder="Street, City, State, ZIP Code"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-label">Invoice Date *</div>
+                                <input type="date" name="invoice_date" id="invoiceDate" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-label">Due Date</div>
+                                <input type="date" name="due_date" id="dueDate" class="form-control">
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Payment Information</h5>
+
+                <!-- Step 2: Selling Location -->
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <span class="num">2</span> Selling From Location
                     </div>
-                    <div class="card-body">
+                    <div class="invoice-card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Payment Terms</label>
-                                <input type="text" name="payment_terms" class="form-control" value="Due upon receipt">
+                                <div class="field-label">Select Location *</div>
+                                <select name="location_id" id="invoiceLocationId" class="form-select" required>
+                                    <option value="">-- Choose Location --</option>
+                                    {% for loc in locations %}
+                                        <option value="{{ loc.id }}" {% if default_location_id == loc.id %}selected{% endif %}>
+                                            {{ loc.location_name }} ({{ loc.location_code }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Stock will be deducted from this location</small>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Payment Methods</label>
-                                <input type="text" name="payment_methods" class="form-control" value="Bank Transfer, Credit Card">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Notes (Optional)</label>
-                                <textarea name="notes" class="form-control" rows="3" placeholder="Thank you note, special instructions..."></textarea>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Company Logo (Optional)</label>
-                                <input type="file" name="logo" class="form-control" accept="image/*">
+                                <div id="locationStockInfo" class="alert alert-light border">
+                                    Select a location to see available stock.
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="text-center">
-            <button type="submit" id="previewBtn" class="btn btn-success btn-lg px-5 py-3 rounded-pill shadow">
-                Preview Invoice
-            </button>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Step 3: Items (exactly as original – keeps all IDs and classes for form_items.js) -->
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <span class="num">3</span> Invoice Items
+                        <button type="button" class="btn btn-sm btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                            <i class="bi bi-plus-circle me-1"></i> Add from Inventory
+                        </button>
+                    </div>
+                    <div class="invoice-card-body">
+                        <!-- Inventory search bar (quick add) – kept for compatibility -->
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="inventorySearch" placeholder="Quick search product name...">
+                            <button type="button" class="btn btn-outline-primary" id="showAllInventory">Show All (at selected location)</button>
+                        </div>
+                        <div id="inventoryResults" class="mt-3"></div>
+
+                        <!-- Dropdown + Add button (alternative) -->
+                        <div class="input-group mt-3">
+                            <select class="form-select" id="inventoryDropdown">
+                                <option value="">Select product...</option>
+                            </select>
+                            <button type="button" class="btn btn-primary" id="addInventoryBtn">Add to Invoice</button>
+                        </div>
+
+                        <!-- Items container (dynamic rows) -->
+                        <div id="itemsContainer" class="mt-4 items-container"></div>
+                        <div id="noItemsMessage" class="text-center py-5 text-muted">
+                            No items added yet — click "+ Add Item" to start
+                        </div>
+                        <div class="text-end mt-4">
+                            <h4>Total: <span id="grandTotal">0.00</span> {{ currency_symbol }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN (Financials + Totals) -->
+            <div class="col-lg-4">
+                <!-- Step 4: Financial & Payment -->
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <span class="num">4</span> Financial & Payment
+                    </div>
+                    <div class="invoice-card-body">
+                        <div class="mb-3">
+                            <div class="field-label">Tax Rate (%)</div>
+                            <input type="number" name="tax_rate" class="form-control form-control-sm" value="0" min="0" max="50" step="0.1">
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Discount Rate (%)</div>
+                            <input type="number" name="discount_rate" class="form-control form-control-sm" value="0" min="0" max="100" step="0.1">
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Delivery Charge ({{ currency_symbol }})</div>
+                            <input type="number" name="delivery_charge" class="form-control form-control-sm" value="0" min="0" step="0.01">
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Payment Terms</div>
+                            <input type="text" name="payment_terms" class="form-control form-control-sm" value="Due upon receipt">
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Payment Methods</div>
+                            <input type="text" name="payment_methods" class="form-control form-control-sm" value="Bank Transfer, Credit Card">
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Notes (Optional)</div>
+                            <textarea name="notes" class="form-control form-control-sm" rows="3" placeholder="Thank you note, special instructions..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div class="field-label">Company Logo (Optional)</div>
+                            <input type="file" name="logo" class="form-control form-control-sm" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Totals Card (gradient box) – shows grand total only, but matches PO style -->
+                <div class="invoice-card">
+                    <div class="invoice-card-body">
+                        <div class="totals-box">
+                            <div class="totals-grand">
+                                <span>Grand Total</span>
+                                <span id="totGrand">{{ currency_symbol }}0.00</span>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" id="previewBtn" class="btn btn-invoice-submit w-100">
+                                <i class="bi bi-eye me-2"></i>Preview Invoice
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </form>
 </div>
 
-<!-- Add Item Modal (search) -->
+<!-- Modal for item search (kept exactly as original) -->
 <div class="modal fade" id="addItemModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4">
@@ -193,7 +268,6 @@
             </div>
             <div class="modal-body">
                 <input type="text" class="form-control form-control-lg mb-4" id="modalSearch" placeholder="Type product name...">
-                {# FIX: renamed from inventoryResults to modalInventoryResults to avoid duplicate id #}
                 <div id="modalInventoryResults"></div>
             </div>
         </div>
@@ -201,37 +275,44 @@
 </div>
 
 <script nonce="{{ nonce }}">
+    // Pass required globals for form_items.js
     window.userCurrencySymbol = "{{ currency_symbol | default('Rs.') }}";
     window.userLocations = {{ locations | tojson }};
-    <!--window.defaultLocationId = {{ default_location_id | tojson | default('null') }};-->
+    window.defaultLocationId = {{ default_location_id | tojson | default('null') }};
+
+    // Auto-fill dates and keep due date same as invoice date
+    document.addEventListener('DOMContentLoaded', function() {
+        const invoiceDateInput = document.getElementById('invoiceDate');
+        const dueDateInput = document.getElementById('dueDate');
+        const today = new Date().toISOString().split('T')[0];
+        if (invoiceDateInput && !invoiceDateInput.value) {
+            invoiceDateInput.value = today;
+        }
+        // Set due date to same as invoice date initially
+        if (dueDateInput && !dueDateInput.value && invoiceDateInput.value) {
+            dueDateInput.value = invoiceDateInput.value;
+        }
+        // Keep due date in sync when invoice date changes
+        if (invoiceDateInput && dueDateInput) {
+            invoiceDateInput.addEventListener('change', function() {
+                dueDateInput.value = this.value;
+            });
+        }
+
+        // Also update the grand total in the gradient box whenever the original grandTotal updates
+        const originalGrandTotal = document.getElementById('grandTotal');
+        const totGrandSpan = document.getElementById('totGrand');
+        if (originalGrandTotal && totGrandSpan) {
+            const observer = new MutationObserver(function() {
+                totGrandSpan.textContent = originalGrandTotal.textContent;
+            });
+            observer.observe(originalGrandTotal, { childList: true, characterData: true, subtree: true });
+            // initial sync
+            totGrandSpan.textContent = originalGrandTotal.textContent;
+        }
+    });
 </script>
+
+<!-- form_items.js remains untouched – must be loaded after the DOM is ready -->
 <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/form_items.js') }}"></script>
-
-<script nonce="{{ nonce }}">
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-fill dates
-    const dateInput = document.querySelector('input[name="invoice_date"]');
-    if (dateInput && !dateInput.value) {
-        dateInput.value = new Date().toISOString().split('T')[0];
-    }
-
-    const dueDate = document.querySelector('input[name="due_date"]');
-    if (dueDate && !dueDate.value) {
-        const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        dueDate.value = nextMonth.toISOString().split('T')[0];
-    }
-
-    // Prevent double-submit
-    const form = document.querySelector('form');
-    const submitBtn = document.getElementById('previewBtn');
-    if (form && submitBtn) {
-        form.addEventListener('submit', function(e) {
-            if (submitBtn.disabled) e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ Generating Preview...';
-        });
-    }
-});
-</script>
 {% endblock %}
