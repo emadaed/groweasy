@@ -37,28 +37,30 @@
 .invoice-card-body { padding: 1.4rem; }
 .field-label { font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
 
-/* Inventory search results (cards) – used by form_items.js */
-.inv-result-item {
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.8rem;
-    margin-bottom: 0.6rem;
-}
-.inv-result-item:hover { background: #f8fafc; border-color: #1d4ed8; }
-
-/* Items table style (to match PO style) – form_items.js uses dynamic rows, not a table, but we keep the same class for consistency */
+/* Items container – style dynamic rows like a table */
 .items-container .item-row {
     background: #fff;
     border-radius: 10px;
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
-    border: 1px solid #e9ecef;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    transition: all 0.1s;
 }
+.items-container .item-row:hover { background: #f8fafc; }
 .line-total {
     font-weight: 700;
     color: #1d4ed8;
     font-size: 1rem;
 }
+
+/* Inventory search results – card style */
+#inventoryResults .card, #modalInventoryResults .card {
+    transition: transform 0.1s;
+}
+#inventoryResults .card:hover, #modalInventoryResults .card:hover {
+    transform: translateY(-2px);
+}
+
 /* Totals gradient box */
 .totals-box {
     background: linear-gradient(135deg,#1e3a5f,#1d4ed8);
@@ -97,9 +99,9 @@
         <input type="hidden" name="invoice_type" value="S">
 
         <div class="row g-3">
-            <!-- LEFT COLUMN (Client, Location, Items) -->
+            <!-- LEFT COLUMN -->
             <div class="col-lg-8">
-                <!-- Step 1: Client Information -->
+                <!-- 1. Client Details -->
                 <div class="invoice-card">
                     <div class="invoice-card-header">
                         <span class="num">1</span> Client Details
@@ -134,7 +136,7 @@
                     </div>
                 </div>
 
-                <!-- Step 2: Selling Location -->
+                <!-- 2. Selling Location -->
                 <div class="invoice-card">
                     <div class="invoice-card-header">
                         <span class="num">2</span> Selling From Location
@@ -162,7 +164,7 @@
                     </div>
                 </div>
 
-                <!-- Step 3: Items (exactly as original – keeps all IDs and classes for form_items.js) -->
+                <!-- 3. Invoice Items -->
                 <div class="invoice-card">
                     <div class="invoice-card-header">
                         <span class="num">3</span> Invoice Items
@@ -171,14 +173,14 @@
                         </button>
                     </div>
                     <div class="invoice-card-body">
-                        <!-- Inventory search bar (quick add) – kept for compatibility -->
+                        <!-- Quick search bar (kept for compatibility) -->
                         <div class="input-group mb-3">
                             <input type="text" class="form-control" id="inventorySearch" placeholder="Quick search product name...">
                             <button type="button" class="btn btn-outline-primary" id="showAllInventory">Show All (at selected location)</button>
                         </div>
                         <div id="inventoryResults" class="mt-3"></div>
 
-                        <!-- Dropdown + Add button (alternative) -->
+                        <!-- Dropdown + Add button -->
                         <div class="input-group mt-3">
                             <select class="form-select" id="inventoryDropdown">
                                 <option value="">Select product...</option>
@@ -186,7 +188,7 @@
                             <button type="button" class="btn btn-primary" id="addInventoryBtn">Add to Invoice</button>
                         </div>
 
-                        <!-- Items container (dynamic rows) -->
+                        <!-- Dynamic items container -->
                         <div id="itemsContainer" class="mt-4 items-container"></div>
                         <div id="noItemsMessage" class="text-center py-5 text-muted">
                             No items added yet — click "+ Add Item" to start
@@ -198,9 +200,9 @@
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN (Financials + Totals) -->
+            <!-- RIGHT COLUMN -->
             <div class="col-lg-4">
-                <!-- Step 4: Financial & Payment -->
+                <!-- 4. Financial & Payment -->
                 <div class="invoice-card">
                     <div class="invoice-card-header">
                         <span class="num">4</span> Financial & Payment
@@ -237,10 +239,26 @@
                     </div>
                 </div>
 
-                <!-- Totals Card (gradient box) – shows grand total only, but matches PO style -->
+                <!-- Totals + Submit Button (same gradient style as PO) -->
                 <div class="invoice-card">
                     <div class="invoice-card-body">
                         <div class="totals-box">
+                            <div class="totals-line">
+                                <span>Subtotal</span>
+                                <span id="totSubtotal">{{ currency_symbol }}0.00</span>
+                            </div>
+                            <div class="totals-line">
+                                <span>Discount</span>
+                                <span id="totDiscount">{{ currency_symbol }}0.00</span>
+                            </div>
+                            <div class="totals-line">
+                                <span>Tax</span>
+                                <span id="totTax">{{ currency_symbol }}0.00</span>
+                            </div>
+                            <div class="totals-line">
+                                <span>Delivery</span>
+                                <span id="totDelivery">{{ currency_symbol }}0.00</span>
+                            </div>
                             <div class="totals-grand">
                                 <span>Grand Total</span>
                                 <span id="totGrand">{{ currency_symbol }}0.00</span>
@@ -258,7 +276,7 @@
     </form>
 </div>
 
-<!-- Modal for item search (kept exactly as original) -->
+<!-- Modal for item search (unchanged) -->
 <div class="modal fade" id="addItemModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4">
@@ -275,44 +293,68 @@
 </div>
 
 <script nonce="{{ nonce }}">
-    // Pass required globals for form_items.js
+    // Globals for form_items.js
     window.userCurrencySymbol = "{{ currency_symbol | default('Rs.') }}";
     window.userLocations = {{ locations | tojson }};
     window.defaultLocationId = {{ default_location_id | tojson | default('null') }};
 
-    // Auto-fill dates and keep due date same as invoice date
+    // Date handling: due date = invoice date, and keep synced
     document.addEventListener('DOMContentLoaded', function() {
-        const invoiceDateInput = document.getElementById('invoiceDate');
-        const dueDateInput = document.getElementById('dueDate');
+        const invoiceDate = document.getElementById('invoiceDate');
+        const dueDate = document.getElementById('dueDate');
         const today = new Date().toISOString().split('T')[0];
-        if (invoiceDateInput && !invoiceDateInput.value) {
-            invoiceDateInput.value = today;
-        }
-        // Set due date to same as invoice date initially
-        if (dueDateInput && !dueDateInput.value && invoiceDateInput.value) {
-            dueDateInput.value = invoiceDateInput.value;
-        }
-        // Keep due date in sync when invoice date changes
-        if (invoiceDateInput && dueDateInput) {
-            invoiceDateInput.addEventListener('change', function() {
-                dueDateInput.value = this.value;
+        if (invoiceDate && !invoiceDate.value) invoiceDate.value = today;
+        if (dueDate && !dueDate.value && invoiceDate.value) dueDate.value = invoiceDate.value;
+        if (invoiceDate && dueDate) {
+            invoiceDate.addEventListener('change', function() {
+                dueDate.value = this.value;
             });
         }
 
-        // Also update the grand total in the gradient box whenever the original grandTotal updates
-        const originalGrandTotal = document.getElementById('grandTotal');
-        const totGrandSpan = document.getElementById('totGrand');
-        if (originalGrandTotal && totGrandSpan) {
-            const observer = new MutationObserver(function() {
-                totGrandSpan.textContent = originalGrandTotal.textContent;
+        // Sync the gradient totals with the actual calculated values from form_items.js
+        // We'll recompute totals whenever input fields change
+        const taxInput = document.querySelector('input[name="tax_rate"]');
+        const discountInput = document.querySelector('input[name="discount_rate"]');
+        const deliveryInput = document.querySelector('input[name="delivery_charge"]');
+        const itemsContainer = document.getElementById('itemsContainer');
+        const grandTotalSpan = document.getElementById('grandTotal');
+
+        function updateGradientTotals() {
+            // Get subtotal from all line items
+            let subtotal = 0;
+            document.querySelectorAll('.item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('input[name="item_qty[]"]')?.value) || 0;
+                const price = parseFloat(row.querySelector('input[name="item_price[]"]')?.value) || 0;
+                subtotal += qty * price;
             });
-            observer.observe(originalGrandTotal, { childList: true, characterData: true, subtree: true });
-            // initial sync
-            totGrandSpan.textContent = originalGrandTotal.textContent;
+            const taxRate = parseFloat(taxInput?.value) || 0;
+            const discountRate = parseFloat(discountInput?.value) || 0;
+            const delivery = parseFloat(deliveryInput?.value) || 0;
+            const discount = subtotal * (discountRate / 100);
+            const taxable = subtotal - discount;
+            const tax = taxable * (taxRate / 100);
+            const grand = taxable + tax + delivery;
+
+            document.getElementById('totSubtotal').innerText = window.userCurrencySymbol + subtotal.toFixed(2);
+            document.getElementById('totDiscount').innerText = window.userCurrencySymbol + discount.toFixed(2);
+            document.getElementById('totTax').innerText = window.userCurrencySymbol + tax.toFixed(2);
+            document.getElementById('totDelivery').innerText = window.userCurrencySymbol + delivery.toFixed(2);
+            document.getElementById('totGrand').innerText = window.userCurrencySymbol + grand.toFixed(2);
+            // Also update the original grandTotal span (used by form_items.js for its own calculations)
+            if (grandTotalSpan) grandTotalSpan.innerText = grand.toFixed(2);
         }
+
+        // Listen to changes in items, tax, discount, delivery
+        if (itemsContainer) {
+            const observer = new MutationObserver(updateGradientTotals);
+            observer.observe(itemsContainer, { childList: true, subtree: true, attributes: true });
+        }
+        if (taxInput) taxInput.addEventListener('input', updateGradientTotals);
+        if (discountInput) discountInput.addEventListener('input', updateGradientTotals);
+        if (deliveryInput) deliveryInput.addEventListener('input', updateGradientTotals);
+        updateGradientTotals(); // initial run
     });
 </script>
 
-<!-- form_items.js remains untouched – must be loaded after the DOM is ready -->
 <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/form_items.js') }}"></script>
 {% endblock %}
