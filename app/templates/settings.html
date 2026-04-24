@@ -1,164 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Premium Settings | GrowEasy Invoice</title>
+    <!-- Bootstrap 5 + Icons + Fonts (ensuring premium look) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        /* ----- premium custom styles ----- */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f8;
+            scroll-behavior: smooth;
+        }
+
+        /* smooth card style */
+        .premium-card {
+            background: #ffffff;
+            border: none;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05), 0 4px 8px rgba(0, 0, 0, 0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .premium-card:hover {
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .card-header-premium {
+            background: transparent;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1.25rem 1.75rem;
+            font-weight: 600;
+            font-size: 1.2rem;
+            letter-spacing: -0.2px;
+        }
+
+        .card-body-premium {
+            padding: 1.75rem;
+        }
+
+        /* form elements styling */
+        .form-control, .form-select {
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            padding: 0.7rem 1rem;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            background-color: #fefefe;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+            outline: none;
+        }
+
+        textarea.form-control {
+            border-radius: 20px;
+        }
+
+        .form-label {
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-icon-group {
+            position: relative;
+        }
+
+        .btn-premium {
+            border-radius: 40px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-success-premium {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-success-premium:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: scale(1.01);
+            box-shadow: 0 8px 18px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-warning-premium {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+        }
+
+        .btn-warning-premium:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            transform: scale(1.01);
+        }
+
+        .btn-outline-premium {
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-weight: 500;
+            padding: 0.5rem 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .btn-outline-premium:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+        }
+
+        .badge-premium {
+            background: #eef2ff;
+            color: #1e40af;
+            border-radius: 40px;
+            padding: 0.4rem 0.9rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        .link-icon {
+            text-decoration: none;
+            color: #334155;
+            font-weight: 500;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .link-icon:hover {
+            color: #3b82f6;
+        }
+
+        .divider-light {
+            background: #eef2ff;
+            height: 1px;
+            width: 100%;
+            margin: 1.2rem 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 0.6rem 0;
+            border-bottom: 1px dashed #eef2ff;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.85rem;
+        }
+
+        .info-value {
+            color: #0f172a;
+            font-weight: 500;
+            word-break: break-word;
+            text-align: right;
+        }
+
+        .flash-message {
+            border-radius: 20px;
+            border-left: 6px solid;
+            background: white;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #1e293b, #2d3a4b);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .back-dashboard {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 60px;
+            padding: 0.4rem 1.2rem;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .card-body-premium {
+                padding: 1.25rem;
+            }
+            .card-header-premium {
+                padding: 1rem 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
 {% extends "base.html" %}
 
-{% block title %}Settings - GrowEasy Invoice{% endblock %}
+{% block title %}Premium Settings - GrowEasy Invoice{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>⚙️ Account Settings</h2>
-                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">← Back to Dashboard</a>
-            </div>
+<div class="container py-5">
+    <!-- premium header with background accent -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-5 pb-1">
+        <div>
+            <h1 class="display-6 fw-bold" style="letter-spacing: -0.5px; background: linear-gradient(135deg, #0f172a, #2d3e5f); background-clip: text; -webkit-background-clip: text; color: transparent;">⚙️ Workspace Settings</h1>
+            <p class="text-muted mt-1">Manage your business profile, security preferences & integrations</p>
+        </div>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary back-dashboard">
+            <i class="bi bi-arrow-left-short"></i> Back to Dashboard
+        </a>
+    </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-
-            <div class="row">
-                <!-- Company Information -->
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">🏢 Company Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST">
-                                <input type="hidden" name="update_profile" value="1">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                                <div class="mb-3">
-                                    <label class="form-label">Company Name</label>
-                                    <input type="text" name="company_name" class="form-control"
-                                           value="{{ user_profile['company_name'] or '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Company Address</label>
-                                    <textarea name="company_address" class="form-control" rows="3">{{ user_profile['company_address'] or '' }}</textarea>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Phone Number</label>
-                                    <input type="text" name="company_phone" class="form-control"
-                                           value="{{ user_profile['company_phone'] or '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Tax ID</label>
-                                    <input type="text" name="company_tax_id" class="form-control"
-                                           value="{{ user_profile['company_tax_id'] or '' }}">
-                                </div>
-
-                                <!-- 🆕 FBR Tax Fields (Moved from accordion) -->
-                                <hr>
-                                <h6 class="text-primary">🛒️ Tax Information (Pakistan)</h6>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Seller NTN</label>
-                                    <input type="text" name="seller_ntn" class="form-control"
-                                           value="{{ user_profile.get('seller_ntn', '') }}"
-                                           pattern="[0-9]{7}-[0-9]{1}"
-                                           placeholder="1234567-8">
-                                    <div class="form-text">National Tax Number (Format: 1234567-8)</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Seller STRN</label>
-                                    <input type="text" name="seller_strn" class="form-control"
-                                           value="{{ user_profile.get('seller_strn', '') }}"
-                                           placeholder="Sales Tax Registration Number">
-                                    <div class="form-text">Required if registered for sales tax</div>
-                                </div>
-                                <hr>
-                                <h6 class="text-primary">💱 Currency Preference</h6>
-                                <div class="mb-3">
-                                    <label class="form-label">Display Currency</label>
-                                    <select name="preferred_currency" class="form-control">
-                                        <option value="PKR" {% if user_profile.get('preferred_currency') == 'PKR' %}selected{% endif %}>🇵🇰 Pakistani Rupee (Rs.)</option>
-                                        <option value="USD" {% if user_profile.get('preferred_currency') == 'USD' %}selected{% endif %}>🇺🇸 US Dollar ($)</option>
-                                        <option value="EUR" {% if user_profile.get('preferred_currency') == 'EUR' %}selected{% endif %}>🇪🇺 Euro (€)</option>
-                                        <option value="GBP" {% if user_profile.get('preferred_currency') == 'GBP' %}selected{% endif %}>🇬🇧 British Pound (£)</option>
-                                        <option value="AED" {% if user_profile.get('preferred_currency') == 'AED' %}selected{% endif %}>🇦🇪 UAE Dirham (د.إ)</option>
-                                        <option value="SAR" {% if user_profile.get('preferred_currency') == 'SAR' %}selected{% endif %}>🇸🇦 Saudi Riyal (﷼)</option>
-                                    </select>
-                                    <small class="text-muted">Selected Currency will be used for display purposes</small>
-                                </div>
-                                <button type="submit" class="btn btn-success">Update Profile</button>
-                            </form>
-                        </div>
+    <!-- flash messages (premium style) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message alert-{{ 'danger' if category == 'error' else 'success' }}" 
+                     style="border-left-color: {{ '#dc2626' if category == 'error' else '#10b981' }};">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }} fs-5"></i>
+                        <span class="fw-medium">{{ message }}</span>
                     </div>
                 </div>
-                
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
-                <!-- Security Settings -->
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">🔒 Security</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST">
-                                <input type="hidden" name="change_password" value="1">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-5">
+        <!-- LEFT COLUMN: Company & Tax Information (premium card) -->
+        <div class="col-lg-6">
+            <div class="premium-card">
+                <div class="card-header-premium">
+                    <i class="bi bi-building me-2 text-primary"></i> Company Profile
+                </div>
+                <div class="card-body-premium">
+                    <form method="POST">
+                        <input type="hidden" name="update_profile" value="1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                                <div class="mb-3">
-                                    <label class="form-label">Current Password</label>
-                                    <input type="password" name="current_password" class="form-control" required>
+                        <!-- Business details section -->
+                        <div class="mb-4">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="bi bi-briefcase me-1"></i> Company Name</label>
+                                <input type="text" name="company_name" class="form-control" 
+                                       value="{{ user_profile['company_name'] or '' }}" placeholder="GrowEasy LLC">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label"><i class="bi bi-geo-alt me-1"></i> Company Address</label>
+                                <textarea name="company_address" class="form-control" rows="3" 
+                                          placeholder="Street, City, Postal Code">{{ user_profile['company_address'] or '' }}</textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><i class="bi bi-telephone me-1"></i> Phone Number</label>
+                                    <input type="text" name="company_phone" class="form-control"
+                                           value="{{ user_profile['company_phone'] or '' }}" placeholder="+92 123 4567890">
                                 </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">New Password</label>
-                                    <input type="password" name="new_password" class="form-control" required minlength="6">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><i class="bi bi-receipt me-1"></i> Tax ID (General)</label>
+                                    <input type="text" name="company_tax_id" class="form-control"
+                                           value="{{ user_profile['company_tax_id'] or '' }}" placeholder="NTN/ VAT">
                                 </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Confirm New Password</label>
-                                    <input type="password" name="confirm_password" class="form-control" required minlength="6">
-                                </div>
-
-                                <button type="submit" class="btn btn-warning">Change Password</button>
-                            </form>
-
-                            <hr>
-                            <div class="text-center">
-                                <a href="{{ url_for('auth.forgot_password') }}" class="btn btn-outline-danger btn-sm">🔓 Forgot Password?</a>
                             </div>
                         </div>
+
+                        <!-- Pakistan Tax Section premium design -->
+                        <div class="bg-light p-3 rounded-4 mb-4" style="background: #f9fafc !important;">
+                            <h6 class="fw-semibold mb-3"><i class="bi bi-file-text-fill text-primary me-2"></i>🇵🇰 Pakistan Tax (FBR)</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Seller NTN</label>
+                                <input type="text" name="seller_ntn" class="form-control"
+                                       value="{{ user_profile.get('seller_ntn', '') }}"
+                                       pattern="[0-9]{7}-[0-9]{1}"
+                                       placeholder="1234567-8">
+                                <div class="form-text text-muted small">Format: 1234567-8 (7 digits, hyphen, 1 digit)</div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Seller STRN</label>
+                                <input type="text" name="seller_strn" class="form-control"
+                                       value="{{ user_profile.get('seller_strn', '') }}"
+                                       placeholder="Sales Tax Registration Number">
+                                <div class="form-text text-muted small">Required if registered for sales tax</div>
+                            </div>
+                        </div>
+
+                        <!-- Currency Preference -->
+                        <div class="mb-4">
+                            <label class="form-label"><i class="bi bi-currency-exchange me-1"></i> Display Currency</label>
+                            <select name="preferred_currency" class="form-select">
+                                <option value="PKR" {% if user_profile.get('preferred_currency') == 'PKR' %}selected{% endif %}>🇵🇰 Pakistani Rupee (Rs.)</option>
+                                <option value="USD" {% if user_profile.get('preferred_currency') == 'USD' %}selected{% endif %}>🇺🇸 US Dollar ($)</option>
+                                <option value="EUR" {% if user_profile.get('preferred_currency') == 'EUR' %}selected{% endif %}>🇪🇺 Euro (€)</option>
+                                <option value="GBP" {% if user_profile.get('preferred_currency') == 'GBP' %}selected{% endif %}>🇬🇧 British Pound (£)</option>
+                                <option value="AED" {% if user_profile.get('preferred_currency') == 'AED' %}selected{% endif %}>🇦🇪 UAE Dirham (د.إ)</option>
+                                <option value="SAR" {% if user_profile.get('preferred_currency') == 'SAR' %}selected{% endif %}>🇸🇦 Saudi Riyal (﷼)</option>
+                            </select>
+                            <div class="form-text text-muted">Invoices & estimates will reflect this currency</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success-premium btn-premium w-100">
+                            <i class="bi bi-check2-circle me-2"></i> Update Company Profile
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Security, Active Devices, Account Info -->
+        <div class="col-lg-6">
+            <!-- Security Card (change password) -->
+            <div class="premium-card mb-4">
+                <div class="card-header-premium">
+                    <i class="bi bi-shield-lock me-2 text-warning"></i> Security & Authentication
+                </div>
+                <div class="card-body-premium">
+                    <form method="POST">
+                        <input type="hidden" name="change_password" value="1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-key"></i> Current Password</label>
+                            <input type="password" name="current_password" class="form-control" required autocomplete="current-password">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">New Password</label>
+                                <input type="password" name="new_password" class="form-control" required minlength="6">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Confirm New Password</label>
+                                <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-warning-premium btn-premium w-100">
+                            <i class="bi bi-arrow-repeat me-2"></i> Change Password
+                        </button>
+                    </form>
+                    <div class="divider-light"></div>
+                    <div class="text-center">
+                        <a href="{{ url_for('auth.forgot_password') }}" class="link-icon">
+                            <i class="bi bi-question-circle"></i> Forgot your password?
+                        </a>
                     </div>
-                    <!-- Active Devices -->
-                    <div class="col-md-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h5 class="mb-0">📱 Active Devices</h5>
-                            </div>
-                            <div class="card-body">
-                                <a href="{{ url_for('settings.devices') }}" class="btn btn-primary">Manage Devices</a>
-                                <p class="small text-muted mt-2">View and revoke access from other devices</p>
-                                <ul class="list-unstyled mt-2 mb-0">
-                                    <li><a href="{{ url_for('users.api_keys') }}"><i class="bi bi-key-fill"></i> API Keys</a></li>
-                                    <li><a href="{{ url_for('users.list_webhooks') }}"><i class="bi bi-plug-fill"></i> Webhooks</a></li>
-                                </ul>
-                            </div>
+                </div>
+            </div>
+
+            <!-- Active Devices + Integrations (unified premium card) -->
+            <div class="premium-card mb-4">
+                <div class="card-header-premium">
+                    <i class="bi bi-device-ssd me-2 text-info"></i> Active Devices & Integrations
+                </div>
+                <div class="card-body-premium">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                        <div>
+                            <span class="badge-premium"><i class="bi bi-wifi"></i> Manage sessions</span>
                         </div>
+                        <a href="{{ url_for('settings.devices') }}" class="btn btn-outline-premium btn-sm">
+                            <i class="bi bi-laptop"></i> Manage Devices
+                        </a>
                     </div>
-                    <!-- Account Info -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">📊 Account Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Email:</strong> {{ user_profile['email'] }}</p>
-                            <p><strong>Member since:</strong> {{ user_profile['created_at'][:10] if user_profile['created_at'] else 'N/A' }}</p>
-                            <p><strong>User ID:</strong> {{ user_profile['id'] }}</p>
-                        </div>
+                    <p class="small text-muted mb-3">View and revoke access from other browsers or devices.</p>
+                    
+                    <div class="d-flex flex-wrap gap-3 mt-2">
+                        <a href="{{ url_for('users.api_keys') }}" class="link-icon bg-light p-2 px-3 rounded-3" style="background: #f1f5f9;">
+                            <i class="bi bi-key-fill text-primary"></i> API Keys
+                        </a>
+                        <a href="{{ url_for('users.list_webhooks') }}" class="link-icon bg-light p-2 px-3 rounded-3" style="background: #f1f5f9;">
+                            <i class="bi bi-plug-fill text-success"></i> Webhooks
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Information Card -->
+            <div class="premium-card">
+                <div class="card-header-premium">
+                    <i class="bi bi-person-circle me-2 text-secondary"></i> Account Snapshot
+                </div>
+                <div class="card-body-premium">
+                    <div class="info-row">
+                        <span class="info-label"><i class="bi bi-envelope"></i> Email</span>
+                        <span class="info-value">{{ user_profile['email'] }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="bi bi-calendar-check"></i> Member since</span>
+                        <span class="info-value">{{ user_profile['created_at'][:10] if user_profile['created_at'] else 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="bi bi-fingerprint"></i> User ID</span>
+                        <span class="info-value">{{ user_profile['id'] }}</span>
+                    </div>
+                    <div class="mt-3 pt-2 text-center">
+                        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1">
+                            <i class="bi bi-check-lg"></i> Verified account
+                        </span>
                     </div>
                 </div>
             </div>
@@ -166,3 +416,8 @@
     </div>
 </div>
 {% endblock %}
+
+<!-- Bootstrap JS Bundle (with Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
