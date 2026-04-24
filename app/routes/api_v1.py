@@ -637,9 +637,9 @@ def get_location_stats():
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text("""
             SELECT l.id, l.location_name, l.location_code, l.location_type,
-                   COUNT(DISTINCT pl.product_id) as product_count,
-                   COALESCE(SUM(pl.quantity), 0) as total_units,
-                   COALESCE(SUM(pl.quantity * i.cost_price), 0) as total_value
+                   COUNT(DISTINCT CASE WHEN i.id IS NOT NULL THEN pl.product_id END) as product_count,
+                   COALESCE(SUM(CASE WHEN i.id IS NOT NULL THEN pl.quantity ELSE 0 END), 0) as total_units,
+                   COALESCE(SUM(CASE WHEN i.id IS NOT NULL THEN pl.quantity * i.cost_price ELSE 0 END), 0) as total_value
             FROM locations l
             LEFT JOIN product_locations pl ON l.id = pl.location_id
             LEFT JOIN inventory_items i ON pl.product_id = i.id AND i.is_active = TRUE
