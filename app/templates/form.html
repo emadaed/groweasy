@@ -1,37 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Create Invoice{% endblock %}
+{% block title %}Create Invoice | GrowEasy{% endblock %}
 
 {% block extra_head %}
 <style nonce="{{ nonce }}">
-/* ═══════════════════════════════════════════════════════════
-   ESCAPE THE BASE container-main BOX
-   base.html wraps the content block inside:
-     <main class="container-main"> (max-width:980px, bg:#fff, padding:30px 36px)
-   We override it so our full-bleed dashboard layout works,
-   exactly the same way inventory_dashboard.html and create_po.html work.
-═══════════════════════════════════════════════════════════ */
-main.container-main {
+  /* ========= RESET BASE CONTAINER TO ALLOW FULL-WIDTH ========= */
+  main.container-main {
     max-width: 100% !important;
     background: transparent !important;
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
     border-radius: 0 !important;
-}
+  }
 
-/* ═══════════════════════════════════════════════════════════
-   PAGE SHELL
-═══════════════════════════════════════════════════════════ */
-.inv-page {
+  /* ========= GLOBAL PAGE STYLE ========= */
+  .inv-page {
     padding: 1.5rem;
     background: #f0f4f8;
     min-height: 100vh;
-}
+  }
 
-/* ═══════════════════════════════════════════════════════════
-   HERO — identical gradient & radius to create_po.html
-═══════════════════════════════════════════════════════════ */
-.inv-hero {
+  /* ========= HERO SECTION (consistent with create_po) ========= */
+  .inv-hero {
     background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
     border-radius: 18px;
     padding: 1.8rem 2rem;
@@ -42,498 +32,515 @@ main.container-main {
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
-}
-.inv-hero h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
-.inv-hero p  { margin: 0.2rem 0 0; opacity: 0.65; font-size: 0.88rem; }
+  }
+  .inv-hero h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .inv-hero p {
+    margin: 0.2rem 0 0;
+    opacity: 0.65;
+    font-size: 0.88rem;
+  }
 
-/* ═══════════════════════════════════════════════════════════
-   CARDS — identical to .po-card in create_po.html
-═══════════════════════════════════════════════════════════ */
-.inv-card {
+  /* ========= PREMIUM CARDS ========= */
+  .inv-card {
     background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
-    margin-bottom: 1.2rem;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 6px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
     overflow: hidden;
-}
-.inv-card-header {
-    padding: 0.9rem 1.4rem;
-    border-bottom: 1px solid #f1f5f9;
+    transition: transform 0.1s ease, box-shadow 0.2s;
+  }
+  .inv-card:hover {
+    box-shadow: 0 16px 28px rgba(0,0,0,0.08);
+  }
+  .inv-card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eff3f8;
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.75rem;
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 0.95rem;
     color: #1e293b;
-}
-.inv-card-header .num {
+    background: #fefefe;
+  }
+  .inv-card-header .num {
     background: #1d4ed8;
     color: #fff;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
+    border-radius: 40px;
+    width: 28px;
+    height: 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 800;
     flex-shrink: 0;
-}
-.inv-card-body { padding: 1.4rem; }
+    box-shadow: 0 2px 6px rgba(29,78,216,0.2);
+  }
+  .inv-card-body {
+    padding: 1.5rem;
+  }
 
-/* ── Field labels ── */
-.field-label {
-    font-size: 0.78rem;
+  /* ========= FORM LABELS ========= */
+  .field-label {
+    font-size: 0.7rem;
     font-weight: 700;
-    color: #64748b;
+    color: #5b6e8c;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-bottom: 0.3rem;
-}
+    margin-bottom: 0.35rem;
+  }
 
-/* ═══════════════════════════════════════════════════════════
-   ITEMS SECTION — all IDs/classes preserved for form_items.js
-═══════════════════════════════════════════════════════════ */
-/* .item-row — class used by form_items.js to append & query rows */
-#itemsContainer .item-row {
-    background: #fff;
-    border-radius: 10px;
-    margin-bottom: 0.75rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid #e2e8f0;
-    transition: background 0.12s;
-}
-#itemsContainer .item-row:hover { background: #f8fafc; }
-
-/* .line-total — used by form_items.js updateLineTotal() */
-.line-total {
-    font-weight: 700;
+  /* ========= ITEMS ROWS (used by form_items.js) ========= */
+  #itemsContainer .item-row {
+    background: #ffffff;
+    border-radius: 18px;
+    margin-bottom: 0.85rem;
+    padding: 1rem 1.2rem;
+    border: 1px solid #e9edf2;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+  #itemsContainer .item-row:hover {
+    background: #fafcff;
+    border-color: #cbdffc;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.03);
+  }
+  .line-total {
+    font-weight: 800;
     color: #1d4ed8;
     font-size: 1rem;
-}
+    background: #eff6ff;
+    padding: 0.25rem 0.8rem;
+    border-radius: 40px;
+    display: inline-block;
+  }
 
-/* Empty state — id="noItemsMessage" used by form_items.js updateEmptyState() */
-#noItemsMessage {
+  /* empty state */
+  #noItemsMessage {
     border: 2px dashed #e2e8f0;
-    border-radius: 12px;
+    border-radius: 24px;
     padding: 3rem 1rem;
     text-align: center;
     color: #94a3b8;
     margin-top: 1rem;
-}
-#noItemsMessage i { font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.4; }
+    background: #fafcff;
+  }
+  #noItemsMessage i {
+    font-size: 2.2rem;
+    display: block;
+    margin-bottom: 0.6rem;
+    opacity: 0.5;
+  }
 
-/* Search result cards */
-#inventoryResults .card,
-#modalInventoryResults .card {
-    transition: transform 0.1s;
+  /* search & inventory results */
+  #inventoryResults .card, #modalInventoryResults .card {
+    transition: all 0.12s;
     cursor: pointer;
-}
-#inventoryResults .card:hover,
-#modalInventoryResults .card:hover { transform: translateY(-2px); }
+    border-radius: 14px;
+  }
+  #inventoryResults .card:hover, #modalInventoryResults .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+  }
 
-/* ═══════════════════════════════════════════════════════════
-   TOTALS BOX — identical gradient to create_po.html
-═══════════════════════════════════════════════════════════ */
-.totals-box {
+  /* location stock alert */
+  #locationStockInfo {
+    background: #f8fafe;
+    border-radius: 14px;
+    font-size: 0.8rem;
+  }
+
+  /* ========= TOTALS BOX (premium gradient) ========= */
+  .totals-box {
     background: linear-gradient(135deg, #1e3a5f, #1d4ed8);
-    border-radius: 12px;
+    border-radius: 20px;
     color: #fff;
-    padding: 1.4rem;
-}
-.totals-line {
+    padding: 1.5rem;
+    box-shadow: 0 12px 18px -6px rgba(0,0,0,0.12);
+  }
+  .totals-line {
     display: flex;
     justify-content: space-between;
-    font-size: 0.88rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.85;
-}
-.totals-grand {
+    font-size: 0.85rem;
+    margin-bottom: 0.6rem;
+    opacity: 0.88;
+  }
+  .totals-grand {
     display: flex;
     justify-content: space-between;
     font-size: 1.3rem;
     font-weight: 800;
-    margin-top: 0.8rem;
+    margin-top: 0.9rem;
     padding-top: 0.8rem;
     border-top: 1px solid rgba(255,255,255,0.25);
-}
+  }
 
-/* ═══════════════════════════════════════════════════════════
-   SUBMIT BUTTON — identical green gradient to create_po.html
-═══════════════════════════════════════════════════════════ */
-.btn-inv-submit {
+  /* premium submit button */
+  .btn-inv-submit {
     background: linear-gradient(135deg, #059669, #10b981);
     border: none;
-    border-radius: 10px;
+    border-radius: 40px;
     color: #fff;
     font-weight: 700;
     font-size: 1rem;
-    padding: 0.9rem 2.5rem;
-    box-shadow: 0 4px 14px rgba(5,150,105,0.35);
-    transition: all 0.15s;
+    padding: 0.85rem 1.2rem;
     width: 100%;
-}
-.btn-inv-submit:hover {
+    transition: all 0.2s;
+    box-shadow: 0 6px 14px rgba(5,150,105,0.3);
+  }
+  .btn-inv-submit:hover {
     background: linear-gradient(135deg, #047857, #059669);
     transform: translateY(-1px);
     color: #fff;
-}
+  }
 
-/* location info badge */
-#locationStockInfo { font-size: 0.83rem; }
+  /* additional small tweaks */
+  .form-control, .form-select {
+    border-radius: 14px;
+    border: 1px solid #e2edf7;
+    padding: 0.55rem 1rem;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.15);
+  }
+  .btn-outline-secondary {
+    border-radius: 30px;
+  }
+  .badge-location {
+    background: #eef2ff;
+    color: #1e40af;
+    border-radius: 30px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.7rem;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="inv-page">
 
-    <!-- ══════ HERO ══════ -->
-    <div class="inv-hero">
-        <div>
-            <h2><i class="bi bi-receipt me-2"></i>Create Sales Invoice</h2>
-            <p>Select client, add items, and preview your invoice</p>
-        </div>
-        <a href="{{ url_for('sales.invoice_history') }}"
-           class="btn btn-sm"
-           style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;">
-            ← Invoice History
-        </a>
+  <!-- HERO SECTION (gradient + back button) -->
+  <div class="inv-hero">
+    <div>
+      <h2><i class="bi bi-receipt me-2"></i>Create Sales Invoice</h2>
+      <p>Select client, add items, and generate professional invoice</p>
     </div>
+    <a href="{{ url_for('sales.invoice_history') }}"
+       class="btn btn-sm"
+       style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;">
+      ← Invoice History
+    </a>
+  </div>
 
-    <form method="POST"
-          action="{{ url_for('sales.invoice_process') }}"
-          enctype="multipart/form-data"
-          id="invoiceForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="invoice_type" value="S">
+  <form method="POST"
+        action="{{ url_for('sales.invoice_process') }}"
+        enctype="multipart/form-data"
+        id="invoiceForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="invoice_type" value="S">
 
-        <div class="row g-3">
+    <div class="row g-4">
+      <!-- LEFT COLUMN (8) : client, location, items -->
+      <div class="col-lg-8">
 
-            <!-- ════ LEFT COLUMN (8 cols) ════ -->
-            <div class="col-lg-8">
-
-                <!-- Step 1 · Client Details -->
-                <div class="inv-card">
-                    <div class="inv-card-header">
-                        <span class="num">1</span> Client Details
-                    </div>
-                    <div class="inv-card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="field-label">Client Name *</div>
-                                <input type="text" name="client_name" class="form-control"
-                                       placeholder="Client or Company Name" required>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="field-label">Client Email</div>
-                                <input type="email" name="client_email" class="form-control"
-                                       placeholder="client@email.com">
-                            </div>
-                            <div class="col-md-6">
-                                <div class="field-label">Client Phone</div>
-                                <input type="text" name="client_phone" class="form-control"
-                                       placeholder="+92 300 1234567">
-                            </div>
-                            <div class="col-md-6">
-                                <div class="field-label">Client Address</div>
-                                <textarea name="client_address" class="form-control"
-                                          rows="2"
-                                          placeholder="Street, City, State, ZIP Code"></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="field-label">Invoice Date *</div>
-                                <input type="date" name="invoice_date" id="invoiceDate"
-                                       class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="field-label">Due Date</div>
-                                <input type="date" name="due_date" id="dueDate"
-                                       class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2 · Selling Location -->
-                <div class="inv-card">
-                    <div class="inv-card-header">
-                        <span class="num">2</span> Selling From Location
-                    </div>
-                    <div class="inv-card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="field-label">Select Location *</div>
-                                <!-- id required by form_items.js -->
-                                <select name="location_id" id="invoiceLocationId"
-                                        class="form-select" required>
-                                    <option value="">— Choose Location —</option>
-                                    {% for loc in locations %}
-                                    <option value="{{ loc.id }}"
-                                        {% if default_location_id == loc.id %}selected{% endif %}>
-                                        {{ loc.location_name }} ({{ loc.location_code }})
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <small class="text-muted">Stock will be deducted from this location</small>
-                            </div>
-                            <div class="col-md-6">
-                                <!-- id required by form_items.js -->
-                                <div id="locationStockInfo"
-                                     class="alert alert-light border mt-1 mb-0">
-                                    Select a location to see available stock.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3 · Invoice Items -->
-                <div class="inv-card">
-                    <div class="inv-card-header">
-                        <span class="num">3</span> Invoice Items
-                        <!-- data-bs-target required by form_items.js -->
-                        <button type="button"
-                                class="btn btn-sm btn-primary ms-auto"
-                                data-bs-toggle="modal"
-                                data-bs-target="#addItemModal">
-                            <i class="bi bi-plus-circle me-1"></i> Add from Inventory
-                        </button>
-                    </div>
-                    <div class="inv-card-body">
-
-                        <!-- id="inventorySearch" required by form_items.js -->
-                        <div class="input-group mb-2">
-                            <span class="input-group-text bg-white border-end-0 text-muted">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input type="text"
-                                   class="form-control border-start-0"
-                                   id="inventorySearch"
-                                   placeholder="Quick search product name…">
-                            <!-- id="showAllInventory" required by form_items.js -->
-                            <button type="button"
-                                    class="btn btn-outline-secondary"
-                                    id="showAllInventory">
-                                <i class="bi bi-list-ul me-1"></i>Show All
-                            </button>
-                        </div>
-
-                        <!-- id="inventoryResults" required by form_items.js -->
-                        <div id="inventoryResults" class="mb-3"></div>
-
-                        <!-- ids required by form_items.js -->
-                        <div class="input-group mb-2">
-                            <select class="form-select" id="inventoryDropdown">
-                                <option value="">Select product…</option>
-                            </select>
-                            <button type="button"
-                                    class="btn btn-primary"
-                                    id="addInventoryBtn">
-                                Add to Invoice
-                            </button>
-                        </div>
-
-                        <!-- id="itemsContainer" — row append target in form_items.js -->
-                        <div id="itemsContainer"></div>
-
-                        <!-- id="noItemsMessage" — visibility toggled by form_items.js -->
-                        <div id="noItemsMessage">
-                            <i class="bi bi-inbox"></i>
-                            No items added yet — click "+ Add from Inventory" to start
-                        </div>
-
-                        <!-- id="grandTotal" — written by form_items.js (hidden, gradient box is the display) -->
-                        <div style="display:none;"><span id="grandTotal">0.00</span></div>
-
-                    </div>
-                </div>
-
-            </div><!-- /col-lg-8 -->
-
-            <!-- ════ RIGHT COLUMN (4 cols) ════ -->
-            <div class="col-lg-4">
-
-                <!-- Step 4 · Financial & Payment -->
-                <div class="inv-card">
-                    <div class="inv-card-header">
-                        <span class="num">4</span> Financial & Payment
-                    </div>
-                    <div class="inv-card-body">
-                        <div class="mb-3">
-                            <div class="field-label">Tax Rate (%)</div>
-                            <input type="number" name="tax_rate"
-                                   class="form-control form-control-sm"
-                                   value="0" min="0" max="50" step="0.1">
-                        </div>
-                        <div class="mb-3">
-                            <div class="field-label">Discount Rate (%)</div>
-                            <input type="number" name="discount_rate"
-                                   class="form-control form-control-sm"
-                                   value="0" min="0" max="100" step="0.1">
-                        </div>
-                        <div class="mb-3">
-                            <div class="field-label">Delivery Charge ({{ currency_symbol }})</div>
-                            <input type="number" name="delivery_charge"
-                                   class="form-control form-control-sm"
-                                   value="0" min="0" step="0.01">
-                        </div>
-                        <div class="mb-3">
-                            <div class="field-label">Payment Terms</div>
-                            <input type="text" name="payment_terms"
-                                   class="form-control form-control-sm"
-                                   value="Due upon receipt">
-                        </div>
-                        <div class="mb-3">
-                            <div class="field-label">Payment Methods</div>
-                            <input type="text" name="payment_methods"
-                                   class="form-control form-control-sm"
-                                   value="Bank Transfer, Credit Card">
-                        </div>
-                        <div class="mb-3">
-                            <div class="field-label">Notes (Optional)</div>
-                            <textarea name="notes"
-                                      class="form-control form-control-sm"
-                                      rows="3"
-                                      placeholder="Thank you note, special instructions…"></textarea>
-                        </div>
-                        <div class="mb-0">
-                            <div class="field-label">Company Logo (Optional)</div>
-                            <input type="file" name="logo"
-                                   class="form-control form-control-sm"
-                                   accept="image/*">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gradient Totals + Submit -->
-                <div class="inv-card">
-                    <div class="inv-card-body">
-                        <div class="totals-box">
-                            <div class="totals-line">
-                                <span>Subtotal</span>
-                                <span id="totSubtotal">{{ currency_symbol }}0.00</span>
-                            </div>
-                            <div class="totals-line">
-                                <span>Discount</span>
-                                <span id="totDiscount">{{ currency_symbol }}0.00</span>
-                            </div>
-                            <div class="totals-line">
-                                <span>Tax</span>
-                                <span id="totTax">{{ currency_symbol }}0.00</span>
-                            </div>
-                            <div class="totals-line">
-                                <span>Delivery</span>
-                                <span id="totDelivery">{{ currency_symbol }}0.00</span>
-                            </div>
-                            <div class="totals-grand">
-                                <span>Grand Total</span>
-                                <span id="totGrand">{{ currency_symbol }}0.00</span>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <button type="submit" id="previewBtn"
-                                    class="btn btn-inv-submit">
-                                <i class="bi bi-eye me-2"></i>Preview Invoice
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-            </div><!-- /col-lg-4 -->
-        </div><!-- /row -->
-    </form>
-</div><!-- /inv-page -->
-
-<!-- ════════════════════════════════════════════════════════════
-     MODAL
-     id="addItemModal" + id="modalSearch" + id="modalInventoryResults"
-     All required by form_items.js
-════════════════════════════════════════════════════════════ -->
-<div class="modal fade" id="addItemModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content rounded-4 overflow-hidden">
-            <div class="modal-header border-0 pb-0"
-                 style="background:linear-gradient(135deg,#1e3a5f,#1d4ed8);">
-                <h5 class="modal-title text-white fw-bold">
-                    <i class="bi bi-search me-2"></i>Search & Add Item from Inventory
-                </h5>
-                <button type="button" class="btn-close btn-close-white"
-                        data-bs-dismiss="modal"></button>
+        <!-- 1️⃣ Client Details -->
+        <div class="inv-card">
+          <div class="inv-card-header">
+            <span class="num">1</span> Client Details
+          </div>
+          <div class="inv-card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="field-label">Client Name *</div>
+                <input type="text" name="client_name" class="form-control"
+                       placeholder="e.g., Ahmed Enterprises" required>
+              </div>
+              <div class="col-md-6">
+                <div class="field-label">Client Email</div>
+                <input type="email" name="client_email" class="form-control"
+                       placeholder="contact@client.com">
+              </div>
+              <div class="col-md-6">
+                <div class="field-label">Client Phone</div>
+                <input type="text" name="client_phone" class="form-control"
+                       placeholder="+92 300 1234567">
+              </div>
+              <div class="col-md-6">
+                <div class="field-label">Client Address</div>
+                <textarea name="client_address" class="form-control"
+                          rows="2" placeholder="Street, City, State, ZIP"></textarea>
+              </div>
+              <div class="col-md-6">
+                <div class="field-label">Invoice Date *</div>
+                <input type="date" name="invoice_date" id="invoiceDate"
+                       class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <div class="field-label">Due Date</div>
+                <input type="date" name="due_date" id="dueDate" class="form-control">
+              </div>
             </div>
-            <div class="modal-body p-4">
-                <!-- id="modalSearch" required by form_items.js -->
-                <input type="text"
-                       class="form-control form-control-lg mb-3"
-                       id="modalSearch"
-                       placeholder="Type product name or SKU…">
-                <!-- id="modalInventoryResults" required by form_items.js -->
-                <div id="modalInventoryResults"></div>
-            </div>
+          </div>
         </div>
-    </div>
+
+        <!-- 2️⃣ Selling Location (with stock preview) -->
+        <div class="inv-card">
+          <div class="inv-card-header">
+            <span class="num">2</span> Selling From Location
+          </div>
+          <div class="inv-card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="field-label">Select Location *</div>
+                <select name="location_id" id="invoiceLocationId" class="form-select" required>
+                  <option value="">— Choose Location —</option>
+                  {% for loc in locations %}
+                  <option value="{{ loc.id }}"
+                    {% if default_location_id == loc.id %}selected{% endif %}>
+                    {{ loc.location_name }} ({{ loc.location_code }})
+                  </option>
+                  {% endfor %}
+                </select>
+                <small class="text-muted">Stock will be deducted from this location</small>
+              </div>
+              <div class="col-md-6">
+                <div id="locationStockInfo" class="alert alert-light border p-2 mb-0 rounded-3">
+                  <i class="bi bi-info-circle-fill me-1"></i> Select a location to see available stock.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3️⃣ Invoice Items (dynamic) -->
+        <div class="inv-card">
+          <div class="inv-card-header">
+            <span class="num">3</span> Invoice Items
+            <button type="button"
+                    class="btn btn-primary btn-sm ms-auto rounded-pill px-3"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addItemModal">
+              <i class="bi bi-plus-circle me-1"></i> Add from Inventory
+            </button>
+          </div>
+          <div class="inv-card-body">
+            <!-- quick search bar -->
+            <div class="input-group mb-3">
+              <span class="input-group-text bg-white border-end-0 text-muted">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="text"
+                     class="form-control border-start-0"
+                     id="inventorySearch"
+                     placeholder="Quick search product name…">
+              <button type="button"
+                      class="btn btn-outline-secondary"
+                      id="showAllInventory">
+                <i class="bi bi-list-ul me-1"></i>Show All
+              </button>
+            </div>
+
+            <!-- inline search results -->
+            <div id="inventoryResults" class="mb-3"></div>
+
+            <!-- dropdown + add button (backup) -->
+            <div class="input-group mb-3">
+              <select class="form-select" id="inventoryDropdown">
+                <option value="">Select product…</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="addInventoryBtn">
+                Add to Invoice
+              </button>
+            </div>
+
+            <!-- items container (dynamic rows injected by form_items.js) -->
+            <div id="itemsContainer"></div>
+
+            <!-- empty state placeholder -->
+            <div id="noItemsMessage">
+              <i class="bi bi-inbox"></i>
+              No items added yet — click "+ Add from Inventory" to start
+            </div>
+
+            <!-- hidden grand total (used by JS) -->
+            <div style="display:none;"><span id="grandTotal">0.00</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN (4) : Financial & Totals -->
+      <div class="col-lg-4">
+
+        <!-- Financial & Payment Card -->
+        <div class="inv-card">
+          <div class="inv-card-header">
+            <span class="num">4</span> Financial & Payment
+          </div>
+          <div class="inv-card-body">
+            <div class="mb-3">
+              <div class="field-label">Tax Rate (%)</div>
+              <input type="number" name="tax_rate" class="form-control form-control-sm"
+                     value="0" min="0" max="50" step="0.1">
+            </div>
+            <div class="mb-3">
+              <div class="field-label">Discount Rate (%)</div>
+              <input type="number" name="discount_rate" class="form-control form-control-sm"
+                     value="0" min="0" max="100" step="0.1">
+            </div>
+            <div class="mb-3">
+              <div class="field-label">Delivery Charge ({{ currency_symbol }})</div>
+              <input type="number" name="delivery_charge" class="form-control form-control-sm"
+                     value="0" min="0" step="0.01">
+            </div>
+            <div class="mb-3">
+              <div class="field-label">Payment Terms</div>
+              <input type="text" name="payment_terms" class="form-control form-control-sm"
+                     value="Due upon receipt">
+            </div>
+            <div class="mb-3">
+              <div class="field-label">Payment Methods</div>
+              <input type="text" name="payment_methods" class="form-control form-control-sm"
+                     value="Bank Transfer, Credit Card">
+            </div>
+            <div class="mb-3">
+              <div class="field-label">Notes (Optional)</div>
+              <textarea name="notes" class="form-control form-control-sm"
+                        rows="3" placeholder="Thank you note, special instructions…"></textarea>
+            </div>
+            <div class="mb-0">
+              <div class="field-label">Company Logo (Optional)</div>
+              <input type="file" name="logo" class="form-control form-control-sm" accept="image/*">
+            </div>
+          </div>
+        </div>
+
+        <!-- Totals & Submit Card -->
+        <div class="inv-card">
+          <div class="inv-card-body p-0">
+            <div class="totals-box">
+              <div class="totals-line">
+                <span>Subtotal</span>
+                <span id="totSubtotal">{{ currency_symbol }}0.00</span>
+              </div>
+              <div class="totals-line">
+                <span>Discount</span>
+                <span id="totDiscount">{{ currency_symbol }}0.00</span>
+              </div>
+              <div class="totals-line">
+                <span>Tax</span>
+                <span id="totTax">{{ currency_symbol }}0.00</span>
+              </div>
+              <div class="totals-line">
+                <span>Delivery</span>
+                <span id="totDelivery">{{ currency_symbol }}0.00</span>
+              </div>
+              <div class="totals-grand">
+                <span>Grand Total</span>
+                <span id="totGrand">{{ currency_symbol }}0.00</span>
+              </div>
+            </div>
+            <div class="p-3">
+              <button type="submit" id="previewBtn" class="btn btn-inv-submit">
+                <i class="bi bi-eye me-2"></i>Preview Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- end right col -->
+    </div> <!-- end row -->
+  </form>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════
-     INLINE SCRIPT — globals + date sync + gradient totals
-════════════════════════════════════════════════════════════ -->
+<!-- ======================== MODAL : Add from Inventory ======================== -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content rounded-4 overflow-hidden border-0">
+      <div class="modal-header border-0 pb-0"
+           style="background: linear-gradient(135deg, #1e3a5f, #1d4ed8);">
+        <h5 class="modal-title text-white fw-bold">
+          <i class="bi bi-search me-2"></i>Add from Inventory
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <input type="text"
+               class="form-control form-control-lg rounded-4 mb-4"
+               id="modalSearch"
+               placeholder="Search product name or SKU…">
+        <div id="modalInventoryResults"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== GLOBAL JS : date auto + realtime totals ======================== -->
 <script nonce="{{ nonce }}">
-    /* Globals consumed by form_items.js */
-    window.userCurrencySymbol = "{{ currency_symbol | default('Rs.') }}";
-    window.userLocations      = {{ locations | tojson }};
-    window.defaultLocationId  = {{ default_location_id | tojson | default('null') }};
+  /* global variables for form_items.js */
+  window.userCurrencySymbol = "{{ currency_symbol | default('Rs.') }}";
+  window.userLocations      = {{ locations | tojson }};
+  window.defaultLocationId  = {{ default_location_id | tojson | default('null') }};
 
-    document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    // date defaults & sync
+    const invoiceDate = document.getElementById('invoiceDate');
+    const dueDate     = document.getElementById('dueDate');
+    const today       = new Date().toISOString().split('T')[0];
+    if (invoiceDate && !invoiceDate.value) invoiceDate.value = today;
+    if (dueDate && !dueDate.value && invoiceDate?.value) dueDate.value = invoiceDate.value;
+    if (invoiceDate) {
+      invoiceDate.addEventListener('change', function () {
+        if (dueDate) dueDate.value = this.value;
+      });
+    }
 
-        /* Date defaults & sync */
-        const invoiceDate = document.getElementById('invoiceDate');
-        const dueDate     = document.getElementById('dueDate');
-        const today       = new Date().toISOString().split('T')[0];
-        if (invoiceDate && !invoiceDate.value) invoiceDate.value = today;
-        if (dueDate && !dueDate.value && invoiceDate?.value) dueDate.value = invoiceDate.value;
-        invoiceDate?.addEventListener('change', function () { dueDate.value = this.value; });
+    // realtime totals recalculation for tax/discount/delivery + items
+    const taxInput      = document.querySelector('input[name="tax_rate"]');
+    const discountInput = document.querySelector('input[name="discount_rate"]');
+    const deliveryInput = document.querySelector('input[name="delivery_charge"]');
+    const itemsWrap     = document.getElementById('itemsContainer');
+    const grandSpan     = document.getElementById('grandTotal');
+    const sym           = window.userCurrencySymbol;
 
-        /* Gradient totals sync — watches all item rows + financial inputs */
-        const taxInput      = document.querySelector('input[name="tax_rate"]');
-        const discountInput = document.querySelector('input[name="discount_rate"]');
-        const deliveryInput = document.querySelector('input[name="delivery_charge"]');
-        const itemsWrap     = document.getElementById('itemsContainer');
-        const grandSpan     = document.getElementById('grandTotal');
-        const sym           = window.userCurrencySymbol;
+    function computeTotals() {
+      let sub = 0;
+      document.querySelectorAll('.item-row').forEach(row => {
+        const qty   = parseFloat(row.querySelector('input[name="item_qty[]"]')?.value)   || 0;
+        const price = parseFloat(row.querySelector('input[name="item_price[]"]')?.value) || 0;
+        sub += qty * price;
+      });
+      const taxRate  = parseFloat(taxInput?.value)      || 0;
+      const discRate = parseFloat(discountInput?.value) || 0;
+      const delivery = parseFloat(deliveryInput?.value) || 0;
+      const discount = sub * (discRate / 100);
+      const taxable  = sub - discount;
+      const tax      = taxable * (taxRate / 100);
+      const grand    = taxable + tax + delivery;
 
-        function recalc() {
-            let sub = 0;
-            document.querySelectorAll('.item-row').forEach(row => {
-                const qty   = parseFloat(row.querySelector('input[name="item_qty[]"]')?.value)   || 0;
-                const price = parseFloat(row.querySelector('input[name="item_price[]"]')?.value) || 0;
-                sub += qty * price;
-            });
-            const taxRate  = parseFloat(taxInput?.value)      || 0;
-            const discRate = parseFloat(discountInput?.value) || 0;
-            const delivery = parseFloat(deliveryInput?.value) || 0;
-            const discount = sub * (discRate / 100);
-            const taxable  = sub - discount;
-            const tax      = taxable * (taxRate / 100);
-            const grand    = taxable + tax + delivery;
+      document.getElementById('totSubtotal').textContent = sym + sub.toFixed(2);
+      document.getElementById('totDiscount').textContent = sym + discount.toFixed(2);
+      document.getElementById('totTax').textContent      = sym + tax.toFixed(2);
+      document.getElementById('totDelivery').textContent = sym + delivery.toFixed(2);
+      document.getElementById('totGrand').textContent    = sym + grand.toFixed(2);
+      if (grandSpan) grandSpan.textContent = grand.toFixed(2);
+    }
 
-            document.getElementById('totSubtotal').textContent = sym + sub.toFixed(2);
-            document.getElementById('totDiscount').textContent = sym + discount.toFixed(2);
-            document.getElementById('totTax').textContent      = sym + tax.toFixed(2);
-            document.getElementById('totDelivery').textContent = sym + delivery.toFixed(2);
-            document.getElementById('totGrand').textContent    = sym + grand.toFixed(2);
-            if (grandSpan) grandSpan.textContent = grand.toFixed(2);
-        }
-
-        if (itemsWrap) {
-            new MutationObserver(recalc)
-                .observe(itemsWrap, { childList: true, subtree: true, attributes: true });
-        }
-        taxInput?.addEventListener('input', recalc);
-        discountInput?.addEventListener('input', recalc);
-        deliveryInput?.addEventListener('input', recalc);
-        recalc();
-    });
+    if (itemsWrap) {
+      new MutationObserver(computeTotals).observe(itemsWrap, { childList: true, subtree: true, attributes: true });
+    }
+    taxInput?.addEventListener('input', computeTotals);
+    discountInput?.addEventListener('input', computeTotals);
+    deliveryInput?.addEventListener('input', computeTotals);
+    computeTotals();
+  });
 </script>
 
-<script nonce="{{ nonce }}"
-        src="{{ url_for('static', filename='js/form_items.js') }}"></script>
+<!-- dynamic items script (must be placed after DOM) -->
+<script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/form_items.js') }}"></script>
 {% endblock %}
