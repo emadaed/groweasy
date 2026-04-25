@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <style nonce="{{ nonce }}">
+/* Force full viewport coverage — override base container */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
 /* ============================================
    Premium Dark Theme — "Forest at Dusk"
-   Warm olive-greens, amber undertones
    ============================================ */
 .suppliers-page {
     --bg-dark:          #121f17;
@@ -28,7 +37,7 @@
     --radius-input:     10px;
 }
 
-/* Light theme variables (overrides) */
+/* Light theme — exact tokens you provided */
 body.light-mode .suppliers-page {
     --bg-dark:          #f4f6f0;
     --surface-dark:     #ffffff;
@@ -51,10 +60,11 @@ body.light-mode .suppliers-page {
 }
 
 .suppliers-page {
-    font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-dark);
     color: var(--text-dark);
-    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     transition: background 0.2s, color 0.2s;
 }
 
@@ -63,10 +73,10 @@ body.light-mode .suppliers-page {
     width: 100%;
     padding: 1.5rem;
     margin: 0 auto;
-    max-width: 1400px;  /* keeps content readable, background remains full width */
+    max-width: 1400px;
 }
 
-/* Headings & buttons */
+/* Headings */
 .suppliers-page h2 {
     font-family: 'Bricolage Grotesque', sans-serif;
     font-weight: 800;
@@ -79,16 +89,28 @@ body.light-mode .suppliers-page {
     margin: 0;
 }
 
+/* Buttons — touch friendly (min-height 44px) */
+.suppliers-page .btn-primary,
+.suppliers-page .btn-outline-primary,
+.suppliers-page .btn-outline-danger,
+.suppliers-page .btn-outline-secondary,
+.suppliers-page .btn-theme-toggle {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
 .suppliers-page .btn-primary {
     background: linear-gradient(135deg, #a07818 0%, var(--gold-dark) 100%);
     border: none;
-    border-radius: 12px;
-    padding: 0.55rem 1.2rem;
-    font-weight: 600;
-    font-size: 0.85rem;
-    font-family: 'Figtree', sans-serif;
     color: #07100a;
-    transition: all 0.2s ease;
+    font-weight: 600;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 .suppliers-page .btn-primary:hover {
@@ -96,38 +118,10 @@ body.light-mode .suppliers-page {
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(201,162,40,0.25);
 }
-
-/* Theme toggle button (same style as history button in invoice) */
-.btn-theme-toggle {
+.suppliers-page .btn-outline-primary {
     background: transparent;
     border: 1px solid var(--border-hi-dark);
-    border-radius: 8px;
-    padding: 0.5rem 1.1rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--muted-dark);
-    transition: all 0.18s;
-    cursor: pointer;
-    font-family: 'Figtree', sans-serif;
-}
-.btn-theme-toggle:hover {
-    color: var(--text-dark);
-    border-color: rgba(201,162,40,0.4);
-    background: var(--gold-dim-dark);
-}
-
-.suppliers-page .btn-outline-primary,
-.suppliers-page .btn-outline-danger,
-.suppliers-page .btn-outline-secondary {
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    transition: all 0.15s;
-}
-.suppliers-page .btn-outline-primary {
     color: var(--gold-dark);
-    border-color: var(--border-hi-dark);
-    background: transparent;
 }
 .suppliers-page .btn-outline-primary:hover {
     background: var(--gold-dim-dark);
@@ -135,8 +129,9 @@ body.light-mode .suppliers-page {
     color: var(--gold-2-dark);
 }
 .suppliers-page .btn-outline-danger {
+    background: transparent;
+    border: 1px solid var(--border-hi-dark);
     color: var(--danger-dark);
-    border-color: var(--border-hi-dark);
 }
 .suppliers-page .btn-outline-danger:hover {
     background: var(--danger-dim-dark);
@@ -144,12 +139,23 @@ body.light-mode .suppliers-page {
     color: #fca5a5;
 }
 .suppliers-page .btn-outline-secondary {
+    background: transparent;
+    border: 1px solid var(--border-hi-dark);
     color: var(--muted-dark);
-    border-color: var(--border-hi-dark);
 }
 .suppliers-page .btn-outline-secondary:hover {
     background: var(--surface-2-dark);
     color: var(--text-dark);
+}
+.suppliers-page .btn-theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border-hi-dark);
+    color: var(--muted-dark);
+}
+.suppliers-page .btn-theme-toggle:hover {
+    color: var(--text-dark);
+    border-color: rgba(201,162,40,0.4);
+    background: var(--gold-dim-dark);
 }
 
 /* Card */
@@ -160,17 +166,19 @@ body.light-mode .suppliers-page {
     box-shadow: var(--card-shadow-dark);
     overflow: hidden;
 }
-
 .suppliers-page .card-body {
     padding: 0;
 }
 
-/* Table styling */
+/* Table styling — horizontal scroll allowed for small screens (accessibility: reflow) */
+.suppliers-page .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 .suppliers-page .table {
     color: var(--text-dark);
     margin-bottom: 0;
-    border-collapse: separate;
-    border-spacing: 0;
+    min-width: 500px;
 }
 .suppliers-page .table thead th {
     background: var(--surface-2-dark);
@@ -180,18 +188,17 @@ body.light-mode .suppliers-page {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border-dark);
-    padding: 1rem 1rem;
-    font-family: 'Figtree', sans-serif;
+    padding: 0.9rem 1rem;
 }
 .suppliers-page .table tbody tr {
-    transition: background 0.12s;
     border-bottom: 1px solid var(--border-dark);
+    transition: background 0.12s;
 }
 .suppliers-page .table tbody tr:hover {
     background: rgba(90,173,120,0.04);
 }
 .suppliers-page .table td {
-    padding: 1rem;
+    padding: 0.9rem 1rem;
     vertical-align: middle;
     border-color: var(--border-dark);
 }
@@ -318,7 +325,7 @@ body.light-mode .suppliers-page .modal-header .btn-close {
     border-radius: 4px;
 }
 
-/* Responsive table on small screens */
+/* Responsive stacking — WCAG reflow */
 @media (max-width: 768px) {
     .suppliers-page .table {
         font-size: 0.8rem;
@@ -344,69 +351,71 @@ body.light-mode .suppliers-page .modal-header .btn-close {
 
         <div class="card shadow-sm">
             <div class="card-body p-0">
-                <table class="table table-hover table-sm mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Vendor ID</th>
-                            <th>Address</th>
-                            <th>Contact Details</th>                        
-                            <th>Payment Terms</th>
-                            <th>Total Volume</th>
-                            <th>Status</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in suppliers %}
-                        <tr>
-                            <td><code>{{ s.vendor_id }}</code></td>
-                            <td>
-                                <strong>{{ s.name }}</strong><br>
-                                <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ s.address or 'No address provided' }}</small>
-                             </td>
-                            <td>
-                                <i class="bi bi-telephone"></i> {{ s.phone }}<br>
-                                <i class="bi bi-envelope"></i> <small class="text-muted">{{ s.email }}</small>
-                             </td>
-                            <td><span class="badge bg-info text-dark">{{ s.payment_terms }}</span></td>
-                            <td><strong>{{ currency_symbol }}{{ "%.2f"|format(s.total_purchased) }}</strong></td>
-                            <td><span class="badge bg-success">Active</span></td>
-                            <td class="text-center">
-                                <div class="btn-group">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-primary edit-supplier-trigger" 
-                                            data-supplier-json='{{ s | tojson | safe }}'>
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ s.id }}">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Vendor ID</th>
+                                <th>Address</th>
+                                <th>Contact Details</th>                        
+                                <th>Payment Terms</th>
+                                <th>Total Volume</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in suppliers %}
+                            <tr>
+                                <td><code>{{ s.vendor_id }}</code></td>
+                                <td>
+                                    <strong>{{ s.name }}</strong><br>
+                                    <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ s.address or 'No address provided' }}</small>
+                                 </td>
+                                <td>
+                                    <i class="bi bi-telephone"></i> {{ s.phone }}<br>
+                                    <i class="bi bi-envelope"></i> <small class="text-muted">{{ s.email }}</small>
+                                 </td>
+                                <td><span class="badge bg-info text-dark">{{ s.payment_terms }}</span></td>
+                                <td><strong>{{ currency_symbol }}{{ "%.2f"|format(s.total_purchased) }}</strong></td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary edit-supplier-trigger" 
+                                                data-supplier-json='{{ s | tojson | safe }}'>
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ s.id }}">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
 
-                        <!-- Delete Modal -->
-                        <div class="modal fade" id="deleteModal{{ s.id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content border-danger">
-                                    <div class="modal-header bg-danger text-white">
-                                        <h5 class="modal-title">⚠️ Confirm Deletion</h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body text-center py-4">
-                                        <p class="mb-0">Are you sure you want to delete <strong>{{ s.name }}</strong>?</p>
-                                        <small class="text-danger">This action cannot be undone and will remove the vendor from your records.</small>
-                                    </div>
-                                    <div class="modal-footer justify-content-center">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <a href="{{ url_for('suppliers.delete_supplier', id=s.id) }}" class="btn btn-danger">Yes, Delete Vendor</a>
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteModal{{ s.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-danger">
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title">⚠️ Confirm Deletion</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body text-center py-4">
+                                            <p class="mb-0">Are you sure you want to delete <strong>{{ s.name }}</strong>?</p>
+                                            <small class="text-danger">This action cannot be undone and will remove the vendor from your records.</small>
+                                        </div>
+                                        <div class="modal-footer justify-content-center">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <a href="{{ url_for('suppliers.delete_supplier', id=s.id) }}" class="btn btn-danger">Yes, Delete Vendor</a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -517,7 +526,7 @@ body.light-mode .suppliers-page .modal-header .btn-close {
 
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Theme Toggle ---
+    // Theme Toggle
     const themeToggle = document.getElementById('themeToggle');
     const savedTheme = localStorage.getItem('groweasy_theme');
 
@@ -534,7 +543,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedTheme) {
         applyTheme(savedTheme);
     } else {
-        applyTheme('dark'); // default dark
+        applyTheme('dark');
     }
 
     if (themeToggle) {
@@ -545,43 +554,40 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('groweasy_theme', newTheme);
         });
     }
-    // --- End Theme Toggle ---
 
     // Edit modal logic
     const editModalEl = document.getElementById('editVendorModal');
-    if (!editModalEl) {
-        console.error("CRITICAL: Modal with ID 'editVendorModal' not found in HTML.");
-        return;
-    }
-    const bsEditModal = new bootstrap.Modal(editModalEl);
-    const editForm = document.getElementById('editSupplierForm');
+    if (editModalEl) {
+        const bsEditModal = new bootstrap.Modal(editModalEl);
+        const editForm = document.getElementById('editSupplierForm');
 
-    document.querySelectorAll('.edit-supplier-trigger').forEach(btn => {
-        btn.addEventListener('click', function() {
-            try {
-                const rawData = this.getAttribute('data-supplier-json');
-                const data = JSON.parse(rawData);
-                editForm.action = `/suppliers/edit/${data.id}`;
+        document.querySelectorAll('.edit-supplier-trigger').forEach(btn => {
+            btn.addEventListener('click', function() {
+                try {
+                    const rawData = this.getAttribute('data-supplier-json');
+                    const data = JSON.parse(rawData);
+                    editForm.action = `/suppliers/edit/${data.id}`;
 
-                const setVal = (id, val) => {
-                    const el = document.getElementById(id);
-                    if (el) el.value = val || '';
-                };
+                    const setVal = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = val || '';
+                    };
 
-                setVal('edit_vendor_id', data.vendor_id);
-                setVal('edit_name', data.name);
-                setVal('edit_email', data.email);
-                setVal('edit_phone', data.phone);
-                setVal('edit_address', data.address);
-                setVal('edit_tax_id', data.tax_id);
-                setVal('edit_payment_terms', data.payment_terms);
+                    setVal('edit_vendor_id', data.vendor_id);
+                    setVal('edit_name', data.name);
+                    setVal('edit_email', data.email);
+                    setVal('edit_phone', data.phone);
+                    setVal('edit_address', data.address);
+                    setVal('edit_tax_id', data.tax_id);
+                    setVal('edit_payment_terms', data.payment_terms);
 
-                bsEditModal.show();
-            } catch (err) {
-                console.error("Error parsing supplier data:", err);
-            }
+                    bsEditModal.show();
+                } catch (err) {
+                    console.error("Error parsing supplier data:", err);
+                }
+            });
         });
-    });
+    }
 });
 </script>
 {% endblock %}
