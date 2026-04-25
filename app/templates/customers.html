@@ -4,6 +4,16 @@
 
 {% block extra_head %}
 <style nonce="{{ nonce }}">
+/* Force full viewport coverage — override base container */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
 /* ============================================
    DARK THEME — "Forest at Dusk" (default)
    ============================================ */
@@ -78,17 +88,20 @@ body.light-mode .customers-page {
     --page-active-text: #ffffff;
 }
 
-/* Global page styles */
+/* Global page styles — full viewport */
 .customers-page {
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
     font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     transition: background 0.2s, color 0.2s;
 }
 
+/* Inner container: content width limited for readability, but background is full */
 .customers-page .container {
     max-width: 1400px;
+    width: 100%;
     margin: 0 auto;
     padding: 1.5rem;
 }
@@ -106,16 +119,25 @@ body.light-mode .customers-page {
     margin: 0;
 }
 
-/* Buttons */
+/* Buttons — touch friendly (min-height 44px) */
+.btn-outline-secondary,
+.btn-theme-toggle,
+.btn-success {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
 .btn-outline-secondary {
     background: transparent;
     border: 1px solid var(--border-hi);
-    border-radius: 8px;
-    padding: 0.45rem 1rem;
-    font-size: 0.8rem;
-    font-weight: 500;
     color: var(--muted);
-    transition: all 0.18s;
 }
 .btn-outline-secondary:hover {
     color: var(--text);
@@ -125,13 +147,7 @@ body.light-mode .customers-page {
 .btn-theme-toggle {
     background: transparent;
     border: 1px solid var(--border-hi);
-    border-radius: 8px;
-    padding: 0.45rem 1rem;
-    font-size: 0.8rem;
-    font-weight: 500;
     color: var(--muted);
-    transition: all 0.18s;
-    cursor: pointer;
 }
 .btn-theme-toggle:hover {
     color: var(--text);
@@ -141,27 +157,21 @@ body.light-mode .customers-page {
 .btn-success {
     background: linear-gradient(135deg, #5aad78 0%, var(--green-acc) 100%);
     border: none;
-    border-radius: 10px;
-    padding: 0.6rem 1.2rem;
-    font-weight: 600;
     color: #07100a;
-    transition: all 0.2s;
+    font-weight: 600;
 }
 .btn-success:hover {
     transform: translateY(-1px);
     filter: brightness(1.05);
 }
 
-/* Stats cards */
+/* Stats cards — responsive stack */
 .customers-page .card {
     background: var(--surface);
     border: 1px solid var(--border-hi);
     border-radius: var(--radius-card);
     box-shadow: var(--card-shadow);
     transition: transform 0.1s, border-color 0.2s;
-}
-.customers-page .card:hover {
-    border-color: var(--gold-dim);
 }
 .customers-page .card .card-body {
     padding: 0.75rem;
@@ -196,12 +206,15 @@ body.light-mode .customers-page {
     color: var(--text);
 }
 
-/* Table styling */
+/* Table styling — horizontal scroll allowed for small screens (accessibility: reflow) */
+.customers-page .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 .customers-page .table {
     color: var(--text);
     margin-bottom: 0;
-    border-collapse: separate;
-    border-spacing: 0;
+    min-width: 500px; /* ensures content readable, but scrollable on narrow */
 }
 .customers-page .table thead th {
     background: var(--surface-2);
@@ -249,8 +262,12 @@ body.light-mode .customers-page {
     border-radius: 4px;
 }
 
-/* Responsive */
+/* Responsive stacking for stats cards (WCAG reflow) */
 @media (max-width: 768px) {
+    .customers-page .row.g-3 > .col-md-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
     .customers-page .table {
         font-size: 0.8rem;
     }
@@ -328,7 +345,7 @@ body.light-mode .customers-page {
                         {% if customers %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0 table-sm">
-                                <thead class="table-light">
+                                <thead>
                                     <tr>
                                         <th>Customer Name</th>
                                         <th>Contact</th>
@@ -389,7 +406,6 @@ body.light-mode .customers-page {
 
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    // Theme Toggle
     const themeToggle = document.getElementById('themeToggle');
     const savedTheme = localStorage.getItem('groweasy_theme');
 
@@ -406,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedTheme) {
         applyTheme(savedTheme);
     } else {
-        applyTheme('dark'); // default dark
+        applyTheme('dark');
     }
 
     if (themeToggle) {
