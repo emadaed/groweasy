@@ -23,28 +23,28 @@ main.container-main {
    Deep forest green + antique gold
 ══════════════════════════════════════════ */
 :root {
-    --ge-bg:          #07100a;
-    --ge-surface:     #0c1810;
-    --ge-surface-2:   #111f14;
-    --ge-surface-3:   #172b1a;
-    --ge-border:      #1b2e1e;
-    --ge-border-hi:   #253d29;
+    --ge-bg:          #121f17;
+    --ge-surface:     #192a1f;
+    --ge-surface-2:   #21362a;
+    --ge-surface-3:   #2a4232;
+    --ge-border:      #2a4232;
+    --ge-border-hi:   #3b5a46;
     --ge-gold:        #c9a228;
-    --ge-gold-2:      #e8c84a;
-    --ge-gold-dim:    rgba(201, 162, 40, .11);
-    --ge-gold-glow:   rgba(201, 162, 40, .18);
-    --ge-green:       #22c55e;
-    --ge-green-dim:   rgba(34, 197, 94, .08);
-    --ge-green-hi:    rgba(34, 197, 94, .18);
-    --ge-text:        #dff0e2;
-    --ge-muted:       #7a9580;
-    --ge-faint:       #3d5441;
+    --ge-gold-2:      #d4b03a;
+    --ge-gold-dim:    rgba(201, 162, 40, 0.08);
+    --ge-gold-glow:   rgba(201, 162, 40, 0.12);
+    --ge-green:       #4ade80;
+    --ge-green-dim:   rgba(74, 222, 128, 0.06);
+    --ge-green-hi:    rgba(74, 222, 128, 0.12);
+    --ge-text:        #eaf7ef;
+    --ge-muted:       #9bb7a3;
+    --ge-faint:       #5c7c68;
     --ge-danger:      #f87171;
     --ff-d:           'Bricolage Grotesque', sans-serif;
     --ff-b:           'Figtree', sans-serif;
-    --radius-card:    14px;
-    --radius-input:   8px;
-    --shadow-card:    0 1px 3px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+    --radius-card:    16px;
+    --radius-input:   10px;
+    --shadow-card:    0 4px 12px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /* ══════════════════════════════════════════
@@ -85,7 +85,7 @@ main.container-main {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.18'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E");
     background-repeat: repeat;
     pointer-events: none;
-    opacity: 0.6;
+    opacity: 0.3;
 }
 
 /* Gold left accent stripe */
@@ -112,7 +112,7 @@ main.container-main {
 
 .inv-hero-title {
     font-family: var(--ff-d);
-    font-size: 1.65rem;
+    font-size: 2rem;
     font-weight: 800;
     color: var(--ge-text);
     margin: 0;
@@ -155,7 +155,7 @@ main.container-main {
 ══════════════════════════════════════════ */
 .inv-card {
     background: var(--ge-surface);
-    border: 1px solid var(--ge-border);
+    border: 1px solid var(--ge-border-hi);
     border-radius: var(--radius-card);
     margin-bottom: 1.1rem;
     overflow: hidden;
@@ -194,18 +194,17 @@ main.container-main {
     letter-spacing: 0;
 }
 
-.inv-card-body { padding: 1.3rem 1.4rem; }
+.inv-card-body { padding: 1.5rem; }
 
 /* ══════════════════════════════════════════
    FIELD LABELS
 ══════════════════════════════════════════ */
 .field-label {
-    font-size: 0.68rem;
-    font-weight: 700;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
     color: var(--ge-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
     font-family: var(--ff-b);
     display: block;
 }
@@ -215,21 +214,21 @@ main.container-main {
 ══════════════════════════════════════════ */
 .inv-page .form-control,
 .inv-page .form-select {
-    background: var(--ge-surface-2);
+    background: #1f3328;
     border: 1px solid var(--ge-border-hi);
     color: var(--ge-text);
     font-family: var(--ff-b);
     font-size: 0.87rem;
     border-radius: var(--radius-input);
-    padding: 0.52rem 0.85rem;
+    padding: 0.6rem 0.9rem;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 .inv-page .form-control::placeholder { color: var(--ge-faint); font-style: italic; }
 .inv-page .form-control:focus,
 .inv-page .form-select:focus {
-    background: var(--ge-surface-3);
+    background: #2a4232;
     border-color: var(--ge-gold);
-    box-shadow: 0 0 0 3px rgba(201,162,40,.12);
+    box-shadow: 0 0 0 2px rgba(201,162,40,0.2);
     color: var(--ge-text);
     outline: none;
 }
@@ -327,14 +326,14 @@ main.container-main {
 }
 
 .btn-inv-submit {
-    background: linear-gradient(135deg, #8a6810 0%, var(--ge-gold) 50%, var(--ge-gold-2) 100%);
+    background: linear-gradient(135deg, #a07818 0%, #c9a228 100%);
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     color: #07100a;
     font-weight: 800;
     font-size: 0.95rem;
     font-family: var(--ff-d);
-    padding: 0.9rem 1.5rem;
+    padding: 0.8rem 1.2rem;
     width: 100%;
     letter-spacing: 0.01em;
     box-shadow: 0 4px 20px rgba(201,162,40,.22), 0 1px 4px rgba(0,0,0,.4);
@@ -343,7 +342,7 @@ main.container-main {
     display: block;
 }
 .btn-inv-submit:hover {
-    background: linear-gradient(135deg, #a07818 0%, var(--ge-gold-2) 100%);
+    background: linear-gradient(135deg, #b88a1a 0%, #d4b03a 100%);
     transform: translateY(-1px);
     box-shadow: 0 8px 28px rgba(201,162,40,.32), 0 2px 8px rgba(0,0,0,.4);
     color: #07100a;
@@ -468,8 +467,8 @@ main.container-main {
 }
 
 .totals-box {
-    background: linear-gradient(160deg, #0a1f10 0%, #071410 100%);
-    border: 1px solid rgba(201,162,40,.18);
+    background: linear-gradient(160deg, #1e3226 0%, #17271f 100%);
+    border: 1px solid rgba(201,162,40,.15);
     border-radius: 12px;
     padding: 1.3rem 1.4rem;
     position: relative;
@@ -606,6 +605,72 @@ main.container-main {
 .inv-page ::-webkit-scrollbar { width: 5px; height: 5px; }
 .inv-page ::-webkit-scrollbar-track { background: var(--ge-surface); }
 .inv-page ::-webkit-scrollbar-thumb { background: var(--ge-border-hi); border-radius: 3px; }
+
+/* ══════════════════════════════════════════
+   LIGHT MODE OVERRIDES (toggle)
+══════════════════════════════════════════ */
+body.light-mode .inv-page {
+    --ge-bg:          #f8fafc;
+    --ge-surface:     #ffffff;
+    --ge-surface-2:   #f1f5f9;
+    --ge-surface-3:   #e2e8f0;
+    --ge-border:      #cbd5e1;
+    --ge-border-hi:   #94a3b8;
+    --ge-text:        #0f172a;
+    --ge-muted:       #475569;
+    --ge-faint:       #94a3b8;
+    --ge-gold:        #b8860b;
+    --ge-gold-2:      #d4a017;
+    --ge-gold-dim:    rgba(184, 134, 11, 0.08);
+    --ge-gold-glow:   rgba(184, 134, 11, 0.15);
+    --ge-green:       #16a34a;
+    --ge-green-dim:   rgba(22, 163, 74, 0.08);
+    --ge-green-hi:    rgba(22, 163, 74, 0.15);
+    --shadow-card:    0 1px 3px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.05);
+}
+
+body.light-mode .inv-hero::before {
+    opacity: 0.1;
+}
+
+body.light-mode .inv-card {
+    background: var(--ge-surface);
+    border-color: var(--ge-border);
+}
+
+body.light-mode .inv-page .form-control,
+body.light-mode .inv-page .form-select {
+    background: white;
+    border-color: var(--ge-border);
+    color: var(--ge-text);
+}
+
+body.light-mode .inv-page .form-control:focus,
+body.light-mode .inv-page .form-select:focus {
+    border-color: var(--ge-gold);
+    box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    background: white;
+}
+
+body.light-mode .totals-box {
+    background: white;
+    border-color: var(--ge-border);
+}
+
+body.light-mode .totals-box::before {
+    opacity: 0.3;
+}
+
+body.light-mode .btn-hero-back {
+    background: white;
+    color: var(--ge-muted);
+    border-color: var(--ge-border);
+}
+
+body.light-mode .btn-hero-back:hover {
+    background: var(--ge-surface-2);
+    color: var(--ge-text);
+}
 </style>
 {% endblock %}
 
@@ -620,9 +685,12 @@ main.container-main {
             <h2 class="inv-hero-title">New Invoice</h2>
             <p class="inv-hero-sub">Select client &middot; Add items &middot; Preview &amp; generate</p>
         </div>
-        <a href="{{ url_for('sales.invoice_history') }}" class="btn-hero-back">
-            ← Invoice History
-        </a>
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" id="themeToggle" class="btn-hero-back" style="background: transparent; border: 1px solid var(--ge-border-hi);">🌙 Dark</button>
+            <a href="{{ url_for('sales.invoice_history') }}" class="btn-hero-back">
+                ← Invoice History
+            </a>
+        </div>
     </div>
 
     <!-- ══════ FORM ══════ -->
@@ -914,7 +982,7 @@ main.container-main {
 
 <!-- ══════════════════════════════════════════
      INLINE SCRIPT
-     Globals for form_items.js + date sync + live totals recalc
+     Globals for form_items.js + date sync + live totals recalc + theme toggle
 ══════════════════════════════════════════ -->
 <script nonce="{{ nonce }}">
     /* Globals consumed by form_items.js */
@@ -923,6 +991,37 @@ main.container-main {
     window.defaultLocationId  = {{ default_location_id | tojson | default('null') }};
 
     document.addEventListener('DOMContentLoaded', function () {
+
+        // --- THEME TOGGLE ---
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('groweasy_theme');
+        
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+                if (themeToggle) themeToggle.innerHTML = '☀️ Light';
+            } else {
+                document.body.classList.remove('light-mode');
+                if (themeToggle) themeToggle.innerHTML = '🌙 Dark';
+            }
+        }
+        
+        if (savedTheme) {
+            applyTheme(savedTheme);
+        } else {
+            // Default: dark (no class)
+            applyTheme('dark');
+        }
+        
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const isLight = document.body.classList.contains('light-mode');
+                const newTheme = isLight ? 'dark' : 'light';
+                applyTheme(newTheme);
+                localStorage.setItem('groweasy_theme', newTheme);
+            });
+        }
+        // --- END THEME TOGGLE ---
 
         /* Date defaults & sync */
         const invoiceDate = document.getElementById('invoiceDate');
