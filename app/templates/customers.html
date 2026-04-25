@@ -2,124 +2,421 @@
 
 {% block title %}Customers - GrowEasy Invoice{% endblock %}
 
+{% block extra_head %}
+<style nonce="{{ nonce }}">
+/* ============================================
+   DARK THEME — "Forest at Dusk" (default)
+   ============================================ */
+.customers-page {
+    --bg:          #121f17;
+    --surface:     #192a1f;
+    --surface-2:   #21362a;
+    --surface-3:   #2a4232;
+    --border:      #2a4232;
+    --border-hi:   #3b5a46;
+    --gold:        #c9a228;
+    --gold-2:      #d4b03a;
+    --gold-dim:    rgba(201,162,40,0.08);
+    --gold-glow:   rgba(201,162,40,0.12);
+    --green-acc:   #5aad78;
+    --green-dim:   rgba(90,173,120,0.08);
+    --text:        #e2e8d4;
+    --text-2:      #cbd5c3;
+    --muted:       #9bb7a3;
+    --faint:       #5c7c68;
+    --danger:      #f87171;
+    --danger-dim:  rgba(248,113,113,0.1);
+    --info:        #6ab0de;
+    --info-dim:    rgba(106,176,222,0.08);
+    --warning:     #f0b27a;
+    --warning-dim: rgba(240,178,122,0.08);
+    --success-dim: rgba(90,173,120,0.08);
+    --card-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
+    --hero-bg:     linear-gradient(135deg, #1e3226 0%, #17271f 100%);
+    --row-hover:   rgba(90,173,120,0.04);
+    --row-stripe:  rgba(0,0,0,0.1);
+    --code-bg:     var(--surface-3);
+    --code-color:  var(--gold);
+    --page-active-bg:   var(--gold);
+    --page-active-text: #07100a;
+    --radius-card: 16px;
+    --radius-input: 10px;
+}
+
+/* Light theme override — using the exact tokens you provided */
+body.light-mode .customers-page {
+    --bg:          #f4f6f0;
+    --surface:     #ffffff;
+    --surface-2:   #eef2e9;
+    --surface-3:   #e5ece0;
+    --border:      #d8e2d0;
+    --border-hi:   #c0d4b4;
+    --gold:        #9a7212;
+    --gold-2:      #b89018;
+    --gold-dim:    rgba(154,114,18,.09);
+    --gold-glow:   rgba(154,114,18,.16);
+    --green-acc:   #2d8a50;
+    --green-dim:   rgba(45,138,80,.08);
+    --text:        #182012;
+    --text-2:      #3d5530;
+    --muted:       #6a8558;
+    --faint:       #a8bfa0;
+    --danger:      #c0392b;
+    --danger-dim:  rgba(192,57,43,.08);
+    --info:        #1a7fa0;
+    --info-dim:    rgba(26,127,160,.08);
+    --warning:     #b07820;
+    --warning-dim: rgba(176,120,32,.09);
+    --success-dim: rgba(45,138,80,.08);
+    --card-shadow: 0 1px 3px rgba(0,0,0,.07), 0 3px 14px rgba(0,0,0,.05);
+    --hero-bg:     linear-gradient(135deg, #eaf0e2 0%, #dde8d2 100%);
+    --row-hover:   rgba(0,0,0,.025);
+    --row-stripe:  rgba(0,0,0,.013);
+    --code-bg:     rgba(154,114,18,.09);
+    --code-color:  var(--gold);
+    --page-active-bg:   var(--gold);
+    --page-active-text: #ffffff;
+}
+
+/* Global page styles */
+.customers-page {
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    transition: background 0.2s, color 0.2s;
+}
+
+.customers-page .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+/* Headings */
+.customers-page h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text) 0%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0;
+}
+
+/* Buttons */
+.btn-outline-secondary {
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 0.45rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.18s;
+}
+.btn-outline-secondary:hover {
+    color: var(--text);
+    border-color: rgba(201,162,40,0.4);
+    background: var(--gold-dim);
+}
+.btn-theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 0.45rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.18s;
+    cursor: pointer;
+}
+.btn-theme-toggle:hover {
+    color: var(--text);
+    border-color: rgba(201,162,40,0.4);
+    background: var(--gold-dim);
+}
+.btn-success {
+    background: linear-gradient(135deg, #5aad78 0%, var(--green-acc) 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 0.6rem 1.2rem;
+    font-weight: 600;
+    color: #07100a;
+    transition: all 0.2s;
+}
+.btn-success:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+/* Stats cards */
+.customers-page .card {
+    background: var(--surface);
+    border: 1px solid var(--border-hi);
+    border-radius: var(--radius-card);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.1s, border-color 0.2s;
+}
+.customers-page .card:hover {
+    border-color: var(--gold-dim);
+}
+.customers-page .card .card-body {
+    padding: 0.75rem;
+}
+.customers-page .card h5 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.75rem;
+    margin-bottom: 0.25rem;
+}
+.customers-page .border-primary h5 { color: var(--gold); }
+.customers-page .border-success h5 { color: var(--green-acc); }
+.customers-page .border-info h5 { color: var(--info); }
+.customers-page .border-warning h5 { color: var(--warning); }
+.customers-page small {
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Main data card */
+.customers-page .card-header {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 0.8rem 1.2rem;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+}
+.customers-page .card-header h5 {
+    margin: 0;
+    color: var(--text);
+}
+
+/* Table styling */
+.customers-page .table {
+    color: var(--text);
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.customers-page .table thead th {
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    padding: 0.9rem 1rem;
+}
+.customers-page .table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+}
+.customers-page .table tbody tr:hover {
+    background: var(--row-hover);
+}
+.customers-page .table td {
+    padding: 0.9rem 1rem;
+    vertical-align: middle;
+    border-color: var(--border);
+}
+.customers-page .badge {
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    border-radius: 20px;
+}
+.customers-page .badge.bg-primary { background: var(--gold-dim) !important; color: var(--gold) !important; }
+.customers-page .badge.bg-success { background: var(--green-dim) !important; color: var(--green-acc) !important; }
+.customers-page .badge.bg-warning { background: var(--warning-dim) !important; color: var(--warning) !important; }
+.customers-page .badge.bg-secondary { background: var(--surface-3) !important; color: var(--muted) !important; }
+.customers-page .text-muted { color: var(--faint) !important; }
+
+/* Scrollbar */
+.customers-page ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.customers-page ::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+.customers-page ::-webkit-scrollbar-thumb {
+    background: var(--border-hi);
+    border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .customers-page .table {
+        font-size: 0.8rem;
+    }
+    .customers-page .table td,
+    .customers-page .table th {
+        padding: 0.6rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>👥 Customer Management</h2>
-                <div>
-                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+<div class="customers-page">
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header with toggle -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h2>👥 Customer Management</h2>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="themeToggle" class="btn-theme-toggle">🌙 Dark</button>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn-outline-secondary">← Dashboard</a>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Customer Stats -->
-            <div class="row g-2 mb-4">
-                <div class="col-md-3">
-                    <div class="card text-center border-primary h-100">
-                        <div class="card-body p-2">
-                            <h5 class="text-primary mb-0">{{ customers|length }}</h5>
-                            <small>Total Customers</small>
+                <!-- Customer Stats -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center border-primary h-100">
+                            <div class="card-body">
+                                <h5 class="text-primary mb-0">{{ customers|length }}</h5>
+                                <small>Total Customers</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center border-success h-100">
+                            <div class="card-body">
+                                <h5 class="text-success mb-0">
+                                    {{ customers|selectattr("invoice_count", "gt", 1)|list|length }}
+                                </h5>
+                                <small>Repeat Customers</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center border-info h-100">
+                            <div class="card-body">
+                                <h5 class="text-info mb-0">
+                                    {{ customers|selectattr("total_spent", "gt", 1000)|list|length }}
+                                </h5>
+                                <small>VIP Clients ({{ currency_symbol }}1k+)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center border-warning h-100">
+                            <div class="card-body">
+                                <h5 class="text-warning mb-0">
+                                    {% set total_revenue = customers|sum(attribute="total_spent") %}
+                                    {{ currency_symbol }}{{ "%.0f"|format(total_revenue) }}
+                                </h5>
+                                <small>Total Customer Revenue</small>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card text-center border-success h-100">
-                        <div class="card-body p-2">
-                            <h5 class="text-success mb-0">
-                                {{ customers|selectattr("invoice_count", "gt", 1)|list|length }}
-                            </h5>
-                            <small>Repeat Customers</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center border-info h-100">
-                        <div class="card-body p-2">
-                            <h5 class="text-info mb-0">
-                                {{ customers|selectattr("total_spent", "gt", 1000)|list|length }}
-                            </h5>
-                            <small>VIP Clients ({{ currency_symbol }}1k+)</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center border-warning h-100">
-                        <div class="card-body p-2">
-                            <h5 class="text-warning mb-0">
-                                {% set total_revenue = customers|sum(attribute="total_spent") %}
-                                {{ currency_symbol }}{{ "%.0f"|format(total_revenue) }}
-                            </h5>
-                            <small>Total Customer Revenue</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Customers Table -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">📋 All Customers</h5>
-                </div>
-                <div class="card-body p-0">
-                    {% if customers %}
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 table-sm">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Customer Name</th>
-                                    <th>Contact</th>
-                                    <th>Invoices</th>
-                                    <th class="text-end">Total Spent</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for customer in customers %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ customer.name }}</strong>
-                                        {% if customer.tax_id %}
-                                        <br><small class="text-muted">Tax ID: {{ customer.tax_id }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if customer.email %}{{ customer.email }}<br>{% endif %}
-                                        {% if customer.phone %}{{ customer.phone }}{% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary">{{ customer.invoice_count }}</span>
-                                    </td>
-                                    <td class="text-end">
-                                        <strong>{{ currency_symbol }}{{ "%.2f"|format(customer.total_spent) }}</strong>
-                                    </td>
-                                    <td>
-                                        {% if customer.invoice_count > 1 %}
-                                        <span class="badge bg-success">Repeat</span>
-                                        {% elif customer.total_spent > 1000 %}
-                                        <span class="badge bg-warning">VIP</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary">New</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <!-- Customers Table Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">📋 All Customers</h5>
                     </div>
-                    {% else %}
-                    <div class="text-center py-5">
-                        <i class="bi bi-people text-muted" style="font-size:3rem;"></i>
-                        <h4>No Customers Yet</h4>
-                        <p class="text-muted">Your customers will appear here after you create invoices.</p>
-                        <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success">
-                            Create Your First Invoice
-                        </a>
+                    <div class="card-body p-0">
+                        {% if customers %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Customer Name</th>
+                                        <th>Contact</th>
+                                        <th>Invoices</th>
+                                        <th class="text-end">Total Spent</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for customer in customers %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ customer.name }}</strong>
+                                            {% if customer.tax_id %}
+                                            <br><small class="text-muted">Tax ID: {{ customer.tax_id }}</small>
+                                            {% endif %}
+                                         </td>
+                                        <td>
+                                            {% if customer.email %}{{ customer.email }}<br>{% endif %}
+                                            {% if customer.phone %}{{ customer.phone }}{% endif %}
+                                         </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ customer.invoice_count }}</span>
+                                         </td>
+                                        <td class="text-end">
+                                            <strong>{{ currency_symbol }}{{ "%.2f"|format(customer.total_spent) }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if customer.invoice_count > 1 %}
+                                            <span class="badge bg-success">Repeat</span>
+                                            {% elif customer.total_spent > 1000 %}
+                                            <span class="badge bg-warning">VIP</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">New</span>
+                                            {% endif %}
+                                         </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-people text-muted" style="font-size:3rem;"></i>
+                            <h4>No Customers Yet</h4>
+                            <p class="text-muted">Your customers will appear here after you create invoices.</p>
+                            <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-success">
+                                Create Your First Invoice
+                            </a>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('groweasy_theme');
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            document.body.classList.add('light-mode');
+            if (themeToggle) themeToggle.innerHTML = '☀️ Light';
+        } else {
+            document.body.classList.remove('light-mode');
+            if (themeToggle) themeToggle.innerHTML = '🌙 Dark';
+        }
+    }
+
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } else {
+        applyTheme('dark'); // default dark
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.body.classList.contains('light-mode');
+            const newTheme = isLight ? 'dark' : 'light';
+            applyTheme(newTheme);
+            localStorage.setItem('groweasy_theme', newTheme);
+        });
+    }
+});
+</script>
 {% endblock %}
