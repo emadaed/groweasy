@@ -2,92 +2,437 @@
 
 {% block title %}Expenses - GrowEasy Invoice{% endblock %}
 
+{% block extra_head %}
+<style nonce="{{ nonce }}">
+/* Force full viewport coverage — override base container */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ============================================
+   Premium Dark Theme — "Forest at Dusk"
+   ============================================ */
+.expenses-page {
+    --bg-dark:          #121f17;
+    --surface-dark:     #192a1f;
+    --surface-2-dark:   #21362a;
+    --surface-3-dark:   #2a4232;
+    --border-dark:      #2a4232;
+    --border-hi-dark:   #3b5a46;
+    --gold-dark:        #c9a228;
+    --gold-2-dark:      #d4b03a;
+    --gold-dim-dark:    rgba(201,162,40,0.08);
+    --gold-glow-dark:   rgba(201,162,40,0.12);
+    --green-dark:       #5aad78;
+    --green-dim-dark:   rgba(90,173,120,0.08);
+    --text-dark:        #e2e8d4;
+    --muted-dark:       #9bb7a3;
+    --faint-dark:       #5c7c68;
+    --danger-dark:      #f87171;
+    --danger-dim-dark:  rgba(248,113,113,0.1);
+    --card-shadow-dark: 0 4px 12px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
+    --radius-card:      16px;
+    --radius-input:     10px;
+}
+
+/* Light theme — exact tokens you provided */
+body.light-mode .expenses-page {
+    --bg-dark:          #f4f6f0;
+    --surface-dark:     #ffffff;
+    --surface-2-dark:   #eef2e9;
+    --surface-3-dark:   #e5ece0;
+    --border-dark:      #d8e2d0;
+    --border-hi-dark:   #c0d4b4;
+    --gold-dark:        #9a7212;
+    --gold-2-dark:      #b89018;
+    --gold-dim-dark:    rgba(154,114,18,0.08);
+    --gold-glow-dark:   rgba(154,114,18,0.12);
+    --green-dark:       #2d8a50;
+    --green-dim-dark:   rgba(45,138,80,0.08);
+    --text-dark:        #182012;
+    --muted-dark:       #6a8558;
+    --faint-dark:       #a8bfa0;
+    --danger-dark:      #c0392b;
+    --danger-dim-dark:  rgba(192,57,43,0.08);
+    --card-shadow-dark: 0 1px 3px rgba(0,0,0,0.07), 0 3px 14px rgba(0,0,0,0.05);
+}
+
+.expenses-page {
+    background: var(--bg-dark);
+    color: var(--text-dark);
+    min-height: 100dvh;
+    width: 100%;
+    font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    transition: background 0.2s, color 0.2s;
+}
+
+/* Full‑width inner container with readable content width */
+.expenses-page .container {
+    width: 100%;
+    padding: 1.5rem;
+    margin: 0 auto;
+    max-width: 1400px;
+}
+
+/* Headings */
+.expenses-page h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-dark) 0%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0;
+}
+
+/* Buttons — touch friendly (min-height 44px) */
+.expenses-page .btn-success,
+.expenses-page .btn-outline-secondary,
+.expenses-page .btn-info,
+.expenses-page .btn-theme-toggle {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+.expenses-page .btn-success {
+    background: linear-gradient(135deg, #5aad78 0%, var(--green-dark) 100%);
+    border: none;
+    color: #07100a;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.expenses-page .btn-success:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+.expenses-page .btn-outline-secondary {
+    background: transparent;
+    border: 1px solid var(--border-hi-dark);
+    color: var(--muted-dark);
+}
+.expenses-page .btn-outline-secondary:hover {
+    background: var(--surface-2-dark);
+    color: var(--text-dark);
+}
+.expenses-page .btn-info {
+    background: var(--gold-dim-dark);
+    border: 1px solid var(--border-hi-dark);
+    color: var(--gold-dark);
+}
+.expenses-page .btn-info:hover {
+    background: var(--gold-glow-dark);
+    border-color: var(--gold-dark);
+    color: var(--gold-2-dark);
+}
+.expenses-page .btn-theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border-hi-dark);
+    color: var(--muted-dark);
+}
+.expenses-page .btn-theme-toggle:hover {
+    color: var(--text-dark);
+    border-color: rgba(201,162,40,0.4);
+    background: var(--gold-dim-dark);
+}
+
+/* Summary cards */
+.expenses-page .card {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-hi-dark);
+    border-radius: var(--radius-card);
+    box-shadow: var(--card-shadow-dark);
+    transition: transform 0.1s, border-color 0.2s;
+}
+.expenses-page .card .card-body {
+    padding: 0.75rem;
+}
+.expenses-page .card h6 {
+    font-weight: 700;
+    color: var(--muted-dark);
+    letter-spacing: 0.03em;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+.expenses-page .card h5 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    margin-bottom: 0.25rem;
+}
+.expenses-page .card .text-muted {
+    color: var(--faint-dark) !important;
+    font-size: 0.7rem;
+}
+
+/* Alert (tip) */
+.expenses-page .alert-info {
+    background: var(--gold-dim-dark);
+    border-color: var(--border-hi-dark);
+    color: var(--gold-dark);
+}
+
+/* Main data card */
+.expenses-page .card-header {
+    background: var(--surface-2-dark);
+    border-bottom: 1px solid var(--border-dark);
+    padding: 0.8rem 1.2rem;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+}
+.expenses-page .card-header h5 {
+    margin: 0;
+    color: var(--text-dark);
+}
+
+/* Table styling — horizontal scroll allowed for small screens (accessibility: reflow) */
+.expenses-page .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.expenses-page .table {
+    color: var(--text-dark);
+    margin-bottom: 0;
+    min-width: 500px;
+}
+.expenses-page .table thead th {
+    background: var(--surface-2-dark);
+    color: var(--muted-dark);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border-dark);
+    padding: 0.9rem 1rem;
+}
+.expenses-page .table tbody tr {
+    border-bottom: 1px solid var(--border-dark);
+    transition: background 0.12s;
+}
+.expenses-page .table tbody tr:hover {
+    background: rgba(90,173,120,0.04);
+}
+.expenses-page .table td {
+    padding: 0.9rem 1rem;
+    vertical-align: middle;
+    border-color: var(--border-dark);
+}
+.expenses-page .badge.bg-secondary {
+    background: var(--surface-3-dark) !important;
+    color: var(--gold-dark) !important;
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    border-radius: 20px;
+}
+.expenses-page .text-danger {
+    color: var(--danger-dark) !important;
+}
+.expenses-page .text-muted {
+    color: var(--faint-dark) !important;
+}
+
+/* Modals */
+.expenses-page .modal-content {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-hi-dark);
+    border-radius: var(--radius-card);
+    color: var(--text-dark);
+}
+.expenses-page .modal-header {
+    background: var(--surface-2-dark);
+    border-bottom: 1px solid var(--border-dark);
+    padding: 1rem 1.5rem;
+}
+.expenses-page .modal-header .modal-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+.expenses-page .modal-header .btn-close {
+    filter: invert(0.8) sepia(1) saturate(0.5) hue-rotate(10deg);
+    opacity: 0.6;
+}
+body.light-mode .expenses-page .modal-header .btn-close {
+    filter: invert(0.2);
+}
+.expenses-page .modal-body {
+    padding: 1.5rem;
+}
+.expenses-page .modal-footer {
+    border-top: 1px solid var(--border-dark);
+    padding: 1rem 1.5rem;
+}
+.expenses-page .form-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--muted-dark);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+}
+.expenses-page .form-control,
+.expenses-page .form-select {
+    background: var(--surface-3-dark);
+    border: 1px solid var(--border-hi-dark);
+    border-radius: var(--radius-input);
+    color: var(--text-dark);
+    font-size: 0.85rem;
+    padding: 0.55rem 0.85rem;
+    transition: all 0.15s;
+}
+.expenses-page .form-control:focus,
+.expenses-page .form-select:focus {
+    background: var(--surface-2-dark);
+    border-color: var(--gold-dark);
+    box-shadow: 0 0 0 2px rgba(201,162,40,0.2);
+    outline: none;
+    color: var(--text-dark);
+}
+.expenses-page .form-control::placeholder {
+    color: var(--faint-dark);
+    font-style: italic;
+}
+.expenses-page textarea.form-control {
+    resize: vertical;
+}
+
+/* Scrollbar */
+.expenses-page ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.expenses-page ::-webkit-scrollbar-track {
+    background: var(--surface-dark);
+}
+.expenses-page ::-webkit-scrollbar-thumb {
+    background: var(--border-hi-dark);
+    border-radius: 4px;
+}
+
+/* Responsive stacking — WCAG reflow */
+@media (max-width: 768px) {
+    .expenses-page .row.g-2 > .col-md-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    .expenses-page .table {
+        font-size: 0.8rem;
+    }
+    .expenses-page .table td,
+    .expenses-page .table th {
+        padding: 0.6rem;
+    }
+    .expenses-page .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.75rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>💰 Expense Tracking</h2>
-                <div>
-                    <button class="btn btn-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                        ➕ Add Expense
-                    </button>
-                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
-                    <a href="{{ url_for('reports.profit_loss') }}" class="btn btn-info btn-sm me-2">📊 Profit & Loss Report</a>
+<div class="expenses-page">
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h2>💰 Expense Tracking</h2>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" id="themeToggle" class="btn-theme-toggle">🌙 Dark</button>
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                            ➕ Add Expense
+                        </button>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn-outline-secondary">← Dashboard</a>
+                        <a href="{{ url_for('reports.profit_loss') }}" class="btn-info">📊 Profit & Loss Report</a>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Expense Summary -->
-            <div class="row g-2 mb-4">
-                {% for category in expense_summary %}
-                <div class="col-md-3">
-                    <div class="card text-center h-100">
-                        <div class="card-body p-2">
-                            <h6 class="mb-0">{{ category.category }}</h6>
-                            <h5 class="text-danger mb-0">{{ currency_symbol }}{{ "%.0f"|format(category.total) }}</h5>
-                            <small class="text-muted">{{ category.count }} expenses</small>
+                
+                <!-- Expense Summary Cards (stack on mobile) -->
+                <div class="row g-3 mb-4">
+                    {% for category in expense_summary %}
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body p-2">
+                                <h6 class="mb-0">{{ category.category }}</h6>
+                                <h5 class="text-danger mb-0">{{ currency_symbol }}{{ "%.0f"|format(category.total) }}</h5>
+                                <small class="text-muted">{{ category.count }} expenses</small>
+                            </div>
                         </div>
                     </div>
-                </div>
-                {% else %}
-                <div class="col-12">
-                    <div class="alert alert-info py-2">
-                        <small><strong>💡 Tip:</strong> Track your business expenses to understand your profitability.</small>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- Expenses Table -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">📋 Recent Expenses</h5>
-                </div>
-                <div class="card-body p-0">
-                    {% if expenses %}
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 table-sm">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Description</th>
-                                    <th>Category</th>
-                                    <th class="text-end">Amount</th>
-                                    <th>Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for expense in expenses %}
-                                <tr>
-                                    <td>{{ expense.expense_date }}</td>
-                                    <td>{{ expense.description }}</td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ expense.category }}</span>
-                                    </td>
-                                    <td class="text-end text-danger">
-                                        <strong>-{{ currency_symbol }}{{ "%.2f"|format(expense.amount) }}</strong>
-                                    </td>
-                                    <td>
-                                        {% if expense.notes %}
-                                        <small class="text-muted">{{ expense.notes[:50] }}{% if expense.notes|length > 50 %}...{% endif %}</small>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    
                     {% else %}
-                    <div class="text-center py-5">
-                        <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
-                        <h4>No Expenses Tracked</h4>
-                        <p class="text-muted">Start tracking your business expenses to see your financial health.</p>
-                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                            Add Your First Expense
-                        </button>
+                    <div class="col-12">
+                        <div class="alert alert-info py-2">
+                            <small><strong>💡 Tip:</strong> Track your business expenses to understand your profitability.</small>
+                        </div>
                     </div>
-                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Expenses Table Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">📋 Recent Expenses</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if expenses %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Category</th>
+                                        <th class="text-end">Amount</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for expense in expenses %}
+                                    <tr>
+                                        <td>{{ expense.expense_date }}</td>
+                                        <td>{{ expense.description }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ expense.category }}</span>
+                                         </td>
+                                        <td class="text-end text-danger">
+                                            <strong>-{{ currency_symbol }}{{ "%.2f"|format(expense.amount) }}</strong>
+                                         </td>
+                                        <td>
+                                            {% if expense.notes %}
+                                            <small class="text-muted">{{ expense.notes[:50] }}{% if expense.notes|length > 50 %}...{% endif %}</small>
+                                            {% endif %}
+                                         </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                             </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                            <h4>No Expenses Tracked</h4>
+                            <p class="text-muted">Start tracking your business expenses to see your financial health.</p>
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                                Add Your First Expense
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -160,4 +505,37 @@
         </div>
     </div>
 </div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('groweasy_theme');
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            document.body.classList.add('light-mode');
+            if (themeToggle) themeToggle.innerHTML = '☀️ Light';
+        } else {
+            document.body.classList.remove('light-mode');
+            if (themeToggle) themeToggle.innerHTML = '🌙 Dark';
+        }
+    }
+
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } else {
+        applyTheme('dark');
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.body.classList.contains('light-mode');
+            const newTheme = isLight ? 'dark' : 'light';
+            applyTheme(newTheme);
+            localStorage.setItem('groweasy_theme', newTheme);
+        });
+    }
+});
+</script>
 {% endblock %}
