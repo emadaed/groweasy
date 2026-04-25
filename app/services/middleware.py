@@ -55,10 +55,9 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
             csp = [
                 "default-src 'self'",
                 f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
                 "img-src 'self' data: blob: https:",
                 "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
-                # Updated connect-src to allow Chart.js maps and Sentry telemetry
                 "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io https://cdn.jsdelivr.net",
                 "frame-ancestors 'none'",
                 "form-action 'self'",
@@ -68,7 +67,7 @@ def init_middleware(app):  # Renamed from security_headers to fix the ImportErro
             csp = [
                 "default-src 'self'",
                 "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
                 "img-src 'self' data: blob: https:",
                 "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com fonts.gstatic.com",
                 "connect-src 'self' https://*.jsdelivr.net https://*.cloudflare.com https://*.sentry.io https://cdn.jsdelivr.net",
