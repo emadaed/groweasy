@@ -66,7 +66,7 @@ def devices():
                          nonce=g.nonce)
 
 # REVOKE TOKEN - 3
-@settings_bp.route("/revoke_device/<token>")
+@settings_bp.route("/revoke_device/<token>", methods=['GET', 'POST'])
 def revoke_device(token):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -80,7 +80,7 @@ def revoke_device(token):
     return redirect(url_for('settings.devices'))
 
 # REVOKE ALL DEVICES - 4
-@settings_bp.route("/revoke_all_devices")
+@settings_bp.route("/revoke_all_devices", methods=['GET', 'POST'])
 def revoke_all_devices():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

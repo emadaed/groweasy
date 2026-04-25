@@ -6,338 +6,882 @@
     {%- endif -%}
 {%- endmacro %}
 
-{% block title %}Dashboard - GrowEasy ERP{% endblock %}
+{% block title %}Dashboard — GrowEasy ERP{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+{# ── Early theme apply — runs before body renders, prevents flash ── #}
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+<style nonce="{{ nonce }}">
+
+/* ══════════════════════════════════════════════
+   BASE OVERRIDE
+══════════════════════════════════════════════ */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════════════
+   DESIGN TOKENS — DARK THEME (default)
+══════════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+    --bg:           #07100a;
+    --surface:      #0c1810;
+    --surface-2:    #111f14;
+    --surface-3:    #172b1a;
+    --border:       #1b2e1e;
+    --border-hi:    #253d29;
+    --gold:         #c9a228;
+    --gold-2:       #e8c84a;
+    --gold-dim:     rgba(201,162,40,.10);
+    --gold-glow:    rgba(201,162,40,.16);
+    --green-acc:    #22c55e;
+    --green-dim:    rgba(34,197,94,.08);
+    --text:         #dff0e2;
+    --text-2:       #a8c4ad;
+    --muted:        #7a9580;
+    --faint:        #3d5441;
+    --danger:       #f87171;
+    --danger-dim:   rgba(248,113,113,.10);
+    --warning:      #fbbf24;
+    --warning-dim:  rgba(251,191,36,.10);
+    --info:         #38bdf8;
+    --info-dim:     rgba(56,189,248,.10);
+    --success-dim:  rgba(34,197,94,.10);
+    --card-shadow:  0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.30);
+    --hero-bg:      linear-gradient(135deg, #0a1f10 0%, #071e18 100%);
+    --chart-grid:   rgba(255,255,255,.05);
+    --chart-text:   #7a9580;
+    --toggle-label: '☀️ Light';
+}
+
+/* ══════════════════════════════════════════════
+   DESIGN TOKENS — LIGHT THEME
+══════════════════════════════════════════════ */
+[data-theme="light"] {
+    --bg:           #f5f7f2;
+    --surface:      #ffffff;
+    --surface-2:    #f0f4ed;
+    --surface-3:    #e8efe4;
+    --border:       #dde8d8;
+    --border-hi:    #c5d9bc;
+    --gold:         #9a7510;
+    --gold-2:       #b8920e;
+    --gold-dim:     rgba(154,117,16,.09);
+    --gold-glow:    rgba(154,117,16,.16);
+    --green-acc:    #16a34a;
+    --green-dim:    rgba(22,163,74,.08);
+    --text:         #152318;
+    --text-2:       #3d5c42;
+    --muted:        #6b8a6f;
+    --faint:        #a8c4ad;
+    --danger:       #dc2626;
+    --danger-dim:   rgba(220,38,38,.08);
+    --warning:      #d97706;
+    --warning-dim:  rgba(217,119,6,.09);
+    --info:         #0284c7;
+    --info-dim:     rgba(2,132,199,.08);
+    --success-dim:  rgba(22,163,74,.08);
+    --card-shadow:  0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    --hero-bg:      linear-gradient(135deg, #e8f0e4 0%, #ddecd5 100%);
+    --chart-grid:   rgba(0,0,0,.06);
+    --chart-text:   #6b8a6f;
+    --toggle-label: '🌙 Dark';
+}
+
+/* ══════════════════════════════════════════════
+   PAGE SHELL
+══════════════════════════════════════════════ */
+.db-page {
+    font-family: 'Figtree', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 1.4rem 1.5rem 2.5rem;
+    color: var(--text);
+    transition: background 0.25s, color 0.25s;
+}
+
+/* ══════════════════════════════════════════════
+   HERO
+══════════════════════════════════════════════ */
+.db-hero {
+    position: relative;
+    background: var(--hero-bg);
+    border: 1px solid var(--border-hi);
+    border-radius: 18px;
+    padding: 1.6rem 2rem 1.6rem 2.4rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+/* Islamic geometric lattice */
+.db-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.15'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
+    pointer-events: none;
+}
+.db-hero::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 60%, transparent 100%);
+    border-radius: 0 2px 2px 0;
+}
+
+.db-hero-inner { position: relative; z-index: 1; }
+
+.db-hero-eyebrow {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.25rem;
+}
+.db-hero-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+}
+.db-hero-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 0.3rem 0 0;
+    font-style: italic;
+    font-weight: 300;
+}
+
+.hero-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+/* Theme toggle */
+.btn-theme-toggle {
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid rgba(201,162,40,.25);
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+.btn-theme-toggle:hover {
+    background: var(--gold-glow);
+    border-color: rgba(201,162,40,.4);
+}
+
+.btn-hero-logout {
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    text-decoration: none;
+    transition: all 0.18s;
+    white-space: nowrap;
+    display: inline-block;
+}
+.btn-hero-logout:hover {
+    color: var(--danger);
+    border-color: rgba(248,113,113,.35);
+    background: var(--danger-dim);
+}
+
+/* ══════════════════════════════════════════════
+   SECTION LABEL
+══════════════════════════════════════════════ */
+.section-label {
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* ══════════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════════ */
+.db-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    transition: border-color 0.18s, box-shadow 0.18s, background 0.25s;
+}
+.db-card:hover {
+    border-color: var(--border-hi);
+    box-shadow: 0 4px 24px rgba(0,0,0,.15);
+}
+.db-card-header {
+    padding: 0.75rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--text);
+    background: var(--surface-2);
+}
+.db-card-body {
+    padding: 1.1rem 1.2rem;
+}
+.db-card-body-scroll {
+    padding: 0.75rem 1rem;
+    max-height: 180px;
+    overflow-y: auto;
+}
+/* scrollbar */
+.db-card-body-scroll::-webkit-scrollbar { width: 4px; }
+.db-card-body-scroll::-webkit-scrollbar-track { background: var(--surface-2); }
+.db-card-body-scroll::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+/* ══════════════════════════════════════════════
+   METRIC CARDS
+══════════════════════════════════════════════ */
+.metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem 1rem 1rem;
+    box-shadow: var(--card-shadow);
+    transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s, background 0.25s;
+    height: 100%;
+}
+.metric-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-hi);
+    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+}
+
+.metric-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+    margin-bottom: 0.55rem;
+    display: block;
+}
+.metric-label {
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.25rem;
+}
+.metric-value {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0;
+}
+
+/* accent line on bottom of metric card */
+.metric-card.accent-gold  { border-bottom: 2px solid var(--gold); }
+.metric-card.accent-green { border-bottom: 2px solid var(--green-acc); }
+.metric-card.accent-warn  { border-bottom: 2px solid var(--warning); }
+.metric-card.accent-info  { border-bottom: 2px solid var(--info); }
+
+/* ══════════════════════════════════════════════
+   ALERT BADGES
+══════════════════════════════════════════════ */
+.alert-row {
+    font-size: 0.8rem;
+    color: var(--text-2);
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.4;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+}
+.alert-row:last-child { border-bottom: none; }
+.alert-row strong { color: var(--text); font-weight: 600; }
+.alert-row .sku-tag {
+    font-size: 0.68rem;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0 0.3rem;
+    font-family: 'Figtree', monospace;
+    white-space: nowrap;
+}
+.alert-row .badge-count {
+    margin-left: auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--danger);
+    white-space: nowrap;
+}
+
+/* Card accent colours for alert panels */
+.db-card.card-warn  { border-top: 2px solid var(--warning); }
+.db-card.card-danger{ border-top: 2px solid var(--danger); }
+.db-card.card-info  { border-top: 2px solid var(--info); }
+
+/* ══════════════════════════════════════════════
+   QUICK ACTIONS
+══════════════════════════════════════════════ */
+.quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 0.5rem;
+    text-decoration: none;
+    color: var(--text-2);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: 'Figtree', sans-serif;
+    transition: all 0.18s;
+    height: 100%;
+    box-shadow: var(--card-shadow);
+}
+.quick-action:hover {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+    color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(201,162,40,.12);
+}
+.quick-action .qa-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+/* ══════════════════════════════════════════════
+   AI TIP CARD
+══════════════════════════════════════════════ */
+.ai-tip-card {
+    background: var(--success-dim);
+    border: 1px solid rgba(34,197,94,.18);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+}
+.ai-tip-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--green-acc);
+    margin-bottom: 0.4rem;
+    font-family: 'Figtree', sans-serif;
+}
+.ai-tip-text {
+    font-size: 0.85rem;
+    color: var(--text-2);
+    margin: 0;
+    line-height: 1.55;
+}
+
+/* ══════════════════════════════════════════════
+   CHART AREA
+══════════════════════════════════════════════ */
+.chart-wrap {
+    position: relative;
+    height: 280px;
+}
+
+/* ══════════════════════════════════════════════
+   ONBOARDING MODAL — dark/light aware
+══════════════════════════════════════════════ */
+.modal-content {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-hi) !important;
+    color: var(--text) !important;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5) !important;
+    border-radius: 14px !important;
+}
+.modal-header {
+    background: var(--surface-2) !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-radius: 14px 14px 0 0 !important;
+}
+.modal-header .modal-title { color: var(--text) !important; }
+.modal-footer {
+    background: var(--surface-2) !important;
+    border-top: 1px solid var(--border) !important;
+}
+.modal-body .card {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border-hi) !important;
+    color: var(--text) !important;
+}
+.modal-body .card p { color: var(--muted) !important; }
+.modal-body .alert-info {
+    background: var(--info-dim) !important;
+    border: 1px solid rgba(56,189,248,.18) !important;
+    color: var(--text-2) !important;
+}
+.btn-close-white { filter: invert(0.7); }
+
+/* ══════════════════════════════════════════════
+   EMPTY STATE TEXT
+══════════════════════════════════════════════ */
+.empty-text {
+    font-size: 0.78rem;
+    color: var(--faint);
+    font-style: italic;
+    padding: 0.5rem 0;
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════════
+   PAIR LIST (market basket)
+══════════════════════════════════════════════ */
+.pair-item {
+    font-size: 0.8rem;
+    color: var(--text-2);
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.pair-item:last-child { border-bottom: none; }
+.pair-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--info);
+    background: var(--info-dim);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    white-space: nowrap;
+}
+</style>
+{% endblock %}
+
 
 {% block content %}
-<div class="container py-4">
-    <!-- Welcome Row -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2>📊 Business Overview</h2>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm">Logout</a>
-            </div>
+<div class="db-page">
+
+    <!-- ══════ HERO ══════ -->
+    <div class="db-hero">
+        <div class="db-hero-inner">
+            <div class="db-hero-eyebrow">✦ GrowEasy &middot; ERP</div>
+            <h2 class="db-hero-title">Business Overview</h2>
+            <p class="db-hero-sub">All your key metrics at a glance</p>
+        </div>
+        <div class="hero-actions">
+            <button class="btn-theme-toggle" id="themeToggle" type="button">☀️ Light</button>
+            <a href="{{ url_for('auth.logout') }}" class="btn-hero-logout">Logout</a>
         </div>
     </div>
 
-    <!-- Key Metrics Cards (compact) -->
+    <!-- ══════ KEY METRICS ══════ -->
+    <div class="section-label">Key Metrics</div>
     <div class="row g-2 mb-4">
         <div class="col-6 col-md-3">
-            <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center p-2">
-                    <div class="metric-icon text-primary mb-1">💰</div>
-                    <h6 class="text-muted small mb-0">Revenue</h6>
-                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.revenue) }}</h5>
-                </div>
+            <div class="metric-card accent-gold">
+                <span class="metric-icon">💰</span>
+                <div class="metric-label">Revenue</div>
+                <div class="metric-value">{{ currency_symbol }}{{ "%.0f"|format(data.revenue) }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center p-2">
-                    <div class="metric-icon text-success mb-1">📈</div>
-                    <h6 class="text-muted small mb-0">Profit</h6>
-                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.net_profit) }}</h5>
-                </div>
+            <div class="metric-card accent-green">
+                <span class="metric-icon">📈</span>
+                <div class="metric-label">Profit</div>
+                <div class="metric-value">{{ currency_symbol }}{{ "%.0f"|format(data.net_profit) }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center p-2">
-                    <div class="metric-icon text-warning mb-1">🧾</div>
-                    <h6 class="text-muted small mb-0">Tax Liability</h6>
-                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.tax_liability) }}</h5>
-                </div>
+            <div class="metric-card accent-warn">
+                <span class="metric-icon">🧾</span>
+                <div class="metric-label">Tax Liability</div>
+                <div class="metric-value">{{ currency_symbol }}{{ "%.0f"|format(data.tax_liability) }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card metric-card h-100 border-0 shadow-sm">
-                <div class="card-body text-center p-2">
-                    <div class="metric-icon text-info mb-1">📦</div>
-                    <h6 class="text-muted small mb-0">Inventory Value</h6>
-                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(data.inventory_value) }}</h5>
-                </div>
+            <div class="metric-card accent-info">
+                <span class="metric-icon">📦</span>
+                <div class="metric-label">Inventory Value</div>
+                <div class="metric-value">{{ currency_symbol }}{{ "%.0f"|format(data.inventory_value) }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Second Row: Deadstock, Reorder Alerts, Market Basket -->
+    <!-- ══════ ALERTS ROW ══════ -->
+    <div class="section-label">Inventory Alerts</div>
     <div class="row g-3 mb-4">
-        <!-- Deadstock - NEW: added SKU -->
+
+        <!-- Deadstock -->
         <div class="col-md-4">
-            <div class="card border-warning h-100 shadow-sm">
-                <div class="card-header bg-warning bg-opacity-10 py-2">
-                    <h6 class="mb-0">📦 Deadstock (90 days no sale)</h6>
+            <div class="db-card card-warn h-100">
+                <div class="db-card-header">
+                    📦 Deadstock <span style="color:var(--muted);font-weight:400;font-size:0.72rem;">(90d no sale)</span>
                 </div>
-                <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
+                <div class="db-card-body-scroll">
                     {% if deadstock %}
                         {% for item in deadstock %}
-                        <small class="d-block mb-1">
-                            <strong>{{ item.name }}</strong> 
-                            <span class="text-muted">(SKU: {{ item.sku }})</span>
-                        </small>
+                        <div class="alert-row">
+                            <strong>{{ item.name }}</strong>
+                            <span class="sku-tag">{{ item.sku }}</span>
+                        </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-muted mb-0 small">No deadstock items.</p>
+                        <p class="empty-text">No deadstock items.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- Reorder / Low Stock - NEW: added SKU + correct keys -->
+        <!-- Reorder Alerts -->
         <div class="col-md-4">
-            <div class="card border-danger h-100 shadow-sm">
-                <div class="card-header bg-danger bg-opacity-10 py-2">
-                    <h6 class="mb-0">⚠️ Reorder Alerts ({{ reorder_items|length }})</h6>
+            <div class="db-card card-danger h-100">
+                <div class="db-card-header">
+                    ⚠️ Reorder Alerts
+                    <span style="margin-left:auto;font-size:0.72rem;color:var(--danger);font-weight:700;">
+                        {{ reorder_items|length }}
+                    </span>
                 </div>
-                <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
+                <div class="db-card-body-scroll">
                     {% if reorder_items %}
                         {% for alert in reorder_items %}
-                        <small class="d-block mb-1">
-                            <strong>{{ alert.name }}</strong> 
-                            <span class="text-muted">(SKU: {{ alert.sku }})</span>:
-                            {{ alert.current }} units (Min: {{ alert.min }})
-                        </small>
+                        <div class="alert-row">
+                            <strong>{{ alert.name }}</strong>
+                            <span class="sku-tag">{{ alert.sku }}</span>
+                            <span class="badge-count">{{ alert.current }} / {{ alert.min }}</span>
+                        </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-muted mb-0 small">No low stock items.</p>
+                        <p class="empty-text">No low stock items.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- Frequently Bought Together - NEW: added SKU -->
+        <!-- Frequently Bought Together -->
         <div class="col-md-4">
-            <div class="card border-info h-100 shadow-sm">
-                <div class="card-header bg-info bg-opacity-10 py-2">
-                    <h6 class="mb-0">🛒 Frequently Bought Together</h6>
+            <div class="db-card card-info h-100">
+                <div class="db-card-header">
+                    🛒 Bought Together
                 </div>
-                <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
+                <div class="db-card-body-scroll">
                     {% if market_basket %}
-                        <ul class="list-unstyled small mb-0">
-                            {% for pair in market_basket %}
-                            <li>{{ pair.pair }} – {{ pair.times }}×</li>
-                            {% endfor %}
-                        </ul>
+                        {% for pair in market_basket %}
+                        <div class="pair-item">
+                            <span>{{ pair.pair }}</span>
+                            <span class="pair-count">{{ pair.times }}×</span>
+                        </div>
+                        {% endfor %}
                     {% else %}
-                        <p class="text-muted mb-0 small">No frequent pairs yet.</p>
+                        <p class="empty-text">No frequent pairs yet.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- NEW: Expiry Alert Card -->
+    <!-- ══════ EXPIRY ALERTS (conditional) ══════ -->
     {% if expiry_alerts %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-danger shadow-sm">
-                <div class="card-header bg-danger bg-opacity-10 py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">⏰ Expiry Alerts ({{ expiry_alerts|length }})</h6>
-                </div>
-                <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
-                    {% for alert in expiry_alerts %}
-                    <small class="d-block mb-1">
-                        <strong>{{ alert.name }}</strong>
-                        <span class="text-muted">(SKU: {{ alert.sku }})</span>:
-                        Expires <strong>{{ alert.expiry_date }}</strong>
-                    </small>
-                    {% endfor %}
-                    {# NOTE: days_left, stock, unit_type removed — add them to expiry_list in main.py if needed #}
-                </div>
+    <div class="section-label">Expiry Alerts</div>
+    <div class="db-card card-danger mb-4">
+        <div class="db-card-header">
+            ⏰ Expiry Alerts
+            <span style="margin-left:auto;font-size:0.72rem;color:var(--danger);font-weight:700;">
+                {{ expiry_alerts|length }}
+            </span>
+        </div>
+        <div class="db-card-body-scroll" style="max-height:160px;">
+            {% for alert in expiry_alerts %}
+            <div class="alert-row">
+                <strong>{{ alert.name }}</strong>
+                <span class="sku-tag">{{ alert.sku }}</span>
+                <span style="margin-left:auto;font-size:0.75rem;color:var(--warning);">
+                    Exp: {{ alert.expiry_date }}
+                </span>
             </div>
+            {% endfor %}
         </div>
     </div>
     {% endif %}
-    <!-- Onboarding Wizard Modal -->
-    {% if show_wizard %}
-    <div class="modal fade" id="onboardingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">🚀 Welcome to Groweasy!</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="lead">Let's get your business up and running in 3 simple steps.</p>
-                    <div class="row g-4 mt-2">
-                        <div class="col-md-4 text-center">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <i class="bi bi-building bi-3x text-primary mb-3" style="font-size:3rem;"></i>
-                                    <h5>1. Company Settings</h5>
-                                    <p>Add your logo, tax details, and business info.</p>
-                                    <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-primary">Go to Settings</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 text-center">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <i class="bi bi-boxes text-success mb-3" style="font-size:3rem;"></i>
-                                    <h5>2. Add Your First Product</h5>
-                                    <p>Create an inventory item to start selling.</p>
-                                    <a href="{{ url_for('inventory.inventory') }}" class="btn btn-outline-success">Add Product</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 text-center">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <i class="bi bi-file-earmark-text text-warning mb-3" style="font-size:3rem;"></i>
-                                    <h5>3. Create Your First Invoice</h5>
-                                    <p>Generate a professional invoice for a client.</p>
-                                    <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-outline-warning">Create Invoice</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="alert alert-info mt-4 mb-0">
-                        <i class="bi bi-lightbulb-fill"></i> <strong>Pro tip:</strong> Once you add a product or create an invoice, this wizard won't appear again.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Skip for now</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    <!-- AI Tip Card -->
+
+    <!-- ══════ AI TIP (conditional) ══════ -->
     {% if ai_tip %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm bg-success bg-opacity-10">
-                <div class="card-body">
-                    <h6 class="text-success">💡 AI Growth Tip</h6>
-                    <p class="mb-0">{{ ai_tip }}</p>  {# FIX: XSS filter removed — AI content is now escaped by Jinja2 #}
-                </div>
-            </div>
-        </div>
+    <div class="ai-tip-card mb-4">
+        <div class="ai-tip-label">💡 AI Growth Tip</div>
+        <p class="ai-tip-text">{{ ai_tip }}</p>
     </div>
     {% endif %}
 
-    <!-- Quick Actions (compact) -->
-    <div class="row g-2">
+    <!-- ══════ QUICK ACTIONS ══════ -->
+    <div class="section-label">Quick Actions</div>
+    <div class="row g-2 mb-4">
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('sales.create_invoice') }}" class="btn btn-outline-primary w-100 py-3">
-                <div>📝</div>
-                <small>New Invoice</small>
+            <a href="{{ url_for('sales.create_invoice') }}" class="quick-action">
+                <span class="qa-icon">📝</span>
+                <span>New Invoice</span>
             </a>
         </div>
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('inventory.inventory') }}" class="btn btn-outline-success w-100 py-3">
-                <div>📦</div>
-                <small>Inventory</small>
+            <a href="{{ url_for('inventory.inventory') }}" class="quick-action">
+                <span class="qa-icon">📦</span>
+                <span>Inventory</span>
             </a>
         </div>
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('crm.customers') }}" class="btn btn-outline-info w-100 py-3">
-                <div>👥</div>
-                <small>Customers</small>
+            <a href="{{ url_for('crm.customers') }}" class="quick-action">
+                <span class="qa-icon">👥</span>
+                <span>Customers</span>
             </a>
         </div>
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-info w-100 py-3">
-                <div>⚙️</div>
-                <small>Settings</small>
+            <a href="{{ url_for('settings.settings') }}" class="quick-action">
+                <span class="qa-icon">⚙️</span>
+                <span>Settings</span>
             </a>
-        </div>        
-    </div>
-</div>
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5>📈 Monthly Revenue (Last 6 Months)</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="revenueChart" style="height: 300px;"></canvas>
-            </div>
         </div>
     </div>
-</div>
 
-<script nonce="{{ g.nonce }}">
-    document.addEventListener('DOMContentLoaded', function() {
-        var ctx = document.getElementById('revenueChart').getContext('2d');
-        new Chart(ctx, {
+    <!-- ══════ REVENUE CHART ══════ -->
+    <div class="section-label">Revenue Trend</div>
+    <div class="db-card mb-2">
+        <div class="db-card-header">📈 Monthly Revenue — Last 6 Months</div>
+        <div class="db-card-body">
+            <div class="chart-wrap">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /db-page -->
+
+
+<!-- ══════════════════════════════════════════════
+     ONBOARDING WIZARD MODAL — untouched logic
+══════════════════════════════════════════════ -->
+{% if show_wizard %}
+<div class="modal fade" id="onboardingModal" tabindex="-1"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🚀 Welcome to GrowEasy!</h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="lead" style="color:var(--text-2);">
+                    Get your business up and running in 3 simple steps.
+                </p>
+                <div class="row g-4 mt-2">
+                    <div class="col-md-4 text-center">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <i class="bi bi-building" style="font-size:2.5rem;color:var(--gold);"></i>
+                                <h5 class="mt-3" style="color:var(--text);">1. Company Settings</h5>
+                                <p>Add your logo, tax details, and business info.</p>
+                                <a href="{{ url_for('settings.settings') }}"
+                                   class="btn btn-outline-primary btn-sm">Go to Settings</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <i class="bi bi-boxes" style="font-size:2.5rem;color:var(--green-acc);"></i>
+                                <h5 class="mt-3" style="color:var(--text);">2. Add a Product</h5>
+                                <p>Create an inventory item to start selling.</p>
+                                <a href="{{ url_for('inventory.inventory') }}"
+                                   class="btn btn-outline-success btn-sm">Add Product</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <i class="bi bi-file-earmark-text" style="font-size:2.5rem;color:var(--warning);"></i>
+                                <h5 class="mt-3" style="color:var(--text);">3. First Invoice</h5>
+                                <p>Generate a professional invoice for a client.</p>
+                                <a href="{{ url_for('sales.create_invoice') }}"
+                                   class="btn btn-outline-warning btn-sm">Create Invoice</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert-info mt-4 mb-0"
+                     style="background:var(--info-dim);border:1px solid rgba(56,189,248,.18);
+                            border-radius:8px;padding:0.8rem 1rem;font-size:0.83rem;color:var(--text-2);">
+                    <i class="bi bi-lightbulb-fill" style="color:var(--info);"></i>
+                    <strong style="color:var(--text);">Pro tip:</strong>
+                    Once you add a product or create an invoice, this wizard won't appear again.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm"
+                        data-bs-dismiss="modal">Skip for now</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════
+     SCRIPTS — all nonce-tagged, zero inline handlers
+══════════════════════════════════════════════ -->
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ── Theme toggle ── */
+    var html        = document.documentElement;
+    var toggleBtn   = document.getElementById('themeToggle');
+    var DARK_LABEL  = '🌙 Dark';
+    var LIGHT_LABEL = '☀️ Light';
+
+    function applyTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('ge-theme', theme);
+        toggleBtn.textContent = (theme === 'dark') ? LIGHT_LABEL : DARK_LABEL;
+    }
+
+    /* Set correct button label on load */
+    var current = html.getAttribute('data-theme') || 'dark';
+    toggleBtn.textContent = (current === 'dark') ? LIGHT_LABEL : DARK_LABEL;
+
+    toggleBtn.addEventListener('click', function () {
+        var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        /* Redraw chart with new colours */
+        if (window._revenueChart) {
+            var style = getComputedStyle(document.documentElement);
+            var gridColor = style.getPropertyValue('--chart-grid').trim();
+            var textColor = style.getPropertyValue('--chart-text').trim();
+            window._revenueChart.options.scales.x.ticks.color = textColor;
+            window._revenueChart.options.scales.y.ticks.color = textColor;
+            window._revenueChart.options.scales.x.grid.color  = gridColor;
+            window._revenueChart.options.scales.y.grid.color  = gridColor;
+            window._revenueChart.update();
+        }
+    });
+
+    /* ── Revenue Chart ── */
+    var ctx = document.getElementById('revenueChart');
+    if (ctx) {
+        var style     = getComputedStyle(document.documentElement);
+        var gridColor = style.getPropertyValue('--chart-grid').trim();
+        var textColor = style.getPropertyValue('--chart-text').trim();
+        var goldColor = style.getPropertyValue('--gold').trim();
+
+        window._revenueChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: {{ months|tojson }},
+                labels: {{ months | tojson }},
                 datasets: [{
                     label: 'Revenue ({{ currency_symbol }})',
-                    data: {{ revenues|tojson }},
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1,
-                    fill: true
+                    data: {{ revenues | tojson }},
+                    borderColor: goldColor,
+                    backgroundColor: 'rgba(201,162,40,0.08)',
+                    pointBackgroundColor: goldColor,
+                    pointBorderColor: goldColor,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.35,
+                    fill: true,
+                    borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) label += ': ';
-                                label += context.parsed.y.toLocaleString();
-                                return label;
+                            label: function (context) {
+                                return ' {{ currency_symbol }}' + context.parsed.y.toLocaleString();
                             }
                         }
                     }
                 },
                 scales: {
+                    x: {
+                        ticks: { color: textColor, font: { family: 'Figtree', size: 11 } },
+                        grid:  { color: gridColor }
+                    },
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString();
-                            }
-                        }
+                            color: textColor,
+                            font: { family: 'Figtree', size: 11 },
+                            callback: function (v) { return v.toLocaleString(); }
+                        },
+                        grid: { color: gridColor }
                     }
                 }
             }
         });
-    });
-</script>
+    }
 
-<!-- Hover effect CSS -->
-<style>
-.metric-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.metric-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-.metric-icon {
-    font-size: 1.5rem;
-    line-height: 1;
-}
-/* Optional: style scrollbars (for WebKit browsers) */
-.card-body::-webkit-scrollbar {
-    width: 6px;
-}
-.card-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-.card-body::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 3px;
-}
-.card-body::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-</style>
-<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ g.nonce }}"></script>
-<script nonce="{{ g.nonce }}">
-    document.addEventListener('DOMContentLoaded', function() {
-        {% if show_wizard %}
-        var myModal = new bootstrap.Modal(document.getElementById('onboardingModal'));
+    /* ── Onboarding wizard ── */
+    {% if show_wizard %}
+    var wizardEl = document.getElementById('onboardingModal');
+    if (wizardEl) {
+        var myModal = new bootstrap.Modal(wizardEl);
         myModal.show();
-        {% endif %}
-    });
+    }
+    {% endif %}
+});
 </script>
 {% endblock %}
