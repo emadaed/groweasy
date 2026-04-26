@@ -1,226 +1,940 @@
-<!-- purchase_orders.html - Updated with action buttons -->
-
 {% extends "base.html" %}
-{% block title %}Purchase Orders{% endblock %}
+{% block title %}Purchase Orders — GrowEasy{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+{# ── Early theme apply — no flash ── #}
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+<style nonce="{{ nonce }}">
+
+/* ── Base container override ── */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════════
+   TOKENS — DARK (forest at dusk, identical to invoice_history)
+══════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+    --bg:          #0c110a;
+    --surface:     #131a10;
+    --surface-2:   #192214;
+    --surface-3:   #1f2c19;
+    --border:      #222e1c;
+    --border-hi:   #2e3f25;
+    --gold:        #c9a228;
+    --gold-2:      #e2c040;
+    --gold-dim:    rgba(201,162,40,.10);
+    --gold-glow:   rgba(201,162,40,.17);
+    --green-acc:   #5aad78;
+    --green-dim:   rgba(90,173,120,.09);
+    --text:        #e2e8d4;
+    --text-2:      #b5c4a0;
+    --muted:       #7d9068;
+    --faint:       #485c38;
+    --danger:      #e07070;
+    --danger-dim:  rgba(224,112,112,.10);
+    --info:        #6db8d4;
+    --info-dim:    rgba(109,184,212,.09);
+    --warning:     #d4a040;
+    --warning-dim: rgba(212,160,64,.10);
+    --success-dim: rgba(90,173,120,.09);
+    --card-shadow: 0 1px 4px rgba(0,0,0,.40), 0 4px 18px rgba(0,0,0,.28);
+    --hero-bg:     linear-gradient(135deg, #111a0d 0%, #0d160b 100%);
+    --row-hover:   rgba(255,255,255,.025);
+    --row-stripe:  rgba(255,255,255,.012);
+    --code-bg:     rgba(201,162,40,.09);
+    --code-color:  var(--gold);
+    --page-active-bg:   var(--gold);
+    --page-active-text: #0c110a;
+    --dd-bg:       #192214;
+    --dd-hover:    #1f2c19;
+    --dd-border:   #2e3f25;
+}
+
+/* ══════════════════════════════════════════
+   TOKENS — LIGHT
+══════════════════════════════════════════ */
+[data-theme="light"] {
+    --bg:          #f4f6f0;
+    --surface:     #ffffff;
+    --surface-2:   #eef2e9;
+    --surface-3:   #e5ece0;
+    --border:      #d8e2d0;
+    --border-hi:   #c0d4b4;
+    --gold:        #9a7212;
+    --gold-2:      #b89018;
+    --gold-dim:    rgba(154,114,18,.09);
+    --gold-glow:   rgba(154,114,18,.16);
+    --green-acc:   #2d8a50;
+    --green-dim:   rgba(45,138,80,.08);
+    --text:        #182012;
+    --text-2:      #3d5530;
+    --muted:       #6a8558;
+    --faint:       #a8bfa0;
+    --danger:      #c0392b;
+    --danger-dim:  rgba(192,57,43,.08);
+    --info:        #1a7fa0;
+    --info-dim:    rgba(26,127,160,.08);
+    --warning:     #b07820;
+    --warning-dim: rgba(176,120,32,.09);
+    --success-dim: rgba(45,138,80,.08);
+    --card-shadow: 0 1px 3px rgba(0,0,0,.07), 0 3px 14px rgba(0,0,0,.05);
+    --hero-bg:     linear-gradient(135deg, #eaf0e2 0%, #dde8d2 100%);
+    --row-hover:   rgba(0,0,0,.025);
+    --row-stripe:  rgba(0,0,0,.013);
+    --code-bg:     rgba(154,114,18,.09);
+    --code-color:  var(--gold);
+    --page-active-bg:   var(--gold);
+    --page-active-text: #ffffff;
+    --dd-bg:       #ffffff;
+    --dd-hover:    #eef2e9;
+    --dd-border:   #c0d4b4;
+}
+
+/* ══════════════════════════════════════════
+   PAGE SHELL
+══════════════════════════════════════════ */
+.po-page {
+    font-family: 'Figtree', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 1.4rem 1.5rem 2.5rem;
+    color: var(--text);
+    transition: background 0.25s, color 0.25s;
+}
+
+/* ══════════════════════════════════════════
+   HERO
+══════════════════════════════════════════ */
+.po-hero {
+    position: relative;
+    background: var(--hero-bg);
+    border: 1px solid var(--border-hi);
+    border-radius: 18px;
+    padding: 1.55rem 2rem 1.55rem 2.4rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+.po-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.13'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
+    pointer-events: none;
+}
+.po-hero::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 65%, transparent 100%);
+    border-radius: 0 2px 2px 0;
+}
+.po-hero-inner  { position: relative; z-index: 1; }
+.po-hero-eyebrow {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.2rem;
+}
+.po-hero-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+}
+.po-hero-sub {
+    font-size: 0.79rem;
+    color: var(--muted);
+    margin: 0.3rem 0 0;
+    font-style: italic;
+    font-weight: 300;
+}
+.hero-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+.btn-new-po {
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0c110a;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    border: none;
+    border-radius: 8px;
+    padding: 0.45rem 1rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.18s;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px var(--gold-glow);
+}
+.btn-new-po:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--gold-glow);
+    color: #0c110a;
+}
+.btn-theme-toggle {
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid rgba(201,162,40,.22);
+    border-radius: 8px;
+    padding: 0.44rem 0.85rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+.btn-theme-toggle:hover { background: var(--gold-glow); }
+.btn-back {
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 0.44rem 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+.btn-back:hover {
+    color: var(--text);
+    background: rgba(255,255,255,.05);
+}
+
+/* ══════════════════════════════════════════
+   SECTION LABEL
+══════════════════════════════════════════ */
+.section-label {
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* ══════════════════════════════════════════
+   STAT CARDS — identical to invoice_history
+══════════════════════════════════════════ */
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    box-shadow: var(--card-shadow);
+    text-align: center;
+    transition: border-color 0.18s, transform 0.18s, background 0.25s;
+    height: 100%;
+}
+.stat-card:hover { transform: translateY(-2px); border-color: var(--border-hi); }
+.stat-label {
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+    font-family: 'Figtree', sans-serif;
+}
+.stat-value {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0;
+}
+.stat-card.s-gold  { border-bottom: 2px solid var(--gold); }
+.stat-card.s-green { border-bottom: 2px solid var(--green-acc); }
+.stat-card.s-info  { border-bottom: 2px solid var(--info); }
+.stat-card.s-warn  { border-bottom: 2px solid var(--warning); }
+.stat-card.s-gold  .stat-value { color: var(--gold); }
+.stat-card.s-green .stat-value { color: var(--green-acc); }
+.stat-card.s-info  .stat-value { color: var(--info); }
+.stat-card.s-warn  .stat-value { color: var(--warning); }
+
+/* ══════════════════════════════════════════
+   TABLE WRAPPER
+══════════════════════════════════════════ */
+.po-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+    transition: background 0.25s;
+}
+.po-table-head-row {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border-hi);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.2rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.po-table-heading {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+.btn-export {
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    border-radius: 7px;
+    padding: 0.3rem 0.75rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.14s;
+    white-space: nowrap;
+}
+.btn-export:hover {
+    color: var(--text);
+    background: rgba(255,255,255,.04);
+    border-color: var(--border-hi);
+}
+
+/* TABLE */
+.po-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+    font-family: 'Figtree', sans-serif;
+}
+.po-table thead tr {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border-hi);
+}
+.po-table thead th {
+    padding: 0.65rem 1rem;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+    border: none;
+}
+.po-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+}
+.po-table tbody tr:last-child { border-bottom: none; }
+.po-table tbody tr:nth-child(even) { background: var(--row-stripe); }
+.po-table tbody tr:hover { background: var(--row-hover); }
+.po-table td {
+    padding: 0.72rem 1rem;
+    color: var(--text-2);
+    vertical-align: middle;
+    border: none;
+}
+
+/* PO number chip */
+.po-num-chip {
+    font-family: 'Figtree', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--code-color);
+    background: var(--code-bg);
+    border-radius: 5px;
+    padding: 0.18rem 0.5rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* Supplier cell */
+.supplier-name { color: var(--text); font-weight: 500; }
+.supplier-phone { font-size: 0.74rem; color: var(--muted); margin-top: 0.1rem; }
+
+/* Items count badge */
+.items-chip {
+    font-size: 0.71rem;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border-hi);
+    border-radius: 12px;
+    padding: 0.15rem 0.55rem;
+    white-space: nowrap;
+    font-family: 'Figtree', sans-serif;
+}
+
+/* Amount */
+.amount-cell {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+
+/* Date */
+.date-cell { color: var(--muted); font-size: 0.81rem; white-space: nowrap; }
+
+/* ── STATUS BADGES ── */
+.status-badge {
+    display: inline-block;
+    font-size: 0.67rem;
+    font-weight: 700;
+    font-family: 'Figtree', sans-serif;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 5px;
+    padding: 0.2rem 0.55rem;
+    white-space: nowrap;
+}
+.status-received, .status-completed {
+    background: var(--success-dim);
+    color: var(--green-acc);
+    border: 1px solid rgba(90,173,120,.22);
+}
+.status-pending {
+    background: var(--warning-dim);
+    color: var(--warning);
+    border: 1px solid rgba(212,160,64,.22);
+}
+.status-partial {
+    background: var(--info-dim);
+    color: var(--info);
+    border: 1px solid rgba(109,184,212,.22);
+}
+.status-cancelled {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid rgba(224,112,112,.22);
+}
+.status-other {
+    background: rgba(125,144,104,.10);
+    color: var(--muted);
+    border: 1px solid rgba(125,144,104,.2);
+}
+
+/* ── ACTION BUTTONS ── */
+.btn-act {
+    font-size: 0.73rem;
+    font-weight: 600;
+    font-family: 'Figtree', sans-serif;
+    border-radius: 6px;
+    padding: 0.26rem 0.6rem;
+    cursor: pointer;
+    transition: all 0.13s;
+    white-space: nowrap;
+    line-height: 1.5;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    border: 1px solid transparent;
+}
+.btn-act-dl {
+    color: var(--muted);
+    background: transparent;
+    border-color: var(--border-hi);
+}
+.btn-act-dl:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.btn-act-view {
+    color: var(--info);
+    background: var(--info-dim);
+    border-color: rgba(109,184,212,.2);
+}
+.btn-act-view:hover {
+    background: rgba(109,184,212,.18);
+    border-color: rgba(109,184,212,.35);
+    color: #8dd0e8;
+}
+
+/* ── DROPDOWN ── */
+.po-dropdown { position: relative; display: inline-block; }
+.btn-act-more {
+    color: var(--muted);
+    background: transparent;
+    border-color: var(--border-hi);
+    padding: 0.26rem 0.5rem;
+}
+.btn-act-more:hover { color: var(--text); background: rgba(255,255,255,.04); }
+
+.po-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    min-width: 170px;
+    background: var(--dd-bg);
+    border: 1px solid var(--dd-border);
+    border-radius: 9px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.35);
+    z-index: 1050;
+    overflow: hidden;
+    padding: 0.3rem 0;
+}
+.po-dropdown-menu.open { display: block; }
+.po-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.48rem 0.85rem;
+    font-size: 0.79rem;
+    font-family: 'Figtree', sans-serif;
+    font-weight: 500;
+    color: var(--text-2);
+    text-decoration: none;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: background 0.1s, color 0.1s;
+}
+.po-dropdown-item:hover {
+    background: var(--dd-hover);
+    color: var(--text);
+}
+.po-dropdown-item.item-danger { color: var(--danger); }
+.po-dropdown-item.item-danger:hover { background: var(--danger-dim); color: var(--danger); }
+.po-dropdown-item.item-success { color: var(--green-acc); }
+.po-dropdown-item.item-success:hover { background: var(--success-dim); color: var(--green-acc); }
+.po-dd-divider { height: 1px; background: var(--border); margin: 0.3rem 0; }
+
+/* ══════════════════════════════════════════
+   PAGINATION — identical to invoice_history
+══════════════════════════════════════════ */
+.po-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    margin-top: 1.2rem;
+}
+.pg-link {
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: 'Figtree', sans-serif;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border-hi);
+    border-radius: 7px;
+    padding: 0.38rem 0.85rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.14s;
+    text-align: center;
+}
+.pg-link:hover {
+    color: var(--text);
+    border-color: var(--gold);
+    background: var(--gold-dim);
+}
+.pg-link.active {
+    background: var(--page-active-bg);
+    color: var(--page-active-text);
+    border-color: var(--page-active-bg);
+    cursor: default;
+    font-weight: 800;
+}
+
+/* ══════════════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════════════ */
+.empty-state {
+    background: var(--surface);
+    border: 1.5px dashed var(--border-hi);
+    border-radius: 14px;
+    padding: 3.5rem 1rem;
+    text-align: center;
+    box-shadow: var(--card-shadow);
+}
+.empty-state i { font-size: 2.8rem; color: var(--faint); display: block; margin-bottom: 0.75rem; }
+.empty-state h4 { font-family: 'Bricolage Grotesque', sans-serif; color: var(--text); font-size: 1.1rem; margin-bottom: 0.5rem; }
+.empty-state p  { color: var(--muted); font-size: 0.87rem; margin-bottom: 1.2rem; }
+.btn-create-first {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0c110a;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    border: none;
+    border-radius: 10px;
+    padding: 0.7rem 1.6rem;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: 0 4px 16px var(--gold-glow);
+    transition: all 0.18s;
+}
+.btn-create-first:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px var(--gold-glow);
+    color: #0c110a;
+}
+
+/* ══════════════════════════════════════════
+   MODAL — theme-aware + injected content
+══════════════════════════════════════════ */
+#poDetailsModal .modal-content {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-hi) !important;
+    color: var(--text) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55) !important;
+}
+#poDetailsModal .modal-header {
+    background: var(--surface-2) !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-radius: 14px 14px 0 0 !important;
+    padding: 1rem 1.3rem !important;
+}
+#poDetailsModal .modal-title {
+    font-family: 'Bricolage Grotesque', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    color: var(--text) !important;
+}
+#poDetailsModal .modal-footer {
+    background: var(--surface-2) !important;
+    border-top: 1px solid var(--border) !important;
+    border-radius: 0 0 14px 14px !important;
+    padding: 0.75rem 1.3rem !important;
+    gap: 0.5rem;
+}
+#poDetailsModal .modal-body {
+    padding: 1.3rem !important;
+    background: var(--surface) !important;
+    color: var(--text) !important;
+}
+#poDetailsModal .spinner-border { color: var(--gold) !important; }
+#poDetailsModal .btn-close {
+    filter: invert(0.6) sepia(0.5) saturate(1.5) hue-rotate(10deg);
+}
+/* Injected content styles */
+#poDetailsContent h6 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.65rem;
+}
+#poDetailsContent p { font-size: 0.84rem; color: var(--text-2); margin-bottom: 0.4rem; }
+#poDetailsContent p strong { color: var(--text); font-weight: 600; }
+#poDetailsContent hr { border-color: var(--border); margin: 1rem 0; }
+/* Injected table */
+#poDetailsContent .table {
+    color: var(--text-2);
+    font-size: 0.82rem;
+    font-family: 'Figtree', sans-serif;
+    border-color: var(--border);
+}
+#poDetailsContent .table thead th {
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-color: var(--border-hi);
+    padding: 0.55rem 0.75rem;
+}
+#poDetailsContent .table tbody td {
+    border-color: var(--border);
+    padding: 0.55rem 0.75rem;
+    color: var(--text-2);
+}
+#poDetailsContent .table tfoot td {
+    border-color: var(--border-hi);
+    border-top: 2px solid var(--border-hi);
+    color: var(--text);
+    padding: 0.55rem 0.75rem;
+}
+
+/* Modal footer buttons */
+.btn-modal-close {
+    font-size: 0.8rem; font-weight: 600; font-family: 'Figtree', sans-serif;
+    color: var(--muted); background: transparent;
+    border: 1px solid var(--border-hi); border-radius: 7px;
+    padding: 0.42rem 0.9rem; cursor: pointer; transition: all 0.14s;
+}
+.btn-modal-close:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.btn-modal-dl {
+    font-size: 0.8rem; font-weight: 700; font-family: 'Figtree', sans-serif;
+    color: #0c110a; background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    border: none; border-radius: 7px; padding: 0.42rem 1rem;
+    cursor: pointer; transition: all 0.15s;
+    box-shadow: 0 2px 8px var(--gold-dim);
+    display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.btn-modal-dl:hover {
+    transform: translateY(-1px); color: #0c110a;
+    box-shadow: 0 4px 14px var(--gold-glow);
+}
+
+/* Scrollbar */
+.po-page ::-webkit-scrollbar { width: 5px; height: 5px; }
+.po-page ::-webkit-scrollbar-track { background: var(--surface); }
+.po-page ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+</style>
+{% endblock %}
+
 
 {% block content %}
-<div class="container py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>📋 Purchase Orders</h2>
-                <div>
-                    <a href="{{ url_for('purchases.create_purchase_order') }}" class="btn btn-success btn-sm me-2">➕ New Purchase Order</a>
-                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
-                </div>
-            </div>
+<div class="po-page">
 
-    <!-- Stats Cards -->
+    <!-- ══════ HERO ══════ -->
+    <div class="po-hero">
+        <div class="po-hero-inner">
+            <div class="po-hero-eyebrow">✦ GrowEasy &middot; Purchases</div>
+            <h2 class="po-hero-title">Purchase Orders</h2>
+            <p class="po-hero-sub">Track supplier orders, receive goods, manage stock inflows</p>
+        </div>
+        <div class="hero-actions">
+            <a href="{{ url_for('purchases.create_purchase_order') }}" class="btn-new-po">
+                ＋ New Purchase Order
+            </a>
+            <button class="btn-theme-toggle" id="themeToggle" type="button">☀️ Light</button>
+            <a href="{{ url_for('main.dashboard') }}" class="btn-back">← Dashboard</a>
+        </div>
+    </div>
+
+    <!-- ══════ STAT CARDS ══════ -->
+    <div class="section-label">Summary</div>
     <div class="row g-2 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body p-2 text-center">
-                    <h6 class="mb-0">Total POs</h6>
-                    <h5 class="mb-0">{{ total_count }}</h5>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card s-gold">
+                <div class="stat-label">Total POs</div>
+                <div class="stat-value">{{ total_count }}</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body p-2 text-center">
-                    <h6 class="mb-0">Total Value</h6>
-                    <h5 class="mb-0">{{ currency_symbol }}{{ "%.0f"|format(total_sum) }}</h5>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card s-green">
+                <div class="stat-label">Total Value</div>
+                <div class="stat-value">{{ currency_symbol }}{{ "%.0f"|format(total_sum) }}</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body p-2 text-center">
-                    <h6 class="mb-0">Pending</h6>
-                    <h5 class="mb-0">{{ pending_count }}</h5>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card s-info">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value">{{ pending_count }}</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body p-2 text-center">
-                    <h6 class="mb-0">This Month</h6>
-                    <h5 class="mb-0">{{ month_count }}</h5>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card s-warn">
+                <div class="stat-label" id="thisMonthCount">This Month</div>
+                <div class="stat-value">{{ month_count }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Purchase Orders Table -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Recent Purchase Orders</h5>
-            <div class="btn-group" role="group">
-                <a href="{{ url_for('inventory.download_inventory_report') }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-download"></i> Export CSV
-                </a>
-            </div>
+    <!-- ══════ TABLE ══════ -->
+    <div class="section-label">Recent Purchase Orders</div>
+
+    {% if orders %}
+    <div class="po-table-wrap">
+
+        <!-- Table header row with export -->
+        <div class="po-table-head-row">
+            <span class="po-table-heading">All Orders</span>
+            <a href="{{ url_for('inventory.download_inventory_report') }}" class="btn-export">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
         </div>
-        <div class="card-body">
-            {% if orders %}
-            <div class="table-responsive">
-                <table class="table table-hover table-sm">
-                    <thead class="table-light">
-                        <tr>
-                            <th>PO Number</th>
-                            <th>Supplier</th>
-                            <th>Date</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in orders %}
-                        <tr>
-                            <td>
-                                <strong>{{ order.po_number }}</strong>
-                            </td>
-                            <td>
-                                {{ order.supplier_name }}
-                                {% if order.supplier_phone %}
-                                <br><small class="text-muted">{{ order.supplier_phone }}</small>
-                                {% endif %}
-                            </td>
-                            <td>{{ order.order_date }}</td>
-                            <td>
-                                <span class="badge bg-secondary">{{ order.item_count or 0 }} items</span>
-                            </td>
-                            <td>
-                                <strong>{{ currency_symbol }}{{ "%.2f"|format(order.grand_total) }}</strong>
-                            </td>
-                            <td>
-                                {% if order.status == 'completed' or order.status == 'Received' %}
-                                <span class="badge bg-success">{{ order.status }}</span>
-                                {% elif order.status == 'pending' %}
-                                <span class="badge bg-warning">{{ order.status }}</span>
-                                {% elif order.status == 'Partial' %}
-                                <span class="badge bg-info">{{ order.status }}</span>
-                                {% elif order.status == 'cancelled' %}
-                                <span class="badge bg-danger">{{ order.status }}</span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ order.status }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <!-- Download PDF -->
-                                    <a href="{{ url_for('sales.download_document', document_number=order.po_number, type='purchase_order') }}"
-                                       class="btn btn-outline-primary"
-                                       title="Download PDF">
-                                        <i class="bi bi-download"></i>
-                                    </a>
 
-                                    <!-- View Details -->
-                                    <button type="button"
-                                            class="btn btn-outline-info view-po-details"
-                                            data-po-number="{{ order.po_number }}"
-                                            title="View Details">
-                                        <i class="bi bi-eye"></i>
+        <div style="overflow-x:auto;">
+            <table class="po-table">
+                <thead>
+                    <tr>
+                        <th>PO Number</th>
+                        <th>Supplier</th>
+                        <th>Date</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><span class="po-num-chip">{{ order.po_number }}</span></td>
+                        <td>
+                            <div class="supplier-name">{{ order.supplier_name }}</div>
+                            {% if order.supplier_phone %}
+                            <div class="supplier-phone">{{ order.supplier_phone }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="date-cell">{{ order.order_date }}</td>
+                        <td><span class="items-chip">{{ order.item_count or 0 }} items</span></td>
+                        <td class="amount-cell">{{ currency_symbol }}{{ "%.2f"|format(order.grand_total) }}</td>
+                        <td>
+                            {% if order.status == 'completed' or order.status == 'Received' %}
+                            <span class="status-badge status-received">{{ order.status }}</span>
+                            {% elif order.status == 'pending' %}
+                            <span class="status-badge status-pending">{{ order.status }}</span>
+                            {% elif order.status == 'Partial' %}
+                            <span class="status-badge status-partial">{{ order.status }}</span>
+                            {% elif order.status == 'cancelled' %}
+                            <span class="status-badge status-cancelled">{{ order.status }}</span>
+                            {% else %}
+                            <span class="status-badge status-other">{{ order.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:0.3rem;align-items:center;">
+
+                                <!-- Download PDF -->
+                                <a href="{{ url_for('sales.download_document', document_number=order.po_number, type='purchase_order') }}"
+                                   class="btn-act btn-act-dl"
+                                   title="Download PDF">
+                                    <i class="bi bi-download"></i>
+                                </a>
+
+                                <!-- View Details -->
+                                <button class="btn-act btn-act-view view-po-details"
+                                        data-po-number="{{ order.po_number }}"
+                                        title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+
+                                <!-- More Actions — custom dropdown (no inline handlers) -->
+                                <div class="po-dropdown">
+                                    <button class="btn-act btn-act-more po-dd-toggle"
+                                            title="More actions"
+                                            data-po-number="{{ order.po_number }}">
+                                        <i class="bi bi-three-dots-vertical"></i>
                                     </button>
-
-                                    <!-- More Actions Dropdown -->
-                                    <div class="btn-group" role="group">
-                                        <button type="button"
-                                                class="btn btn-outline-secondary dropdown-toggle"
-                                                data-bs-toggle="dropdown"
-                                                aria-expanded="false">
-                                            <i class="bi bi-three-dots"></i>
+                                    <div class="po-dropdown-menu">
+                                        <a href="{{ url_for('sales.download_document', document_number=order.po_number, type='purchase_order') }}"
+                                           class="po-dropdown-item">
+                                            <i class="bi bi-file-pdf"></i> Download PDF
+                                        </a>
+                                        {% if order.status == 'pending' or order.status == 'Partial' %}
+                                        <div class="po-dd-divider"></div>
+                                        <a href="{{ url_for('purchases.mark_po_received', po_number=order.po_number) }}"
+                                           class="po-dropdown-item item-success">
+                                            <i class="bi bi-truck"></i> Receive Goods
+                                        </a>
+                                        <button class="po-dropdown-item item-danger cancel-po"
+                                                data-po-number="{{ order.po_number }}">
+                                            <i class="bi bi-x-circle"></i> Cancel PO
                                         </button>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item"
-                                                   href="{{ url_for('sales.download_document', document_number=order.po_number, type='purchase_order') }}">
-                                                    <i class="bi bi-file-pdf"></i> Download PDF
-                                                </a>
-                                            </li>                                         
-                                            <li><hr class="dropdown-divider"></li>
-                                            {% if order.status == 'pending' or order.status == 'Partial' %}
-                                            <li>
-                                                <a href="{{ url_for('purchases.mark_po_received', po_number=order.po_number) }}" class="btn btn-success">
-                                                    <i class="bi bi-truck"></i> Receive Goods
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <button class="dropdown-item text-danger cancel-po"
-                                                        data-po-number="{{ order.po_number }}">
-                                                    <i class="bi bi-x-circle"></i> Cancel PO
-                                                </button>
-                                            </li>
-                                            {% endif %}
-                                        </ul>
+                                        {% endif %}
                                     </div>
                                 </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
 
-            <!-- Pagination -->
-            {% if current_page > 1 or orders|length == limit %}
-            <nav aria-label="Purchase orders pagination" class="mt-3">
-                <ul class="pagination justify-content-center">
-                    {% if current_page > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ current_page - 1 }}">Previous</a>
-                    </li>
-                    {% endif %}
-
-                    <li class="page-item active">
-                        <span class="page-link">Page {{ current_page }}</span>
-                    </li>
-
-                    {% if orders|length == limit %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ current_page + 1 }}">Next</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-
-            {% else %}
-            <!-- Empty State -->
-            <div class="text-center py-5">
-                <i class="bi bi-cart-x" style="font-size: 3rem; color: #6c757d;"></i>
-                <h4 class="mt-3">No Purchase Orders Yet</h4>
-                <p class="text-muted">Create your first purchase order to track supplier purchases</p>
-                <a href="{{  url_for('purchases.create_purchase_order') }}" class="btn btn-primary mt-2">
-                    <i class="bi bi-plus-circle"></i> Create First Purchase Order
-                </a>
-            </div>
-            {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
 
-<!-- Modal for PO Details -->
+    <!-- Pagination -->
+    {% if current_page > 1 or orders|length == limit %}
+    <div class="po-pagination">
+        {% if current_page > 1 %}
+        <a class="pg-link" href="?page={{ current_page - 1 }}">← Prev</a>
+        {% endif %}
+        <span class="pg-link active">Page {{ current_page }}</span>
+        {% if orders|length == limit %}
+        <a class="pg-link" href="?page={{ current_page + 1 }}">Next →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+
+    <!-- Empty state -->
+    <div class="empty-state">
+        <i class="bi bi-cart-x"></i>
+        <h4>No Purchase Orders Yet</h4>
+        <p>Create your first purchase order to track supplier purchases</p>
+        <a href="{{ url_for('purchases.create_purchase_order') }}" class="btn-create-first">
+            <i class="bi bi-plus-circle me-1"></i> Create First Purchase Order
+        </a>
+    </div>
+
+    {% endif %}
+
+</div><!-- /po-page -->
+
+
+<!-- ══════════════════════════════════════════
+     MODAL — all IDs preserved exactly
+══════════════════════════════════════════ -->
 <div class="modal fade" id="poDetailsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Purchase Order Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="poDetailsContent">
-                <!-- Content will be loaded via AJAX -->
                 <div class="text-center py-4">
                     <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                        <span class="visually-hidden">Loading…</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="downloadPoFromModal">
+                <button type="button" class="btn-modal-close"
+                        data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn-modal-dl" id="downloadPoFromModal">
                     <i class="bi bi-download"></i> Download PDF
                 </button>
             </div>
@@ -228,140 +942,177 @@
     </div>
 </div>
 
-<!-- JavaScript for interactivity -->
+
+<!-- ══════════════════════════════════════════
+     SCRIPTS — single nonce block, zero inline handlers
+══════════════════════════════════════════ -->
 <script nonce="{{ nonce }}">
-document.addEventListener('DOMContentLoaded', function() {
-    // View PO Details
-    document.querySelectorAll('.view-po-details').forEach(button => {
-        button.addEventListener('click', function() {
-            const poNumber = this.dataset.poNumber;
-            const modal = new bootstrap.Modal(document.getElementById('poDetailsModal'));
+document.addEventListener('DOMContentLoaded', function () {
 
-            // Load PO details via AJAX
-            fetch(`/api/purchase_order/${poNumber}`)
-                .then(response => response.json())
-                .then(data => {
-                    // FIX: Use regular data access, not .get('get', '')
-                    const items = data.items || [];
+    /* ── Theme toggle ── */
+    var html      = document.documentElement;
+    var toggleBtn = document.getElementById('themeToggle');
 
-                    // FIX: escape all API data before inserting into innerHTML
-                    function esc(s) {
-                        if (s === null || s === undefined) return '';
-                        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-                    }
-                    const statusClass = data.status === 'completed' || data.status === 'Received' ? 'success' : data.status === 'pending' ? 'warning' : 'info';
-                    const itemRows = items.map(item =>
-                        `<tr><td>${esc(item.name)}</td><td>${esc(item.qty)}</td><td>${esc(item.price)}</td><td>${esc(item.total)}</td></tr>`
-                    ).join('');
-                    document.getElementById('poDetailsContent').innerHTML = `
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Supplier Information</h6>
-                                <p><strong>Name:</strong> ${esc(data.supplier_name)}</p>
-                                <p><strong>Contact:</strong> ${esc(data.supplier_phone) || 'N/A'}</p>
-                                <p><strong>Email:</strong> ${esc(data.supplier_email) || 'N/A'}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Order Details</h6>
-                                <p><strong>PO Number:</strong> ${esc(data.po_number)}</p>
-                                <p><strong>Date:</strong> ${esc(data.po_date || data.order_date)}</p>
-                                <p><strong>Status:</strong> <span class="badge bg-${statusClass}">${esc(data.status)}</span></p>
-                            </div>
-                        </div>
-                        <hr>
-                        <h6>Items (${items.length})</h6>
-                        <table class="table table-sm">
-                            <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
-                            <tbody>${itemRows}</tbody>
-                            <tfoot><tr><td colspan="3" class="text-end"><strong>Grand Total:</strong></td><td><strong>${esc(data.grand_total)}</strong></td></tr></tfoot>
-                        </table>
-                    `;
-
-                    // Set download button
-                    document.getElementById('downloadPoFromModal').onclick = () => {
-                        window.location.href = `/invoice/download/${poNumber}?type=purchase_order`;
-                    };
-
-                    modal.show();
-                })
-                .catch(error => {
-                    document.getElementById('poDetailsContent').innerHTML = `
-                        <div class="alert alert-danger">
-                            Error loading purchase order details: ${error.message}
-                        </div>
-                    `;
-                    modal.show();
-                });
-        });
-    });
-
-    // Mark as Completed
-    document.querySelectorAll('.mark-completed').forEach(button => {
-        button.addEventListener('click', function() {
-            const poNumber = this.dataset.poNumber;
-            if (confirm(`Mark Purchase Order ${poNumber} as completed?`)) {
-                fetch(`/po/mark_completed/${poNumber}`, { method: 'POST' })  // FIXED: Use correct endpoint
-                    .then(response => {
-                        if (response.ok) {
-                            location.reload();
-                        } else {
-                            alert('Error marking PO as completed');
-                        }
-                    })
-                    .catch(error => {
-                        alert('Error: ' + error.message);
-                    });
-            }
-        });
-    });
-
-    // Cancel PO
-    document.querySelectorAll('.cancel-po').forEach(button => {
-        button.addEventListener('click', function() {
-            const poNumber = this.dataset.poNumber;
-            const reason = prompt('Please provide a reason for cancellation:');
-            if (reason) {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                fetch(`/api/purchase_order/${poNumber}/cancel`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({ reason: reason })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Purchase order cancelled successfully.');
-                        location.reload();
-                    } else {
-                        alert('Error cancelling PO: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    alert('Network error: ' + error.message);
-                });
-            }
-        });
-    });
-});
-
-// Fix for duplicate variable declaration - use unique variable name
-document.addEventListener('DOMContentLoaded', function() {
-    // Fallback if template filter doesn't work
-    const thisMonthCountElement = document.getElementById('thisMonthCount');
-    if (thisMonthCountElement && thisMonthCountElement.textContent.includes('now')) {
-        const currentMonthNum = new Date().getMonth() + 1;
-        let monthCountNum = 0;
-
-        // Simple client-side calculation - use different variable names
-        // The template variable is processed server-side, this is just fallback
-        monthCountNum = document.querySelectorAll('tr').length - 1; // Simple estimate
-
-        thisMonthCountElement.textContent = monthCountNum;
+    function applyThemeLabel(theme) {
+        toggleBtn.textContent = (theme === 'dark') ? '☀️ Light' : '🌙 Dark';
     }
+    applyThemeLabel(html.getAttribute('data-theme') || 'dark');
+
+    toggleBtn.addEventListener('click', function () {
+        var next = (html.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('ge-theme', next);
+        applyThemeLabel(next);
+    });
+
+    /* ── Custom dropdown — open/close ── */
+    document.querySelectorAll('.po-dd-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            /* Close all other open menus first */
+            document.querySelectorAll('.po-dropdown-menu.open').forEach(function (m) {
+                if (m !== btn.nextElementSibling) m.classList.remove('open');
+            });
+            btn.nextElementSibling.classList.toggle('open');
+        });
+    });
+    /* Close dropdown on outside click */
+    document.addEventListener('click', function () {
+        document.querySelectorAll('.po-dropdown-menu.open').forEach(function (m) {
+            m.classList.remove('open');
+        });
+    });
+
+    /* ── View PO Details ── */
+    var poModal    = new bootstrap.Modal(document.getElementById('poDetailsModal'));
+    var poContent  = document.getElementById('poDetailsContent');
+    var dlBtn      = document.getElementById('downloadPoFromModal');
+    var currentPo  = null;
+
+    /* Escape helper — prevents XSS in JS-built innerHTML */
+    function esc(s) {
+        if (s === null || s === undefined) return '';
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function statusClass(st) {
+        if (st === 'completed' || st === 'Received') return 'status-received';
+        if (st === 'pending')   return 'status-pending';
+        if (st === 'Partial')   return 'status-partial';
+        if (st === 'cancelled') return 'status-cancelled';
+        return 'status-other';
+    }
+
+    document.querySelectorAll('.view-po-details').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            currentPo = this.dataset.poNumber;
+
+            /* Loading spinner */
+            poContent.innerHTML =
+                '<div class="text-center py-5">' +
+                '<div class="spinner-border" role="status"></div>' +
+                '<p style="color:var(--muted);font-size:0.84rem;margin-top:0.75rem;">Loading ' + esc(currentPo) + '…</p>' +
+                '</div>';
+            poModal.show();
+
+            fetch('/api/purchase_order/' + currentPo)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var items    = data.items || [];
+                    var itemRows = items.map(function (item) {
+                        return '<tr><td>' + esc(item.name) + '</td><td>' + esc(item.qty) +
+                               '</td><td>' + esc(item.price) + '</td><td>' + esc(item.total) + '</td></tr>';
+                    }).join('');
+
+                    poContent.innerHTML =
+                        '<div class="row">' +
+                          '<div class="col-md-6">' +
+                            '<h6>Supplier Information</h6>' +
+                            '<p><strong>Name:</strong> '    + esc(data.supplier_name)  + '</p>' +
+                            '<p><strong>Contact:</strong> ' + (esc(data.supplier_phone) || 'N/A') + '</p>' +
+                            '<p><strong>Email:</strong> '   + (esc(data.supplier_email) || 'N/A') + '</p>' +
+                          '</div>' +
+                          '<div class="col-md-6">' +
+                            '<h6>Order Details</h6>' +
+                            '<p><strong>PO Number:</strong> ' + esc(data.po_number) + '</p>' +
+                            '<p><strong>Date:</strong> '      + esc(data.po_date || data.order_date) + '</p>' +
+                            '<p><strong>Status:</strong> <span class="status-badge ' + statusClass(data.status) + '">' + esc(data.status) + '</span></p>' +
+                          '</div>' +
+                        '</div>' +
+                        '<hr>' +
+                        '<h6>Items (' + items.length + ')</h6>' +
+                        '<table class="table table-sm">' +
+                          '<thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>' +
+                          '<tbody>' + itemRows + '</tbody>' +
+                          '<tfoot><tr><td colspan="3" style="text-align:right;"><strong>Grand Total:</strong></td>' +
+                          '<td><strong>' + esc(data.grand_total) + '</strong></td></tr></tfoot>' +
+                        '</table>';
+                })
+                .catch(function (err) {
+                    poContent.innerHTML =
+                        '<div style="background:var(--danger-dim);border:1px solid rgba(224,112,112,.25);' +
+                        'border-radius:8px;padding:1rem;color:var(--danger);font-size:0.84rem;">' +
+                        '<strong>Error loading details:</strong> ' + esc(err.message) +
+                        '</div>';
+                });
+        });
+    });
+
+    /* Download button in modal — set href on each open */
+    dlBtn.addEventListener('click', function () {
+        if (currentPo) {
+            window.location.href = '/invoice/download/' + currentPo + '?type=purchase_order';
+        }
+    });
+
+    /* ── Mark as Completed ── */
+    document.querySelectorAll('.mark-completed').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var poNumber = this.dataset.poNumber;
+            if (confirm('Mark Purchase Order ' + poNumber + ' as completed?')) {
+                fetch('/po/mark_completed/' + poNumber, { method: 'POST' })
+                    .then(function (r) {
+                        if (r.ok) { location.reload(); }
+                        else       { alert('Error marking PO as completed'); }
+                    })
+                    .catch(function (err) { alert('Error: ' + err.message); });
+            }
+        });
+    });
+
+    /* ── Cancel PO ── */
+    document.querySelectorAll('.cancel-po').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            /* Close dropdown first */
+            document.querySelectorAll('.po-dropdown-menu.open').forEach(function (m) {
+                m.classList.remove('open');
+            });
+            var poNumber = this.dataset.poNumber;
+            var reason   = prompt('Please provide a reason for cancellation:');
+            if (!reason) return;
+
+            var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+            fetch('/api/purchase_order/' + poNumber + '/cancel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ reason: reason })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) { alert('Purchase order cancelled successfully.'); location.reload(); }
+                else              { alert('Error cancelling PO: ' + (data.error || 'Unknown error')); }
+            })
+            .catch(function (err) { alert('Network error: ' + err.message); });
+        });
+    });
+
 });
 </script>
-
 {% endblock %}
