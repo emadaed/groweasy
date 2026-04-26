@@ -114,7 +114,9 @@ def create_session_token(user_id: int) -> str:
 
 
 def update_user_profile(user_id, company_name=None, company_address=None, company_phone=None,
-                        company_tax_id=None, seller_ntn=None, seller_strn=None, preferred_currency=None):
+                        company_tax_id=None, seller_ntn=None, seller_strn=None,
+                        preferred_currency=None, show_fbr_fields=None):
+    
     with DB_ENGINE.begin() as conn:
         updates = []
         params = {"user_id": user_id}
@@ -139,6 +141,9 @@ def update_user_profile(user_id, company_name=None, company_address=None, compan
         if preferred_currency is not None:
             updates.append("preferred_currency = :preferred_currency")
             params["preferred_currency"] = preferred_currency
+        if show_fbr_fields is not None:
+            updates.append("show_fbr_fields = :show_fbr_fields")
+            params["show_fbr_fields"] = show_fbr_fields
         if updates:
             updates.append("updated_at = CURRENT_TIMESTAMP")
             sql = f"UPDATE users SET {', '.join(updates)} WHERE id = :user_id"

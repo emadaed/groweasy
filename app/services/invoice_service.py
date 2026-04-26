@@ -63,6 +63,7 @@ class InvoiceService:
             invoice_data['show_fbr_fields'] = _profile.get('show_fbr_fields', False)
             invoice_data['seller_ntn']      = _profile.get('seller_ntn', '')
             invoice_data['seller_strn']     = _profile.get('seller_strn', '')
+            invoice_data['company_tax_id']  = _profile.get('company_tax_id', '')
             
             # Check invoice limit
             if self.account_id:

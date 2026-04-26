@@ -247,6 +247,11 @@
                 {% if data.get('company_phone') and data.get('company_email') %} &nbsp;|&nbsp; {% endif %}
                 {% if data.get('company_email') %}{{ data.get('company_email') }}{% endif %}
             </div>
+            {% if data.get('company_tax_id') %}
+            <div class="company-detail" style="color:#2c5aa0;font-weight:bold;">
+                Tax ID: {{ data.get('company_tax_id') }}
+            </div>
+            {% endif %}
 
             {# ── FBR block — only when user has enabled the toggle ── #}
             {% if data.get('show_fbr_fields') and (data.get('seller_ntn') or data.get('seller_strn')) %}

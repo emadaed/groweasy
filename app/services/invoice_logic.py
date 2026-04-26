@@ -1,27 +1,6 @@
 # app/services/invoice_logic.py
-"""
-Invoice data preparation.
-
-MONEY FIX: All financial calculations now use Python's Decimal type with
-ROUND_HALF_UP rounding instead of float.
-
-Why it matters: float is a binary floating-point type.  It cannot represent
-most decimal fractions exactly.  For example:
-    float: 3 items @ Rs.333.33 = 999.9900000000001  (wrong)
-    Decimal: 3 items @ Rs.333.33 = 999.99            (correct)
-
-This means invoices with certain item prices could show grand totals that are
-off by a paisa, which would not match FBR records and could cause problems
-with bank reconciliation.
-
-Every monetary value entering this function from a form is a string.  We pass
-strings directly to Decimal() — never float() — to avoid introducing the
-float error at the point of parsing.
-"""
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
-
 from app.services.utils import process_uploaded_logo
-
 
 # Consistent rounding for all monetary values (2 decimal places)
 TWOPLACES = Decimal('0.01')
