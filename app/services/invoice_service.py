@@ -50,6 +50,19 @@ class InvoiceService:
             
             # Prepare invoice data (existing logic)
             invoice_data = prepare_invoice_data(form_data, files=files)
+            # Fetch location name for PDF
+            loc_name = next(
+                (l['location_name'] for l in locations if l['id'] == location_id),
+                'Main Warehouse'
+            )
+            invoice_data['location_name'] = loc_name
+
+            # Fetch FBR fields from user profile for PDF
+            from app.services.auth import get_user_profile
+            user_profile = get_user_profile(self.user_id)
+            invoice_data['show_fbr_fields'] = _profile.get('show_fbr_fields', False)
+            invoice_data['seller_ntn']      = _profile.get('seller_ntn', '')
+            invoice_data['seller_strn']     = _profile.get('seller_strn', '')
             
             # Check invoice limit
             if self.account_id:

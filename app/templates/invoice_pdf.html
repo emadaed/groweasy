@@ -3,167 +3,408 @@
 <head>
     <meta charset="UTF-8">
     <title>Invoice {{ data.get('invoice_number', '') }}</title>
-    <style>
-        @page { size: A4; margin: 0.5cm; }
-        body { font-family: Arial, sans-serif; font-size: 8pt; line-height: 1.4; color: #333; }
-        .container { max-width: 100%; }
-        
-        /* Balanced Header Layout */
-        .header { 
-            margin-bottom: 5px; 
-            border-bottom: 1px solid #2c5aa0; 
-            padding-bottom: 5px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-        }
-        .logo-section { flex: 1; text-align: left; }
-        .logo-section img { max-height: 70px; display: block; }
-        
-        .company-info-center { flex: 2; text-align: center; }
-        .company-info-center h2 { font-size: 12pt; color: #2c5aa0; margin: 0; }
-        .company-info-center p { margin: 0; font-size: 10pt; }
 
-        .invoice-info-right { flex: 1; text-align: right; }
-        .invoice-info-right h1 { font-size: 18pt; margin: 0; }
-
-        /* Three Column Metadata Row - Original Clean Layout */
-        .metadata-row { display: flex; justify-content: space-between; gap: 8px; margin: 8px 0; }
-        .metadata-column { 
-            flex: 1; 
-            padding: 8px; 
-            background: #f8f9fa; 
-            border: 1px solid #2c5aa0; 
-            min-height: 85px; 
-        }
-
-        table.items { width: 100%; border-collapse: collapse; margin: 10px 0; page-break-inside: avoid; }
-        table.items th, table.items td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 8pt; }
-        table.items thead { background: #2c5aa0; color: white; }
-        
-        .totals { width: 35%; float: right; background: #f8f9fa; border: 1px solid #ddd; margin-top: 10px; }
-        .totals td { padding: 4px; font-size: 8pt; }
-        .grand-total { background: #2c5aa0; color: white; font-weight: bold; }
-        
-        .qr-section { text-align: center; margin: 15px 0; }
-        .qr-section img { width: 75px; height: 75px; border: 1px solid #2c5aa0; padding: 2px; background: white; }
-        .footer { text-align: center; margin-top: 10px; font-size: 7pt; color: #666; }
-        .clear { clear: both; }
-        .text-right { text-align: right; }
-        h3 { color: #2c5aa0; margin: 0 0 4px 0; font-size: 9pt; text-transform: uppercase; }
-    </style>
-
-    <!-- Unit label macro -->
     {% macro unit_label(ut) -%}
         {% if ut == 'weight' -%}kg
         {%- elif ut == 'volume' -%}L
         {%- else -%}pcs
         {%- endif -%}
     {%- endmacro %}
+
+    <style>
+        /* ── Page setup ── */
+        @page { size: A4; margin: 0.6cm 0.7cm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 8pt;
+            line-height: 1.45;
+            color: #1a1a2e;
+            background: #fff;
+        }
+        .container { max-width: 100%; }
+
+        /* ── Colour palette ── */
+        /* primary = deep navy-blue kept from original */
+        /* accent  = antique gold to match GrowEasy brand */
+
+        /* ══════════════════════════════
+           HEADER
+        ══════════════════════════════ */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 6px;
+            margin-bottom: 7px;
+        }
+
+        /* Left: logo */
+        .logo-section { flex: 1.2; }
+        .logo-section img { max-height: 68px; max-width: 160px; display: block; }
+        .no-logo-placeholder { width: 80px; }
+
+        /* Center: company info */
+        .company-info-center { flex: 2; text-align: center; padding: 0 8px; }
+        .company-name {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 2px;
+        }
+        .company-detail { font-size: 7.5pt; color: #444; margin: 1px 0; }
+
+        /* ── FBR block inside company info ── */
+        .fbr-block {
+            display: inline-block;
+            margin-top: 4px;
+            background: #f0f4ff;
+            border: 0.5px solid #2c5aa0;
+            border-radius: 3px;
+            padding: 2px 7px;
+            font-size: 7pt;
+            color: #1a3a70;
+        }
+        .fbr-block strong { font-weight: bold; }
+        .fbr-sep { margin: 0 5px; color: #8899bb; }
+
+        /* Right: invoice title + number + date */
+        .invoice-info-right { flex: 1.2; text-align: right; }
+        .invoice-title {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #2c5aa0;
+            letter-spacing: 1px;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .invoice-meta { font-size: 8pt; color: #333; }
+        .invoice-meta strong { color: #1a1a2e; }
+
+        /* ══════════════════════════════
+           METADATA ROW (3 columns)
+        ══════════════════════════════ */
+        .metadata-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            margin: 7px 0;
+        }
+        .metadata-column {
+            flex: 1;
+            padding: 7px 8px;
+            background: #f8f9fa;
+            border: 0.5px solid #c8d6ef;
+            border-top: 2px solid #2c5aa0;
+            min-height: 80px;
+        }
+        .meta-heading {
+            font-size: 7pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #2c5aa0;
+            margin-bottom: 4px;
+            border-bottom: 0.5px solid #dde5f5;
+            padding-bottom: 2px;
+        }
+        .meta-line { font-size: 7.8pt; color: #333; margin: 2px 0; }
+        .meta-line strong { color: #1a1a2e; }
+
+        /* ── "Sold from" location badge ── */
+        .sold-from-badge {
+            display: inline-block;
+            background: #eaf3e8;
+            border: 0.5px solid #7ab88a;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 7pt;
+            color: #2a6b3a;
+            margin-top: 3px;
+            font-weight: bold;
+        }
+
+        /* ══════════════════════════════
+           ITEMS TABLE
+        ══════════════════════════════ */
+        table.items {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 6px;
+            page-break-inside: avoid;
+        }
+        table.items th {
+            background: #2c5aa0;
+            color: #ffffff;
+            padding: 4px 6px;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-align: left;
+            border: none;
+        }
+        table.items td {
+            border: 0.5px solid #dde5f5;
+            padding: 3.5px 6px;
+            font-size: 7.8pt;
+            color: #2a2a40;
+            text-align: left;
+        }
+        table.items tbody tr:nth-child(even) td { background: #f5f7fc; }
+        table.items tbody tr:last-child td { border-bottom: 1.5px solid #2c5aa0; }
+        .col-num  { width: 5%;  text-align: center; }
+        .col-desc { width: 42%; }
+        .col-qty  { width: 14%; text-align: center; }
+        .col-rate { width: 17%; text-align: right; }
+        .col-amt  { width: 22%; text-align: right; font-weight: bold; }
+
+        /* ══════════════════════════════
+           TOTALS TABLE
+        ══════════════════════════════ */
+        .totals-wrap {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 6px;
+            page-break-inside: avoid;
+        }
+        table.totals {
+            width: 36%;
+            border-collapse: collapse;
+        }
+        table.totals td {
+            padding: 3px 6px;
+            font-size: 8pt;
+            border: 0.5px solid #dde5f5;
+        }
+        table.totals .tot-label { color: #555; text-align: left; }
+        table.totals .tot-value { text-align: right; color: #1a1a2e; font-weight: 500; }
+        table.totals tr.grand-total td {
+            background: #2c5aa0;
+            color: #fff;
+            font-weight: bold;
+            font-size: 8.5pt;
+            border-color: #2c5aa0;
+        }
+
+        /* ══════════════════════════════
+           QR SECTION
+        ══════════════════════════════ */
+        .qr-section {
+            text-align: center;
+            margin: 10px 0 6px;
+        }
+        .qr-section img {
+            width: 70px;
+            height: 70px;
+            border: 0.5px solid #2c5aa0;
+            padding: 2px;
+            background: white;
+        }
+        .qr-caption { font-size: 6.5pt; color: #888; margin-top: 2px; }
+
+        /* ══════════════════════════════
+           FOOTER
+        ══════════════════════════════ */
+        .footer {
+            margin-top: 10px;
+            border-top: 0.5px solid #c8d6ef;
+            padding-top: 5px;
+            text-align: center;
+            font-size: 7pt;
+            color: #888;
+        }
+        .footer strong { color: #2c5aa0; }
+
+        /* Utility */
+        .clear { clear: both; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo-section">
-                {% if data.get('logo_b64') %}
-                <img src="data:image/png;base64,{{ data.get('logo_b64') }}" alt="Company Logo">
+<div class="container">
+
+    <!-- ══════════════ HEADER ══════════════ -->
+    <div class="header">
+
+        <!-- Logo -->
+        <div class="logo-section">
+            {% if data.get('logo_b64') %}
+            <img src="data:image/png;base64,{{ data.get('logo_b64') }}" alt="Company Logo">
+            {% else %}
+            <div class="no-logo-placeholder"></div>
+            {% endif %}
+        </div>
+
+        <!-- Company info (centre) -->
+        <div class="company-info-center">
+            <div class="company-name">{{ data.get('company_name', 'Your Company') }}</div>
+            {% if data.get('company_address') %}
+            <div class="company-detail">{{ data.get('company_address') }}</div>
+            {% endif %}
+            <div class="company-detail">
+                {% if data.get('company_phone') %}Tel: {{ data.get('company_phone') }}{% endif %}
+                {% if data.get('company_phone') and data.get('company_email') %} &nbsp;|&nbsp; {% endif %}
+                {% if data.get('company_email') %}{{ data.get('company_email') }}{% endif %}
+            </div>
+
+            {# ── FBR block — only when user has enabled the toggle ── #}
+            {% if data.get('show_fbr_fields') and (data.get('seller_ntn') or data.get('seller_strn')) %}
+            <div class="fbr-block">
+                {% if data.get('seller_ntn') %}
+                <strong>NTN:</strong> {{ data.get('seller_ntn') }}
+                {% endif %}
+                {% if data.get('seller_ntn') and data.get('seller_strn') %}
+                <span class="fbr-sep">|</span>
+                {% endif %}
+                {% if data.get('seller_strn') %}
+                <strong>STRN:</strong> {{ data.get('seller_strn') }}
                 {% endif %}
             </div>
+            {% endif %}
+        </div>
 
-            <div class="company-info-center">
-                <h2>{{ data.get('company_name', 'Your Company') }}</h2>
-                <p>{{ data.get('company_address', '') }}</p>
-                <p>Phone: {{ data.get('company_phone', '') }} | Email: {{ data.get('company_email', '') }}</p>
-            </div>
-
-            <div class="invoice-info-right">
-                <h1>INVOICE</h1>
-                <p><strong>#:</strong> {{ data.get('invoice_number', '') }}<br>
-                <strong>Date:</strong> {{ data.get('invoice_date', '') }}</p>
+        <!-- Invoice number / date (right) -->
+        <div class="invoice-info-right">
+            <div class="invoice-title">INVOICE</div>
+            <div class="invoice-meta">
+                <strong>#:</strong> {{ data.get('invoice_number', '') }}<br>
+                <strong>Date:</strong> {{ data.get('invoice_date', '') }}<br>
+                {% if data.get('due_date') %}
+                <strong>Due:</strong> {{ data.get('due_date') }}<br>
+                {% endif %}
+                <strong>Status:</strong> {{ data.get('status', 'Pending')|upper }}
             </div>
         </div>
 
-        <!-- Original Three Column Layout -->
-        <div class="metadata-row">
-            <div class="metadata-column">
-                <h3>BILL TO</h3>
-                <p><strong>{{ data.get('client_name', '') }}</strong></p>
-                <p>{{ data.get('client_address', '') }}</p>
-                <p>Ph: {{ data.get('client_phone', '') }}</p>
-            </div>
+    </div><!-- /header -->
 
-            <div class="metadata-column">
-                <h3>PAYMENT INFO</h3>
-                <p><strong>Terms:</strong> {{ data.get('payment_terms', 'Due on Receipt') }}</p>
-                <p><strong>Methods:</strong> {{ data.get('payment_methods', 'Bank Transfer, Credit Card') }}</p>
-                <p><strong>Status:</strong> {{ data.get('status', 'Pending')|upper }}</p>
-            </div>
 
-            <div class="metadata-column">
-                <h3>NOTES / INSTRUCTIONS</h3>
-                <p>{{ data.get('notes') if data.get('notes') else 'Thank you for choosing our services.' }}</p>
+    <!-- ══════════════ METADATA ROW ══════════════ -->
+    <div class="metadata-row">
+
+        <!-- Bill To -->
+        <div class="metadata-column">
+            <div class="meta-heading">Bill To</div>
+            <div class="meta-line"><strong>{{ data.get('client_name', '') }}</strong></div>
+            {% if data.get('client_address') %}
+            <div class="meta-line">{{ data.get('client_address') }}</div>
+            {% endif %}
+            {% if data.get('client_phone') %}
+            <div class="meta-line">Tel: {{ data.get('client_phone') }}</div>
+            {% endif %}
+            {% if data.get('client_email') %}
+            <div class="meta-line">{{ data.get('client_email') }}</div>
+            {% endif %}
+
+            {# ── Location badge ── #}
+            {% if data.get('location_name') %}
+            <div style="margin-top:5px;">
+                <span style="font-size:6.8pt;color:#666;">Sold from:</span><br>
+                <span class="sold-from-badge">📍 {{ data.get('location_name') }}</span>
             </div>
+            {% endif %}
         </div>
 
-        <div style="page-break-inside: avoid;">
-            <table class="items">
-                <thead>
-                    <tr>
-                        <th style="width: 5%;">#</th>
-                        <th style="width: 45%;">Description</th>
-                        <th style="width: 15%;">Qty</th>
-                        <th style="width: 15%;">Price</th>
-                        <th style="width: 20%;">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in data.get('items', []) %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.qty }} {{ unit_label(item.unit_type) }}</td>
-                        <td>{{ currency_symbol }}{{ "%.2f"|format(item.price) }}</td>
-                        <td>{{ currency_symbol }}{{ "%.2f"|format(item.total) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Payment Info -->
+        <div class="metadata-column">
+            <div class="meta-heading">Payment Info</div>
+            <div class="meta-line"><strong>Terms:</strong> {{ data.get('payment_terms', 'Due on Receipt') }}</div>
+            <div class="meta-line"><strong>Methods:</strong> {{ data.get('payment_methods', 'Bank Transfer, Credit Card') }}</div>
+            {% if data.get('delivery_charge', 0)|float > 0 %}
+            <div class="meta-line"><strong>Delivery:</strong> {{ currency_symbol }}{{ "%.2f"|format(data.get('delivery_charge', 0)) }}</div>
+            {% endif %}
         </div>
 
-        <div class="clear"></div>
+        <!-- Notes -->
+        <div class="metadata-column">
+            <div class="meta-heading">Notes / Instructions</div>
+            <div class="meta-line">{{ data.get('notes') if data.get('notes') else 'Thank you for choosing our services.' }}</div>
+        </div>
 
-        <div style="page-break-inside: avoid;">
-            <table class="totals">
-                <tr><td>Subtotal:</td><td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('subtotal', 0)) }}</td></tr>
-                {% if data.get('discount_amount', 0)|float > 0 %}
-                <tr><td>Discount:</td><td class="text-right">-{{ currency_symbol }}{{ "%.2f"|format(data.get('discount_amount', 0)) }}</td></tr>
-                {% endif %}
-                {% if data.get('tax_amount', 0)|float > 0 %}
-                <tr><td>Tax:</td><td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('tax_amount', 0)) }}</td></tr>
-                {% endif %}        
-                {% if data.get('delivery_charge', 0)|float > 0 %}
-                <tr><td>Delivery Charge:</td><td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(data.get('delivery_charge', 0)) }}</td></tr>
-                {% endif %}
-                <tr class="grand-total">
-                    <td><strong>TOTAL DUE:</strong></td>
-                    <td class="text-right"><strong>{{ currency_symbol }}{{ "%.2f"|format(data.get('grand_total', 0)) }}</strong></td>
+    </div><!-- /metadata-row -->
+
+
+    <!-- ══════════════ LINE ITEMS ══════════════ -->
+    <div style="page-break-inside: avoid;">
+        <table class="items">
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th class="col-desc">Description</th>
+                    <th class="col-qty">Qty</th>
+                    <th class="col-rate">Unit Price</th>
+                    <th class="col-amt">Amount</th>
                 </tr>
-            </table>
-        </div>
-
-        <div class="clear"></div>
-
-        {% if custom_qr_b64 %}
-        <div class="qr-section">
-            <img src="data:image/png;base64,{{ custom_qr_b64 }}" alt="Payment QR">
-            <p style="font-size: 7pt; margin: 0;">Scan to Verify/Pay</p>
-        </div>
-        {% endif %}
-
-        <div class="footer">
-            <p><strong>Thank you for your business!</strong></p>
-            <p>{{ data.get('company_name', 'Your Company') }} | Generated by GrowEasy Invoice System</p>
-        </div>
+            </thead>
+            <tbody>
+                {% for item in data.get('items', []) %}
+                <tr>
+                    <td class="col-num">{{ loop.index }}</td>
+                    <td class="col-desc">{{ item.name }}</td>
+                    <td class="col-qty">{{ item.qty }} {{ unit_label(item.unit_type) }}</td>
+                    <td class="col-rate">{{ currency_symbol }}{{ "%.2f"|format(item.price) }}</td>
+                    <td class="col-amt">{{ currency_symbol }}{{ "%.2f"|format(item.total) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+
+
+    <!-- ══════════════ TOTALS ══════════════ -->
+    <div class="totals-wrap" style="page-break-inside: avoid;">
+        <table class="totals">
+            <tr>
+                <td class="tot-label">Subtotal:</td>
+                <td class="tot-value">{{ currency_symbol }}{{ "%.2f"|format(data.get('subtotal', 0)) }}</td>
+            </tr>
+            {% if data.get('discount_amount', 0)|float > 0 %}
+            <tr>
+                <td class="tot-label">Discount:</td>
+                <td class="tot-value">- {{ currency_symbol }}{{ "%.2f"|format(data.get('discount_amount', 0)) }}</td>
+            </tr>
+            {% endif %}
+            {% if data.get('tax_amount', 0)|float > 0 %}
+            <tr>
+                <td class="tot-label">Tax:</td>
+                <td class="tot-value">{{ currency_symbol }}{{ "%.2f"|format(data.get('tax_amount', 0)) }}</td>
+            </tr>
+            {% endif %}
+            {% if data.get('delivery_charge', 0)|float > 0 %}
+            <tr>
+                <td class="tot-label">Delivery:</td>
+                <td class="tot-value">{{ currency_symbol }}{{ "%.2f"|format(data.get('delivery_charge', 0)) }}</td>
+            </tr>
+            {% endif %}
+            <tr class="grand-total">
+                <td class="tot-label"><strong>TOTAL DUE:</strong></td>
+                <td class="tot-value"><strong>{{ currency_symbol }}{{ "%.2f"|format(data.get('grand_total', 0)) }}</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="clear"></div>
+
+
+    <!-- ══════════════ QR CODE ══════════════ -->
+    {% if custom_qr_b64 %}
+    <div class="qr-section">
+        <img src="data:image/png;base64,{{ custom_qr_b64 }}" alt="Payment QR">
+        <div class="qr-caption">Scan to Verify / Pay</div>
+    </div>
+    {% endif %}
+
+
+    <!-- ══════════════ FOOTER ══════════════ -->
+    <div class="footer">
+        <strong>Thank you for your business!</strong><br>
+        {{ data.get('company_name', 'Your Company') }} &nbsp;|&nbsp; Generated by GrowEasy Invoice System
+        {% if data.get('location_name') %}
+        &nbsp;|&nbsp; Location: {{ data.get('location_name') }}
+        {% endif %}
+    </div>
+
+</div><!-- /container -->
 </body>
 </html>

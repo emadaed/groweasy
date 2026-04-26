@@ -24,7 +24,8 @@ def settings():
                 company_tax_id=request.form.get('company_tax_id'),
                 seller_ntn=request.form.get('seller_ntn'),
                 seller_strn=request.form.get('seller_strn'),
-                preferred_currency=request.form.get('preferred_currency')
+                preferred_currency=request.form.get('preferred_currency'),
+                show_fbr_fields=request.form.get('show_fbr_fields') == 'on'
             )
 
             flash('✅ Settings updated successfully!', 'success')
