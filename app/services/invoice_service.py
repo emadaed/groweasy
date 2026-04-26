@@ -59,7 +59,7 @@ class InvoiceService:
 
             # Fetch FBR fields from user profile for PDF
             from app.services.auth import get_user_profile
-            user_profile = get_user_profile(self.user_id)
+            _profile = get_user_profile(self.user_id)
             invoice_data['show_fbr_fields'] = _profile.get('show_fbr_fields', False)
             invoice_data['seller_ntn']      = _profile.get('seller_ntn', '')
             invoice_data['seller_strn']     = _profile.get('seller_strn', '')
