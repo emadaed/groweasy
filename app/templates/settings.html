@@ -1,308 +1,625 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Premium Settings | GrowEasy Invoice</title>
-    <!-- Bootstrap 5 + Icons + Fonts (ensuring premium look) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <style>
-        /* ----- premium custom styles ----- */
-        body {
-            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            background: #f0f2f8;
-            scroll-behavior: smooth;
-        }
-
-        /* smooth card style */
-        .premium-card {
-            background: #ffffff;
-            border: none;
-            border-radius: 28px;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05), 0 4px 8px rgba(0, 0, 0, 0.02);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            overflow: hidden;
-        }
-
-        .premium-card:hover {
-            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.08);
-            transform: translateY(-2px);
-        }
-
-        .card-header-premium {
-            background: transparent;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 1.25rem 1.75rem;
-            font-weight: 600;
-            font-size: 1.2rem;
-            letter-spacing: -0.2px;
-        }
-
-        .card-body-premium {
-            padding: 1.75rem;
-        }
-
-        /* form elements styling */
-        .form-control, .form-select {
-            border-radius: 16px;
-            border: 1px solid #e2e8f0;
-            padding: 0.7rem 1rem;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-            background-color: #fefefe;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
-            outline: none;
-        }
-
-        textarea.form-control {
-            border-radius: 20px;
-        }
-
-        .form-label {
-            font-weight: 500;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
-
-        .input-icon-group {
-            position: relative;
-        }
-
-        .btn-premium {
-            border-radius: 40px;
-            padding: 0.6rem 1.5rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            border: none;
-        }
-
-        .btn-success-premium {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
-        }
-
-        .btn-success-premium:hover {
-            background: linear-gradient(135deg, #059669, #047857);
-            transform: scale(1.01);
-            box-shadow: 0 8px 18px rgba(16, 185, 129, 0.25);
-        }
-
-        .btn-warning-premium {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
-        }
-
-        .btn-warning-premium:hover {
-            background: linear-gradient(135deg, #d97706, #b45309);
-            transform: scale(1.01);
-        }
-
-        .btn-outline-premium {
-            border-radius: 40px;
-            border: 1px solid #cbd5e1;
-            background: white;
-            font-weight: 500;
-            padding: 0.5rem 1.2rem;
-            transition: all 0.2s;
-        }
-
-        .btn-outline-premium:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            transform: translateY(-1px);
-        }
-
-        .badge-premium {
-            background: #eef2ff;
-            color: #1e40af;
-            border-radius: 40px;
-            padding: 0.4rem 0.9rem;
-            font-weight: 500;
-            font-size: 0.75rem;
-        }
-
-        .link-icon {
-            text-decoration: none;
-            color: #334155;
-            font-weight: 500;
-            transition: color 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .link-icon:hover {
-            color: #3b82f6;
-        }
-
-        .divider-light {
-            background: #eef2ff;
-            height: 1px;
-            width: 100%;
-            margin: 1.2rem 0;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            padding: 0.6rem 0;
-            border-bottom: 1px dashed #eef2ff;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #475569;
-            font-size: 0.85rem;
-        }
-
-        .info-value {
-            color: #0f172a;
-            font-weight: 500;
-            word-break: break-word;
-            text-align: right;
-        }
-
-        .flash-message {
-            border-radius: 20px;
-            border-left: 6px solid;
-            background: white;
-            padding: 1rem 1.2rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        }
-
-        .gradient-text {
-            background: linear-gradient(135deg, #1e293b, #2d3a4b);
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-        }
-
-        .back-dashboard {
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(4px);
-            border-radius: 60px;
-            padding: 0.4rem 1.2rem;
-            font-weight: 500;
-        }
-        
-        @media (max-width: 768px) {
-            .card-body-premium {
-                padding: 1.25rem;
-            }
-            .card-header-premium {
-                padding: 1rem 1.25rem;
-            }
-        }
-    </style>
-</head>
-<body>
 {% extends "base.html" %}
+{% block title %}Settings — GrowEasy{% endblock %}
 
-{% block title %}Premium Settings - GrowEasy Invoice{% endblock %}
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+{# ── Early theme apply — no flash ── #}
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+<style nonce="{{ nonce }}">
+
+/* ── Base container override ── */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════════
+   TOKENS — DARK (forest at dusk)
+══════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+    --bg:          #0c110a;
+    --surface:     #131a10;
+    --surface-2:   #192214;
+    --surface-3:   #1f2c19;
+    --border:      #222e1c;
+    --border-hi:   #2e3f25;
+    --gold:        #c9a228;
+    --gold-2:      #e2c040;
+    --gold-dim:    rgba(201,162,40,.10);
+    --gold-glow:   rgba(201,162,40,.17);
+    --green-acc:   #5aad78;
+    --green-dim:   rgba(90,173,120,.09);
+    --green-hi:    rgba(90,173,120,.18);
+    --text:        #e2e8d4;
+    --text-2:      #b5c4a0;
+    --muted:       #7d9068;
+    --faint:       #485c38;
+    --danger:      #e07070;
+    --danger-dim:  rgba(224,112,112,.10);
+    --info:        #6db8d4;
+    --info-dim:    rgba(109,184,212,.09);
+    --warning:     #d4a040;
+    --warning-dim: rgba(212,160,64,.10);
+    --card-shadow: 0 1px 4px rgba(0,0,0,.40), 0 4px 18px rgba(0,0,0,.28);
+    --hero-bg:     linear-gradient(135deg, #111a0d 0%, #0d160b 100%);
+    --input-bg:    #192214;
+    --input-bg-f:  #1f2c19;
+    --fbr-bg:      rgba(109,184,212,.06);
+    --fbr-border:  rgba(109,184,212,.15);
+    --info-row-border: rgba(255,255,255,.05);
+    --link-bg:     rgba(255,255,255,.04);
+}
+
+/* ══════════════════════════════════════════
+   TOKENS — LIGHT
+══════════════════════════════════════════ */
+[data-theme="light"] {
+    --bg:          #f4f6f0;
+    --surface:     #ffffff;
+    --surface-2:   #eef2e9;
+    --surface-3:   #e5ece0;
+    --border:      #d8e2d0;
+    --border-hi:   #c0d4b4;
+    --gold:        #9a7212;
+    --gold-2:      #b89018;
+    --gold-dim:    rgba(154,114,18,.09);
+    --gold-glow:   rgba(154,114,18,.16);
+    --green-acc:   #2d8a50;
+    --green-dim:   rgba(45,138,80,.08);
+    --green-hi:    rgba(45,138,80,.16);
+    --text:        #182012;
+    --text-2:      #3d5530;
+    --muted:       #6a8558;
+    --faint:       #a8bfa0;
+    --danger:      #c0392b;
+    --danger-dim:  rgba(192,57,43,.08);
+    --info:        #1a7fa0;
+    --info-dim:    rgba(26,127,160,.08);
+    --warning:     #b07820;
+    --warning-dim: rgba(176,120,32,.09);
+    --card-shadow: 0 1px 3px rgba(0,0,0,.07), 0 3px 14px rgba(0,0,0,.05);
+    --hero-bg:     linear-gradient(135deg, #eaf0e2 0%, #dde8d2 100%);
+    --input-bg:    #f8faf5;
+    --input-bg-f:  #eef2e9;
+    --fbr-bg:      rgba(26,127,160,.05);
+    --fbr-border:  rgba(26,127,160,.14);
+    --info-row-border: rgba(0,0,0,.06);
+    --link-bg:     rgba(0,0,0,.03);
+}
+
+/* ══════════════════════════════════════════
+   PAGE SHELL
+══════════════════════════════════════════ */
+.st-page {
+    font-family: 'Figtree', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 1.4rem 1.5rem 2.5rem;
+    color: var(--text);
+    transition: background 0.25s, color 0.25s;
+}
+
+/* ══════════════════════════════════════════
+   HERO
+══════════════════════════════════════════ */
+.st-hero {
+    position: relative;
+    background: var(--hero-bg);
+    border: 1px solid var(--border-hi);
+    border-radius: 18px;
+    padding: 1.55rem 2rem 1.55rem 2.4rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+.st-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.13'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
+    pointer-events: none;
+}
+.st-hero::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 65%, transparent 100%);
+    border-radius: 0 2px 2px 0;
+}
+.st-hero-inner { position: relative; z-index: 1; }
+.st-hero-eyebrow {
+    font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 0.2rem;
+}
+.st-hero-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.55rem; font-weight: 800;
+    color: var(--text); margin: 0;
+    letter-spacing: -0.025em; line-height: 1.1;
+}
+.st-hero-sub {
+    font-size: 0.79rem; color: var(--muted);
+    margin: 0.3rem 0 0; font-style: italic; font-weight: 300;
+}
+.hero-actions {
+    position: relative; z-index: 1;
+    display: flex; align-items: center;
+    gap: 0.55rem; flex-wrap: wrap;
+}
+.btn-theme-toggle {
+    font-family: 'Figtree', sans-serif; font-size: 0.78rem; font-weight: 600;
+    color: var(--gold); background: var(--gold-dim);
+    border: 1px solid rgba(201,162,40,.22); border-radius: 8px;
+    padding: 0.44rem 0.85rem; cursor: pointer;
+    transition: all 0.18s; white-space: nowrap; line-height: 1.4;
+}
+.btn-theme-toggle:hover { background: var(--gold-glow); }
+.btn-back {
+    font-family: 'Figtree', sans-serif; font-size: 0.78rem; font-weight: 500;
+    color: var(--muted); background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-hi); border-radius: 8px;
+    padding: 0.44rem 0.9rem; text-decoration: none;
+    display: inline-block; transition: all 0.18s; white-space: nowrap;
+}
+.btn-back:hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+/* ══════════════════════════════════════════
+   SECTION LABEL
+══════════════════════════════════════════ */
+.section-label {
+    font-size: 0.63rem; font-weight: 700;
+    letter-spacing: 0.10em; text-transform: uppercase;
+    color: var(--faint); font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ══════════════════════════════════════════
+   FLASH MESSAGES
+══════════════════════════════════════════ */
+.flash-box {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.84rem;
+    font-family: 'Figtree', sans-serif;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border: 1px solid transparent;
+}
+.flash-box.flash-success {
+    background: var(--green-dim);
+    border-color: rgba(90,173,120,.22);
+    color: var(--green-acc);
+}
+.flash-box.flash-error {
+    background: var(--danger-dim);
+    border-color: rgba(224,112,112,.22);
+    color: var(--danger);
+}
+
+/* ══════════════════════════════════════════
+   SETTINGS CARDS
+══════════════════════════════════════════ */
+.st-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+    transition: border-color 0.18s, background 0.25s;
+}
+.st-card:focus-within { border-color: var(--border-hi); }
+.st-card-header {
+    padding: 0.8rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0.6rem;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700; font-size: 0.88rem;
+    color: var(--text);
+    background: var(--surface-2);
+}
+.st-card-header i { color: var(--gold); font-size: 1rem; }
+.st-card-body { padding: 1.3rem 1.4rem; }
+
+/* ══════════════════════════════════════════
+   FORM CONTROLS
+══════════════════════════════════════════ */
+.field-label {
+    font-size: 0.67rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.3rem; display: block;
+}
+.field-hint {
+    font-size: 0.7rem; color: var(--faint);
+    font-family: 'Figtree', sans-serif;
+    margin-top: 0.25rem; display: block;
+}
+.st-page .form-control,
+.st-page .form-select {
+    background: var(--input-bg);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.86rem;
+    border-radius: 8px;
+    padding: 0.52rem 0.85rem;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.2s;
+}
+.st-page .form-control::placeholder { color: var(--faint); font-style: italic; }
+.st-page .form-control:focus,
+.st-page .form-select:focus {
+    background: var(--input-bg-f);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-dim);
+    color: var(--text); outline: none;
+}
+.st-page .form-select option {
+    background: var(--surface);
+    color: var(--text);
+}
+.st-page textarea.form-control { resize: vertical; min-height: 80px; }
+
+/* ══════════════════════════════════════════
+   FBR SECTION PANEL
+══════════════════════════════════════════ */
+.fbr-panel {
+    background: var(--fbr-bg);
+    border: 1px solid var(--fbr-border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem 0.9rem;
+    margin-bottom: 1.2rem;
+}
+.fbr-panel-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.8rem; font-weight: 700;
+    color: var(--info);
+    margin-bottom: 0.85rem;
+    display: flex; align-items: center; gap: 0.45rem;
+}
+
+/* ── FBR Toggle Switch ── */
+.fbr-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--fbr-border);
+}
+.fbr-toggle-label {
+    flex: 1;
+}
+.fbr-toggle-label strong {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.15rem;
+}
+.fbr-toggle-label span {
+    font-size: 0.71rem;
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+/* The toggle switch itself */
+.toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border-hi);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.22s;
+    border: 1px solid var(--border-hi);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--green-acc); border-color: var(--green-acc); }
+.toggle-track::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.22s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+.toggle-switch input:checked + .toggle-track::after { left: 23px; }
+
+/* Fields shown/hidden by JS based on toggle */
+.fbr-fields { transition: opacity 0.22s; }
+.fbr-fields.fbr-hidden { opacity: 0.35; pointer-events: none; }
+
+/* ══════════════════════════════════════════
+   DIVIDER
+══════════════════════════════════════════ */
+.st-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.1rem 0;
+}
+
+/* ══════════════════════════════════════════
+   SUBMIT BUTTONS
+══════════════════════════════════════════ */
+.btn-st-primary {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.88rem; font-weight: 800;
+    color: #0c110a;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    border: none; border-radius: 9px;
+    padding: 0.72rem 1.4rem; width: 100%;
+    cursor: pointer; transition: all 0.18s;
+    box-shadow: 0 3px 14px var(--gold-glow);
+    letter-spacing: 0.01em;
+    display: block; text-align: center;
+}
+.btn-st-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px var(--gold-glow);
+    color: #0c110a;
+}
+
+.btn-st-warning {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.88rem; font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, #c47f0a, var(--warning));
+    border: none; border-radius: 9px;
+    padding: 0.72rem 1.4rem; width: 100%;
+    cursor: pointer; transition: all 0.18s;
+    box-shadow: 0 3px 14px var(--warning-dim);
+    letter-spacing: 0.01em;
+    display: block; text-align: center;
+}
+.btn-st-warning:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px var(--warning-dim);
+    color: #fff;
+}
+
+/* ══════════════════════════════════════════
+   DEVICE & INTEGRATION LINKS
+══════════════════════════════════════════ */
+.device-manage-btn {
+    font-family: 'Figtree', sans-serif; font-size: 0.8rem; font-weight: 600;
+    color: var(--info);
+    background: var(--info-dim);
+    border: 1px solid rgba(109,184,212,.2);
+    border-radius: 8px;
+    padding: 0.42rem 0.9rem;
+    text-decoration: none; display: inline-block;
+    transition: all 0.15s; white-space: nowrap;
+}
+.device-manage-btn:hover {
+    background: rgba(109,184,212,.16);
+    border-color: rgba(109,184,212,.35);
+    color: #8dd0e8;
+}
+.sessions-badge {
+    font-size: 0.7rem; font-weight: 700;
+    font-family: 'Figtree', sans-serif;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border-hi);
+    border-radius: 12px;
+    padding: 0.2rem 0.65rem;
+}
+.integration-link {
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.8rem; font-weight: 600;
+    color: var(--text-2);
+    background: var(--link-bg);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 0.42rem 0.85rem;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    transition: all 0.14s;
+}
+.integration-link:hover {
+    color: var(--text);
+    background: var(--surface-2);
+    border-color: var(--border-hi);
+}
+.integration-link i { color: var(--gold); }
+
+/* Forgot password link */
+.forgot-link {
+    font-family: 'Figtree', sans-serif; font-size: 0.79rem;
+    color: var(--muted); text-decoration: none;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    transition: color 0.14s;
+}
+.forgot-link:hover { color: var(--danger); }
+
+/* ══════════════════════════════════════════
+   ACCOUNT INFO ROWS
+══════════════════════════════════════════ */
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--info-row-border);
+}
+.info-row:last-child { border-bottom: none; }
+.info-row-label {
+    font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted); font-family: 'Figtree', sans-serif;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.info-row-value {
+    font-size: 0.84rem; font-weight: 500;
+    color: var(--text);
+    word-break: break-word; text-align: right;
+    font-family: 'Figtree', sans-serif;
+}
+.verified-badge {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.7rem; font-weight: 700;
+    font-family: 'Figtree', sans-serif;
+    color: var(--green-acc);
+    background: var(--green-dim);
+    border: 1px solid rgba(90,173,120,.2);
+    border-radius: 12px;
+    padding: 0.22rem 0.7rem;
+}
+
+/* Scrollbar */
+.st-page ::-webkit-scrollbar { width: 5px; }
+.st-page ::-webkit-scrollbar-track { background: var(--surface); }
+.st-page ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+</style>
+{% endblock %}
+
 
 {% block content %}
-<div class="container py-5">
-    <!-- premium header with background accent -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-5 pb-1">
-        <div>
-            <h1 class="display-6 fw-bold" style="letter-spacing: -0.5px; background: linear-gradient(135deg, #0f172a, #2d3e5f); background-clip: text; -webkit-background-clip: text; color: transparent;">⚙️ Workspace Settings</h1>
-            <p class="text-muted mt-1">Manage your business profile, security preferences & integrations</p>
+<div class="st-page">
+
+    <!-- ══════ HERO ══════ -->
+    <div class="st-hero">
+        <div class="st-hero-inner">
+            <div class="st-hero-eyebrow">✦ GrowEasy &middot; Workspace</div>
+            <h2 class="st-hero-title">Settings</h2>
+            <p class="st-hero-sub">Business profile, security preferences &amp; integrations</p>
         </div>
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary back-dashboard">
-            <i class="bi bi-arrow-left-short"></i> Back to Dashboard
-        </a>
+        <div class="hero-actions">
+            <button class="btn-theme-toggle" id="themeToggle" type="button">☀️ Light</button>
+            <a href="{{ url_for('main.dashboard') }}" class="btn-back">← Dashboard</a>
+        </div>
     </div>
 
-    <!-- flash messages (premium style) -->
+    <!-- ══════ FLASH MESSAGES ══════ -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="flash-message alert-{{ 'danger' if category == 'error' else 'success' }}" 
-                     style="border-left-color: {{ '#dc2626' if category == 'error' else '#10b981' }};">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }} fs-5"></i>
-                        <span class="fw-medium">{{ message }}</span>
-                    </div>
-                </div>
+            <div class="flash-box {{ 'flash-success' if category != 'error' else 'flash-error' }}">
+                <i class="bi bi-{{ 'check-circle-fill' if category != 'error' else 'exclamation-triangle-fill' }}"></i>
+                <span>{{ message }}</span>
+            </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <div class="row g-5">
-        <!-- LEFT COLUMN: Company & Tax Information (premium card) -->
+    <!-- ══════ TWO COLUMN LAYOUT ══════ -->
+    <div class="row g-3">
+
+        <!-- ════ LEFT — Company Profile ════ -->
         <div class="col-lg-6">
-            <div class="premium-card">
-                <div class="card-header-premium">
-                    <i class="bi bi-building me-2 text-primary"></i> Company Profile
+            <div class="section-label">Company Profile</div>
+
+            <div class="st-card">
+                <div class="st-card-header">
+                    <i class="bi bi-building"></i>
+                    Company Information
                 </div>
-                <div class="card-body-premium">
-                    <form method="POST">
+                <div class="st-card-body">
+                    <form method="POST" autocomplete="off">
                         <input type="hidden" name="update_profile" value="1">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- Business details section -->
-                        <div class="mb-4">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="bi bi-briefcase me-1"></i> Company Name</label>
-                                <input type="text" name="company_name" class="form-control" 
-                                       value="{{ user_profile['company_name'] or '' }}" placeholder="GrowEasy LLC">
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="field-label">Company Name</label>
+                                <input type="text" name="company_name" class="form-control"
+                                       value="{{ user_profile['company_name'] or '' }}"
+                                       placeholder="GrowEasy LLC">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label"><i class="bi bi-geo-alt me-1"></i> Company Address</label>
-                                <textarea name="company_address" class="form-control" rows="3" 
+                            <div class="col-12">
+                                <label class="field-label">Company Address</label>
+                                <textarea name="company_address" class="form-control" rows="2"
                                           placeholder="Street, City, Postal Code">{{ user_profile['company_address'] or '' }}</textarea>
                             </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label"><i class="bi bi-telephone me-1"></i> Phone Number</label>
-                                    <input type="text" name="company_phone" class="form-control"
-                                           value="{{ user_profile['company_phone'] or '' }}" placeholder="+92 123 4567890">
+                            <div class="col-md-6">
+                                <label class="field-label">Phone Number</label>
+                                <input type="text" name="company_phone" class="form-control"
+                                       value="{{ user_profile['company_phone'] or '' }}"
+                                       placeholder="+92 123 4567890">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="field-label">Tax ID (General)</label>
+                                <input type="text" name="company_tax_id" class="form-control"
+                                       value="{{ user_profile['company_tax_id'] or '' }}"
+                                       placeholder="NTN / VAT">
+                            </div>
+                        </div>
+
+                        <!-- ── FBR / Pakistan Tax Panel ── -->
+                        <div class="fbr-panel">
+                            <div class="fbr-panel-title">
+                                <i class="bi bi-file-text-fill"></i>
+                                🇵🇰 FBR Tax Information (Pakistan)
+                            </div>
+
+                            <!-- Toggle row -->
+                            <div class="fbr-toggle-row">
+                                <div class="fbr-toggle-label">
+                                    <strong>Show FBR fields on invoices</strong>
+                                    <span>Prints NTN &amp; STRN on generated PDF invoices when enabled</span>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label"><i class="bi bi-receipt me-1"></i> Tax ID (General)</label>
-                                    <input type="text" name="company_tax_id" class="form-control"
-                                           value="{{ user_profile['company_tax_id'] or '' }}" placeholder="NTN/ VAT">
+                                <label class="toggle-switch" title="Toggle FBR fields on invoice PDF">
+                                    <input type="checkbox"
+                                           name="show_fbr_fields"
+                                           id="fbrToggle"
+                                           value="on"
+                                           {% if user_profile.get('show_fbr_fields') %}checked{% endif %}>
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+
+                            <!-- NTN + STRN — dimmed when toggle is off -->
+                            <div class="fbr-fields {{ '' if user_profile.get('show_fbr_fields') else 'fbr-hidden' }}" id="fbrFields">
+                                <div class="mb-3">
+                                    <label class="field-label">Seller NTN</label>
+                                    <input type="text" name="seller_ntn" class="form-control"
+                                           value="{{ user_profile.get('seller_ntn', '') }}"
+                                           pattern="[0-9]{7}-[0-9]{1}"
+                                           placeholder="1234567-8">
+                                    <span class="field-hint">Format: 1234567-8 (7 digits, hyphen, 1 digit)</span>
+                                </div>
+                                <div class="mb-0">
+                                    <label class="field-label">Seller STRN</label>
+                                    <input type="text" name="seller_strn" class="form-control"
+                                           value="{{ user_profile.get('seller_strn', '') }}"
+                                           placeholder="Sales Tax Registration Number">
+                                    <span class="field-hint">Required if registered for sales tax</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Pakistan Tax Section premium design -->
-                        <div class="bg-light p-3 rounded-4 mb-4" style="background: #f9fafc !important;">
-                            <h6 class="fw-semibold mb-3"><i class="bi bi-file-text-fill text-primary me-2"></i>🇵🇰 Pakistan Tax (FBR)</h6>
-                            <div class="mb-3">
-                                <label class="form-label">Seller NTN</label>
-                                <input type="text" name="seller_ntn" class="form-control"
-                                       value="{{ user_profile.get('seller_ntn', '') }}"
-                                       pattern="[0-9]{7}-[0-9]{1}"
-                                       placeholder="1234567-8">
-                                <div class="form-text text-muted small">Format: 1234567-8 (7 digits, hyphen, 1 digit)</div>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Seller STRN</label>
-                                <input type="text" name="seller_strn" class="form-control"
-                                       value="{{ user_profile.get('seller_strn', '') }}"
-                                       placeholder="Sales Tax Registration Number">
-                                <div class="form-text text-muted small">Required if registered for sales tax</div>
-                            </div>
-                        </div>
-
-                        <!-- Currency Preference -->
-                        <div class="mb-4">
-                            <label class="form-label"><i class="bi bi-currency-exchange me-1"></i> Display Currency</label>
+                        <!-- Currency -->
+                        <div class="mb-3">
+                            <label class="field-label">Display Currency</label>
                             <select name="preferred_currency" class="form-select">
                                 <option value="PKR" {% if user_profile.get('preferred_currency') == 'PKR' %}selected{% endif %}>🇵🇰 Pakistani Rupee (Rs.)</option>
                                 <option value="USD" {% if user_profile.get('preferred_currency') == 'USD' %}selected{% endif %}>🇺🇸 US Dollar ($)</option>
@@ -311,113 +628,164 @@
                                 <option value="AED" {% if user_profile.get('preferred_currency') == 'AED' %}selected{% endif %}>🇦🇪 UAE Dirham (د.إ)</option>
                                 <option value="SAR" {% if user_profile.get('preferred_currency') == 'SAR' %}selected{% endif %}>🇸🇦 Saudi Riyal (﷼)</option>
                             </select>
-                            <div class="form-text text-muted">Invoices & estimates will reflect this currency</div>
+                            <span class="field-hint">Invoices &amp; estimates will reflect this currency</span>
                         </div>
 
-                        <button type="submit" class="btn btn-success-premium btn-premium w-100">
-                            <i class="bi bi-check2-circle me-2"></i> Update Company Profile
+                        <button type="submit" class="btn-st-primary">
+                            <i class="bi bi-check2-circle me-2"></i>Update Company Profile
                         </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: Security, Active Devices, Account Info -->
+        <!-- ════ RIGHT — Security + Devices + Account ════ -->
         <div class="col-lg-6">
-            <!-- Security Card (change password) -->
-            <div class="premium-card mb-4">
-                <div class="card-header-premium">
-                    <i class="bi bi-shield-lock me-2 text-warning"></i> Security & Authentication
+            <div class="section-label">Security</div>
+
+            <!-- Change Password -->
+            <div class="st-card">
+                <div class="st-card-header">
+                    <i class="bi bi-shield-lock"></i>
+                    Security &amp; Authentication
                 </div>
-                <div class="card-body-premium">
-                    <form method="POST">
+                <div class="st-card-body">
+                    <form method="POST" autocomplete="off">
                         <input type="hidden" name="change_password" value="1">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                         <div class="mb-3">
-                            <label class="form-label"><i class="bi bi-key"></i> Current Password</label>
-                            <input type="password" name="current_password" class="form-control" required autocomplete="current-password">
+                            <label class="field-label">Current Password</label>
+                            <input type="password" name="current_password"
+                                   class="form-control" required
+                                   autocomplete="current-password"
+                                   placeholder="••••••••">
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">New Password</label>
-                                <input type="password" name="new_password" class="form-control" required minlength="6">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="field-label">New Password</label>
+                                <input type="password" name="new_password"
+                                       class="form-control" required minlength="6"
+                                       autocomplete="new-password"
+                                       placeholder="min. 6 characters">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Confirm New Password</label>
-                                <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                            <div class="col-md-6">
+                                <label class="field-label">Confirm Password</label>
+                                <input type="password" name="confirm_password"
+                                       class="form-control" required minlength="6"
+                                       autocomplete="new-password"
+                                       placeholder="repeat new password">
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-warning-premium btn-premium w-100">
-                            <i class="bi bi-arrow-repeat me-2"></i> Change Password
+                        <button type="submit" class="btn-st-warning">
+                            <i class="bi bi-arrow-repeat me-2"></i>Change Password
                         </button>
                     </form>
-                    <div class="divider-light"></div>
+
+                    <div class="st-divider"></div>
                     <div class="text-center">
-                        <a href="{{ url_for('auth.forgot_password') }}" class="link-icon">
+                        <a href="{{ url_for('auth.forgot_password') }}" class="forgot-link">
                             <i class="bi bi-question-circle"></i> Forgot your password?
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Active Devices + Integrations (unified premium card) -->
-            <div class="premium-card mb-4">
-                <div class="card-header-premium">
-                    <i class="bi bi-device-ssd me-2 text-info"></i> Active Devices & Integrations
+            <!-- Devices & Integrations -->
+            <div class="section-label mt-1">Devices &amp; Integrations</div>
+            <div class="st-card">
+                <div class="st-card-header">
+                    <i class="bi bi-device-ssd"></i>
+                    Active Devices &amp; Integrations
                 </div>
-                <div class="card-body-premium">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                        <div>
-                            <span class="badge-premium"><i class="bi bi-wifi"></i> Manage sessions</span>
-                        </div>
-                        <a href="{{ url_for('settings.devices') }}" class="btn btn-outline-premium btn-sm">
-                            <i class="bi bi-laptop"></i> Manage Devices
+                <div class="st-card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="sessions-badge"><i class="bi bi-wifi me-1"></i>Active sessions</span>
+                        <a href="{{ url_for('settings.devices') }}" class="device-manage-btn">
+                            <i class="bi bi-laptop me-1"></i>Manage Devices
                         </a>
                     </div>
-                    <p class="small text-muted mb-3">View and revoke access from other browsers or devices.</p>
-                    
-                    <div class="d-flex flex-wrap gap-3 mt-2">
-                        <a href="{{ url_for('users.api_keys') }}" class="link-icon bg-light p-2 px-3 rounded-3" style="background: #f1f5f9;">
-                            <i class="bi bi-key-fill text-primary"></i> API Keys
+                    <p class="field-hint mb-3" style="font-size:0.77rem;">
+                        View and revoke access from other browsers or devices.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('users.api_keys') }}" class="integration-link">
+                            <i class="bi bi-key-fill"></i> API Keys
                         </a>
-                        <a href="{{ url_for('users.list_webhooks') }}" class="link-icon bg-light p-2 px-3 rounded-3" style="background: #f1f5f9;">
-                            <i class="bi bi-plug-fill text-success"></i> Webhooks
+                        <a href="{{ url_for('users.list_webhooks') }}" class="integration-link">
+                            <i class="bi bi-plug-fill"></i> Webhooks
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Account Information Card -->
-            <div class="premium-card">
-                <div class="card-header-premium">
-                    <i class="bi bi-person-circle me-2 text-secondary"></i> Account Snapshot
+            <!-- Account Snapshot -->
+            <div class="section-label mt-1">Account</div>
+            <div class="st-card">
+                <div class="st-card-header">
+                    <i class="bi bi-person-circle"></i>
+                    Account Snapshot
                 </div>
-                <div class="card-body-premium">
+                <div class="st-card-body">
                     <div class="info-row">
-                        <span class="info-label"><i class="bi bi-envelope"></i> Email</span>
-                        <span class="info-value">{{ user_profile['email'] }}</span>
+                        <span class="info-row-label"><i class="bi bi-envelope"></i> Email</span>
+                        <span class="info-row-value">{{ user_profile['email'] }}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label"><i class="bi bi-calendar-check"></i> Member since</span>
-                        <span class="info-value">{{ user_profile['created_at'][:10] if user_profile['created_at'] else 'N/A' }}</span>
+                        <span class="info-row-label"><i class="bi bi-calendar-check"></i> Member since</span>
+                        <span class="info-row-value">{{ user_profile['created_at'][:10] if user_profile['created_at'] else 'N/A' }}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label"><i class="bi bi-fingerprint"></i> User ID</span>
-                        <span class="info-value">{{ user_profile['id'] }}</span>
+                        <span class="info-row-label"><i class="bi bi-fingerprint"></i> User ID</span>
+                        <span class="info-row-value" style="font-family:'Figtree',monospace;font-size:0.78rem;color:var(--muted);">
+                            {{ user_profile['id'] }}
+                        </span>
                     </div>
-                    <div class="mt-3 pt-2 text-center">
-                        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1">
+                    <div class="mt-3 text-center">
+                        <span class="verified-badge">
                             <i class="bi bi-check-lg"></i> Verified account
                         </span>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
 
-<!-- Bootstrap JS Bundle (with Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+        </div><!-- /right col -->
+    </div><!-- /row -->
+</div><!-- /st-page -->
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ── Theme toggle ── */
+    var html      = document.documentElement;
+    var toggleBtn = document.getElementById('themeToggle');
+
+    function applyThemeLabel(theme) {
+        toggleBtn.textContent = (theme === 'dark') ? '☀️ Light' : '🌙 Dark';
+    }
+    applyThemeLabel(html.getAttribute('data-theme') || 'dark');
+
+    toggleBtn.addEventListener('click', function () {
+        var next = (html.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('ge-theme', next);
+        applyThemeLabel(next);
+    });
+
+    /* ── FBR toggle — dim/undim fields ── */
+    var fbrToggle = document.getElementById('fbrToggle');
+    var fbrFields = document.getElementById('fbrFields');
+
+    function syncFbrFields() {
+        if (fbrToggle.checked) {
+            fbrFields.classList.remove('fbr-hidden');
+        } else {
+            fbrFields.classList.add('fbr-hidden');
+        }
+    }
+    /* Set correct state on load (server-rendered checked state) */
+    syncFbrFields();
+    fbrToggle.addEventListener('change', syncFbrFields);
+});
+</script>
+{% endblock %}
