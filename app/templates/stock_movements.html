@@ -1,148 +1,439 @@
 {% extends "base.html" %}
-{% block title %}Stock Movements{% endblock %}
+{% block title %}Stock Movements — GrowEasy{% endblock %}
 
-{% block content %}
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+{# ── Early theme apply — no flash ── #}
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
 <style nonce="{{ nonce }}">
-.movements-page { padding: 1.5rem; }
-.page-hero {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-    border-radius: 16px;
-    padding: 1.5rem 2rem;
-    color: #fff;
+
+/* ── Base override ── */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════
+   TOKENS — DARK (forest at dusk)
+   Identical to invoice_history / PO page
+══════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+    --bg:          #0c110a;
+    --surface:     #131a10;
+    --surface-2:   #192214;
+    --surface-3:   #1f2c19;
+    --border:      #222e1c;
+    --border-hi:   #2e3f25;
+    --gold:        #c9a228;
+    --gold-2:      #e2c040;
+    --gold-dim:    rgba(201,162,40,.10);
+    --gold-glow:   rgba(201,162,40,.17);
+    --green-acc:   #5aad78;
+    --green-dim:   rgba(90,173,120,.09);
+    --green-hi:    rgba(90,173,120,.18);
+    --text:        #e2e8d4;
+    --text-2:      #b5c4a0;
+    --muted:       #7d9068;
+    --faint:       #485c38;
+    --danger:      #e07070;
+    --danger-dim:  rgba(224,112,112,.10);
+    --info:        #6db8d4;
+    --info-dim:    rgba(109,184,212,.09);
+    --warning:     #d4a040;
+    --warning-dim: rgba(212,160,64,.10);
+    --purple:      #b07fd4;
+    --purple-dim:  rgba(176,127,212,.10);
+    --card-shadow: 0 1px 4px rgba(0,0,0,.40), 0 4px 18px rgba(0,0,0,.28);
+    --hero-bg:     linear-gradient(135deg, #111a0d 0%, #0d160b 100%);
+    --row-hover:   rgba(255,255,255,.025);
+    --row-stripe:  rgba(255,255,255,.012);
+    --input-bg:    #192214;
+    --input-bg-f:  #1f2c19;
+}
+
+/* ══════════════════════════════════════
+   TOKENS — LIGHT
+══════════════════════════════════════ */
+[data-theme="light"] {
+    --bg:          #f4f6f0;
+    --surface:     #ffffff;
+    --surface-2:   #eef2e9;
+    --surface-3:   #e5ece0;
+    --border:      #d8e2d0;
+    --border-hi:   #c0d4b4;
+    --gold:        #9a7212;
+    --gold-2:      #b89018;
+    --gold-dim:    rgba(154,114,18,.09);
+    --gold-glow:   rgba(154,114,18,.16);
+    --green-acc:   #2d8a50;
+    --green-dim:   rgba(45,138,80,.08);
+    --green-hi:    rgba(45,138,80,.16);
+    --text:        #182012;
+    --text-2:      #3d5530;
+    --muted:       #6a8558;
+    --faint:       #a8bfa0;
+    --danger:      #c0392b;
+    --danger-dim:  rgba(192,57,43,.08);
+    --info:        #1a7fa0;
+    --info-dim:    rgba(26,127,160,.08);
+    --warning:     #b07820;
+    --warning-dim: rgba(176,120,32,.09);
+    --purple:      #7a3fa0;
+    --purple-dim:  rgba(122,63,160,.08);
+    --card-shadow: 0 1px 3px rgba(0,0,0,.07), 0 3px 14px rgba(0,0,0,.05);
+    --hero-bg:     linear-gradient(135deg, #eaf0e2 0%, #dde8d2 100%);
+    --row-hover:   rgba(0,0,0,.025);
+    --row-stripe:  rgba(0,0,0,.013);
+    --input-bg:    #f8faf5;
+    --input-bg-f:  #eef2e9;
+}
+
+/* ══════════════════════════════════════
+   PAGE SHELL
+══════════════════════════════════════ */
+.sm-page {
+    font-family: 'Figtree', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 1.4rem 1.5rem 2.5rem;
+    color: var(--text);
+    transition: background 0.25s, color 0.25s;
+}
+
+/* ══════════════════════════════════════
+   HERO
+══════════════════════════════════════ */
+.sm-hero {
+    position: relative;
+    background: var(--hero-bg);
+    border: 1px solid var(--border-hi);
+    border-radius: 18px;
+    padding: 1.55rem 2rem 1.55rem 2.4rem;
     margin-bottom: 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
-}
-.page-hero h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
-.page-hero p  { margin: 0.25rem 0 0; opacity: 0.7; font-size: 0.9rem; }
-
-/* ── Filter Card ─── */
-.filter-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 1.2rem 1.5rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    margin-bottom: 1.5rem;
-}
-
-/* ── Movement Types ─── */
-.mv-type {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    border-radius: 20px;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-}
-.mv-sale        { background: #fee2e2; color: #991b1b; }
-.mv-purchase    { background: #dcfce7; color: #166534; }
-.mv-initial     { background: #dbeafe; color: #1e40af; }
-.mv-adjustment  { background: #f3e8ff; color: #6b21a8; }
-.mv-damaged     { background: #fff7ed; color: #9a3412; }
-.mv-found       { background: #ecfdf5; color: #065f46; }
-.mv-other       { background: #f1f5f9; color: #475569; }
-
-/* ── Delta Column ─── */
-.delta-plus  { color: #059669; font-weight: 700; font-size: 0.95rem; }
-.delta-minus { color: #dc2626; font-weight: 700; font-size: 0.95rem; }
-
-/* ── Log Table ─── */
-.log-table-wrap {
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
     overflow: hidden;
+    box-shadow: var(--card-shadow);
 }
-.log-header {
+.sm-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.13'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
+    pointer-events: none;
+}
+.sm-hero::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 65%, transparent 100%);
+    border-radius: 0 2px 2px 0;
+}
+.sm-hero-inner { position: relative; z-index: 1; }
+.sm-hero-eyebrow {
+    font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 0.2rem;
+}
+.sm-hero-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.55rem; font-weight: 800;
+    color: var(--text); margin: 0;
+    letter-spacing: -0.025em; line-height: 1.1;
+}
+.sm-hero-sub {
+    font-size: 0.79rem; color: var(--muted);
+    margin: 0.3rem 0 0; font-style: italic; font-weight: 300;
+}
+.hero-actions {
+    position: relative; z-index: 1;
+    display: flex; align-items: center;
+    gap: 0.55rem; flex-wrap: wrap;
+}
+.btn-export-csv {
+    font-family: 'Figtree', sans-serif; font-size: 0.78rem; font-weight: 600;
+    color: var(--green-acc); background: var(--green-dim);
+    border: 1px solid rgba(90,173,120,.22); border-radius: 8px;
+    padding: 0.44rem 0.9rem; text-decoration: none;
+    display: inline-block; transition: all 0.18s; white-space: nowrap;
+}
+.btn-export-csv:hover { background: var(--green-hi); color: var(--green-acc); }
+.btn-theme-toggle {
+    font-family: 'Figtree', sans-serif; font-size: 0.78rem; font-weight: 600;
+    color: var(--gold); background: var(--gold-dim);
+    border: 1px solid rgba(201,162,40,.22); border-radius: 8px;
+    padding: 0.44rem 0.85rem; cursor: pointer;
+    transition: all 0.18s; white-space: nowrap; line-height: 1.4;
+}
+.btn-theme-toggle:hover { background: var(--gold-glow); }
+
+/* ══════════════════════════════════════
+   SECTION LABEL
+══════════════════════════════════════ */
+.section-label {
+    font-size: 0.63rem; font-weight: 700;
+    letter-spacing: 0.10em; text-transform: uppercase;
+    color: var(--faint); font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ══════════════════════════════════════
+   FILTER CARD
+══════════════════════════════════════ */
+.filter-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 1.3rem;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 1.4rem;
+    transition: background 0.25s;
+}
+.filter-card .form-label {
+    font-size: 0.67rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); font-family: 'Figtree', sans-serif;
+    margin-bottom: 0.3rem; display: block;
+}
+.filter-card .form-control,
+.filter-card .form-select {
+    background: var(--input-bg);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.83rem;
+    border-radius: 8px;
+    padding: 0.46rem 0.8rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.filter-card .form-control:focus,
+.filter-card .form-select:focus {
+    background: var(--input-bg-f);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-dim);
+    color: var(--text); outline: none;
+}
+.filter-card .form-select option { background: var(--surface); color: var(--text); }
+.filter-card input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5) sepia(0.8) saturate(1.5) hue-rotate(15deg);
+    opacity: 0.5; cursor: pointer;
+}
+
+.btn-filter {
+    font-family: 'Figtree', sans-serif; font-size: 0.8rem; font-weight: 700;
+    color: #0c110a;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    border: none; border-radius: 8px;
+    padding: 0.48rem 1rem; width: 100%;
+    cursor: pointer; transition: all 0.15s;
+    box-shadow: 0 2px 10px var(--gold-glow);
+}
+.btn-filter:hover { transform: translateY(-1px); }
+.btn-reset {
+    font-family: 'Figtree', sans-serif; font-size: 0.8rem; font-weight: 500;
+    color: var(--muted); background: transparent;
+    border: 1px solid var(--border-hi); border-radius: 8px;
+    padding: 0.48rem 1rem; width: 100%;
+    text-decoration: none; display: block; text-align: center;
+    transition: all 0.14s;
+}
+.btn-reset:hover { color: var(--text); background: rgba(255,255,255,.04); }
+
+/* ══════════════════════════════════════
+   LOG TABLE
+══════════════════════════════════════ */
+.log-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    transition: background 0.25s;
+}
+
+/* Header row */
+.log-head {
     display: grid;
-    grid-template-columns: 120px 2fr 1.2fr 80px 1.5fr 2fr;
-    gap: 1rem;
-    padding: 0.75rem 1.5rem;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 0.7rem;
+    grid-template-columns: 110px 2fr 1.3fr 70px 1.2fr 1.4fr 1.6fr;
+    gap: 0.75rem;
+    padding: 0.65rem 1.2rem;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border-hi);
+    font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: #94a3b8;
+    letter-spacing: 0.09em;
+    color: var(--muted);
 }
+
+/* Data row */
 .log-row {
     display: grid;
-    grid-template-columns: 120px 2fr 1.2fr 80px 1.5fr 2fr;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #f8fafc;
+    grid-template-columns: 110px 2fr 1.3fr 70px 1.2fr 1.4fr 1.6fr;
+    gap: 0.75rem;
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid var(--border);
     align-items: center;
-    transition: background 0.12s;
+    transition: background 0.1s;
 }
-.log-row:hover { background: #f8fafc; }
 .log-row:last-child { border-bottom: none; }
+.log-row:nth-child(even) { background: var(--row-stripe); }
+.log-row:hover { background: var(--row-hover); }
 
-.time-cell { font-size: 0.78rem; color: #64748b; line-height: 1.4; }
-.time-date { font-weight: 600; color: #374151; }
-.product-cell { font-size: 0.88rem; }
-.product-name { font-weight: 600; color: #1e293b; }
-.product-sku  { font-size: 0.75rem; color: #94a3b8; margin-top: 0.1rem; }
-.ref-cell     { font-size: 0.8rem; color: #475569; font-family: monospace; }
-.notes-cell   { font-size: 0.8rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Cells */
+.cell-when { font-size: 0.77rem; color: var(--muted); line-height: 1.4; }
+.cell-when .when-date { font-weight: 600; color: var(--text-2); font-size: 0.8rem; }
 
-/* ── Empty State ─── */
+.cell-product {}
+.product-name { font-weight: 600; font-size: 0.84rem; color: var(--text); }
+.product-sku  { font-size: 0.71rem; color: var(--muted); margin-top: 0.1rem;
+                font-family: 'Figtree', monospace; }
+
+.cell-ref { font-size: 0.77rem; color: var(--muted); font-family: 'Figtree', monospace; }
+
+.cell-notes {
+    font-size: 0.77rem; color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Location chip */
+.loc-chip {
+    display: inline-flex; align-items: center; gap: 0.28rem;
+    font-size: 0.68rem; font-weight: 600;
+    font-family: 'Figtree', sans-serif;
+    color: var(--info);
+    background: var(--info-dim);
+    border: 1px solid rgba(109,184,212,.18);
+    border-radius: 5px;
+    padding: 0.18rem 0.5rem;
+    white-space: nowrap;
+}
+.loc-chip-unknown {
+    color: var(--faint);
+    background: transparent;
+    border-color: var(--border);
+}
+
+/* Delta */
+.delta-plus  { color: var(--green-acc); font-weight: 700; font-size: 0.9rem;
+               font-family: 'Bricolage Grotesque', sans-serif; }
+.delta-minus { color: var(--danger); font-weight: 700; font-size: 0.9rem;
+               font-family: 'Bricolage Grotesque', sans-serif; }
+.delta-zero  { color: var(--faint); font-size: 0.85rem; }
+
+/* Movement type badges — match existing class names exactly */
+.mv-type {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    border-radius: 5px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    font-family: 'Figtree', sans-serif;
+}
+.mv-sale        { background: var(--danger-dim);  color: var(--danger); }
+.mv-purchase    { background: var(--green-dim);   color: var(--green-acc); }
+.mv-initial     { background: var(--info-dim);    color: var(--info); }
+.mv-adjustment  { background: var(--purple-dim);  color: var(--purple); }
+.mv-damaged     { background: var(--warning-dim); color: var(--warning); }
+.mv-found       { background: var(--green-dim);   color: var(--green-acc); }
+.mv-other       { background: rgba(125,144,104,.10); color: var(--muted); }
+
+/* ══════════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════════ */
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    color: #94a3b8;
 }
-.empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; opacity: 0.4; }
+.empty-state i {
+    font-size: 2.8rem;
+    color: var(--faint);
+    display: block;
+    margin-bottom: 0.75rem;
+}
+.empty-state h5 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    color: var(--text-2);
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+}
+.empty-state p { color: var(--muted); font-size: 0.82rem; }
 
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
 @media (max-width: 768px) {
-    .log-header { display: none; }
+    .log-head { display: none; }
     .log-row {
         grid-template-columns: 1fr;
-        gap: 0.4rem;
-        padding: 1rem;
+        gap: 0.35rem;
+        padding: 0.9rem 1rem;
     }
-    .log-row > * { font-size: 0.85rem; }
+    .log-row > * { font-size: 0.83rem; }
 }
+
+/* Scrollbar */
+.sm-page ::-webkit-scrollbar { width: 5px; height: 5px; }
+.sm-page ::-webkit-scrollbar-track { background: var(--surface); }
+.sm-page ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
 </style>
+{% endblock %}
 
-<div class="movements-page">
 
-    <!-- Hero -->
-    <div class="page-hero">
-        <div>
-            <h2>📦 Stock Movement Log</h2>
-            <p>Every inventory change — fully traceable, one glance readable</p>
+{% block content %}
+<div class="sm-page">
+
+    <!-- ══════ HERO ══════ -->
+    <div class="sm-hero">
+        <div class="sm-hero-inner">
+            <div class="sm-hero-eyebrow">✦ GrowEasy &middot; Inventory</div>
+            <h2 class="sm-hero-title">Stock Movement Log</h2>
+            <p class="sm-hero-sub">Every inventory change — fully traceable, one glance readable</p>
         </div>
-        <a href="{{ url_for('reports.stock_movements', csv=1,
-                    **{'from': request.args.get('from', ''), 'to': request.args.get('to', ''),
-                       'product_id': request.args.get('product_id', '')}) }}"
-           class="btn btn-light btn-sm fw-semibold">
-            📥 Export CSV
-        </a>
+        <div class="hero-actions">
+            <a href="{{ url_for('reports.stock_movements', csv=1,
+                        **{'from': request.args.get('from', ''), 'to': request.args.get('to', ''),
+                           'product_id': request.args.get('product_id', '')}) }}"
+               class="btn-export-csv">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </a>
+            <button class="btn-theme-toggle" id="themeToggle" type="button">☀️ Light</button>
+        </div>
     </div>
 
-    <!-- Filters -->
+    <!-- ══════ FILTERS ══════ -->
+    <div class="section-label">Filters</div>
     <div class="filter-card">
         <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small fw-semibold text-muted">From Date</label>
-                <input type="date" name="from" class="form-control form-control-sm"
+                <label class="form-label">From Date</label>
+                <input type="date" name="from" class="form-control"
                        value="{{ request.args.get('from', '') }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold text-muted">To Date</label>
-                <input type="date" name="to" class="form-control form-control-sm"
+                <label class="form-label">To Date</label>
+                <input type="date" name="to" class="form-control"
                        value="{{ request.args.get('to', '') }}">
             </div>
             <div class="col-md-4">
-                <label class="form-label small fw-semibold text-muted">Filter by Product</label>
-                <select name="product_id" class="form-select form-select-sm">
+                <label class="form-label">Filter by Product</label>
+                <select name="product_id" class="form-select">
                     <option value="">All Products</option>
                     {% for product in products %}
                     <option value="{{ product.id }}"
@@ -153,82 +444,87 @@
                 </select>
             </div>
             <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
-                <a href="{{ url_for('reports.stock_movements') }}"
-                   class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                <button type="submit" class="btn-filter">Filter</button>
+                <a href="{{ url_for('reports.stock_movements') }}" class="btn-reset">Reset</a>
             </div>
         </form>
     </div>
 
-    <!-- Log Table -->
-    <div class="log-table-wrap">
+    <!-- ══════ LOG TABLE ══════ -->
+    <div class="section-label">Movement Log</div>
+    <div class="log-wrap">
         {% if movements %}
-        <div class="log-header">
+
+        <!-- Header -->
+        <div class="log-head">
             <div>When</div>
             <div>Product</div>
-            <div>Transaction Type</div>
+            <div>Type</div>
             <div>Qty Δ</div>
             <div>Reference</div>
+            <div>Location</div>
             <div>Notes</div>
         </div>
 
         {% for m in movements %}
-        {# ── Derive display values ── #}
+
+        {# ── Derive type display (identical logic to original) ── #}
         {% set mv = m.movement_type | lower %}
         {% if 'sale' in mv %}
             {% set type_label = 'Sale' %}
             {% set type_class = 'mv-sale' %}
             {% set type_icon  = '🧾' %}
-            {% set is_out = true %}
         {% elif 'purchase' in mv or 'receive' in mv or 'initial' in mv %}
             {% set type_label = 'Purchase / Receipt' %}
             {% set type_class = 'mv-purchase' %}
             {% set type_icon  = '🚚' %}
-            {% set is_out = false %}
         {% elif 'damage' in mv %}
             {% set type_label = 'Damaged' %}
             {% set type_class = 'mv-damaged' %}
             {% set type_icon  = '⚠️' %}
-            {% set is_out = true %}
         {% elif 'found' in mv %}
             {% set type_label = 'Stock Found' %}
             {% set type_class = 'mv-found' %}
             {% set type_icon  = '✅' %}
-            {% set is_out = false %}
         {% elif 'adjust' in mv or 'correction' in mv %}
             {% set type_label = 'Adjustment' %}
             {% set type_class = 'mv-adjustment' %}
             {% set type_icon  = '🔧' %}
-            {% set is_out = m.quantity < 0 %}
         {% else %}
             {% set type_label = m.movement_type | replace('_', ' ') | title %}
             {% set type_class = 'mv-other' %}
             {% set type_icon  = '📋' %}
-            {% set is_out = m.quantity < 0 %}
         {% endif %}
 
-        {# ── Resolve location name from notes ── #}
-        {% set location_hint = '' %}
+        {# ── Clean notes — strip internal "Location ID: X" from display ── #}
         {% if m.notes and 'Location ID:' in m.notes %}
-            {% set location_hint = m.notes %}
+            {% set clean_note = m.notes | replace(
+                ' (Location ID: ' +
+                (m.notes.split('Location ID: ')[1].split(')')[0]
+                 if 'Location ID:' in m.notes else '') + ')', '') %}
+        {% else %}
+            {% set clean_note = m.notes or '' %}
         {% endif %}
 
         <div class="log-row">
+
             <!-- When -->
-            <div class="time-cell">
-                <div class="time-date">
+            <div class="cell-when">
+                <div class="when-date">
                     {{ m.created_at.strftime('%d %b %Y') if m.created_at else '—' }}
                 </div>
                 {{ m.created_at.strftime('%H:%M') if m.created_at else '' }}
             </div>
 
             <!-- Product -->
-            <div class="product-cell">
+            <div class="cell-product">
                 <div class="product-name">{{ m.product_name }}</div>
-                <div class="product-sku">{{ m.sku if m.sku and m.sku != '—' else '' }}</div>
+                {% if m.sku and m.sku != '—' %}
+                <div class="product-sku">{{ m.sku }}</div>
+                {% endif %}
             </div>
 
-            <!-- Type -->
+            <!-- Type badge -->
             <div>
                 <span class="mv-type {{ type_class }}">
                     {{ type_icon }} {{ type_label }}
@@ -242,29 +538,48 @@
                 {% elif m.quantity < 0 %}
                     <span class="delta-minus">{{ m.quantity }}</span>
                 {% else %}
-                    <span style="color:#94a3b8;">0</span>
+                    <span class="delta-zero">0</span>
                 {% endif %}
             </div>
 
             <!-- Reference -->
-            <div class="ref-cell">
+            <div class="cell-ref">
                 {% if m.reference_id and m.reference_id != 'None' %}
                     {{ m.reference_id }}
                 {% else %}
-                    <span style="color:#cbd5e1;">—</span>
+                    <span style="color:var(--faint);">—</span>
                 {% endif %}
             </div>
 
-            <!-- Notes -->
-            <div class="notes-cell" title="{{ m.notes or '' }}">
-                {# Strip the internal "Location ID: X" from display #}
-                {% if m.notes %}
-                    {% set clean_note = m.notes | replace(' (Location ID: ' + (m.notes.split('Location ID: ')[1].split(')')[0] if 'Location ID:' in m.notes else '') + ')', '') if 'Location ID:' in m.notes else m.notes %}
-                    {{ clean_note[:80] }}{% if clean_note|length > 80 %}…{% endif %}
+            <!-- Location — uses m.location_name when route JOIN is applied;
+                 falls back gracefully to parsing notes until then -->
+            <div>
+                {% if m.location_name is defined and m.location_name %}
+                    <span class="loc-chip">
+                        <i class="bi bi-geo-alt-fill" style="font-size:0.6rem;"></i>
+                        {{ m.location_name }}
+                    </span>
+                {% elif m.notes and 'location' in m.notes | lower %}
+                    <span class="loc-chip">
+                        <i class="bi bi-geo-alt-fill" style="font-size:0.6rem;"></i>
+                        {% if 'location' in (m.notes | lower) %}
+                            {{ m.notes.split('location ')[-1].split(' ')[0] | title if 'location ' in (m.notes | lower) else '—' }}
+                        {% endif %}
+                    </span>
                 {% else %}
-                    <span style="color:#cbd5e1;">—</span>
+                    <span class="loc-chip loc-chip-unknown">—</span>
                 {% endif %}
             </div>
+
+            <!-- Notes (cleaned) -->
+            <div class="cell-notes" title="{{ m.notes or '' }}">
+                {% if clean_note %}
+                    {{ clean_note[:90] }}{% if clean_note | length > 90 %}…{% endif %}
+                {% else %}
+                    <span style="color:var(--faint);">—</span>
+                {% endif %}
+            </div>
+
         </div>
         {% endfor %}
 
@@ -272,10 +587,29 @@
         <div class="empty-state">
             <i class="bi bi-clock-history"></i>
             <h5>No stock movements recorded</h5>
-            <p class="small">Movements appear here when you create invoices, receive POs, or adjust stock.</p>
+            <p>Movements appear here when you create invoices,<br>receive POs, or adjust stock.</p>
         </div>
         {% endif %}
     </div>
 
-</div>
+</div><!-- /sm-page -->
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function () {
+    var html      = document.documentElement;
+    var toggleBtn = document.getElementById('themeToggle');
+
+    function applyLabel(theme) {
+        toggleBtn.textContent = (theme === 'dark') ? '☀️ Light' : '🌙 Dark';
+    }
+    applyLabel(html.getAttribute('data-theme') || 'dark');
+
+    toggleBtn.addEventListener('click', function () {
+        var next = (html.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('ge-theme', next);
+        applyLabel(next);
+    });
+});
+</script>
 {% endblock %}
