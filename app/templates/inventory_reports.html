@@ -9,7 +9,6 @@
 <style nonce="{{ nonce }}">
 /* ═══════════════════════════════════════════════════════════════
    GROWEASY DESIGN TOKENS – identical to form.html
-   (dark-first, with .light-mode override)
 ═══════════════════════════════════════════════════════════════ */
 :root {
     --ge-bg:          #121f17;
@@ -57,7 +56,7 @@ body.light-mode {
     --shadow-card:    0 1px 3px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.05);
 }
 
-/* Global reset & base */
+/* Base reset */
 body {
     background: var(--ge-bg);
     font-family: var(--ff-b);
@@ -203,7 +202,7 @@ main.container-main {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   BCG MATRIX GRID
+   BCG MATRIX GRID (using your backend variables)
 ═══════════════════════════════════════════════════════════════ */
 .bcg-grid {
     display: grid;
@@ -272,15 +271,16 @@ main.container-main {
 /* ═══════════════════════════════════════════════════════════════
    STOCK VELOCITY TABLE (responsive)
 ═══════════════════════════════════════════════════════════════ */
-.velocity-table-wrap {
+.velocity-table-wrap,
+.profit-table-wrap {
     overflow-x: auto;
 }
-.velocity-table {
+.velocity-table, .profit-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
 }
-.velocity-table th {
+.velocity-table th, .profit-table th {
     text-align: left;
     padding: 0.75rem 0.8rem;
     background: var(--ge-surface-3);
@@ -291,12 +291,12 @@ main.container-main {
     font-size: 0.7rem;
     border-bottom: 1px solid var(--ge-border);
 }
-.velocity-table td {
+.velocity-table td, .profit-table td {
     padding: 0.7rem 0.8rem;
     border-bottom: 1px solid var(--ge-border);
     color: var(--ge-text-2);
 }
-.velocity-table tr:hover td { background: var(--ge-surface-2); }
+.velocity-table tr:hover td, .profit-table tr:hover td { background: var(--ge-surface-2); }
 .badge-velocity {
     display: inline-block;
     padding: 0.2rem 0.7rem;
@@ -308,6 +308,19 @@ main.container-main {
 .badge-moderate { background: rgba(201,162,40,0.12); color: var(--ge-gold); border: 1px solid rgba(201,162,40,0.3); }
 .badge-slow { background: rgba(248,113,113,0.12); color: var(--ge-danger); border: 1px solid rgba(248,113,113,0.25); }
 
+.profit-bar-track {
+    height: 8px;
+    background: var(--ge-surface-3);
+    border-radius: 99px;
+    overflow: hidden;
+}
+.profit-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--ge-gold), var(--ge-green));
+}
+.profit-amount { font-weight: 700; font-family: var(--ff-d); }
+
 /* ═══════════════════════════════════════════════════════════════
    UTILITIES
 ═══════════════════════════════════════════════════════════════ */
@@ -317,46 +330,26 @@ main.container-main {
     margin-bottom: 1rem;
     flex-wrap: wrap;
 }
-.section-nav .btn-outline-ge {
-    background: transparent;
-    border: 1px solid var(--ge-border-hi);
-    color: var(--ge-muted);
-    border-radius: 40px;
-    padding: 0.35rem 1rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    transition: all 0.15s;
-    cursor: pointer;
-}
-.section-nav .btn-outline-ge:hover {
-    border-color: var(--ge-gold);
-    color: var(--ge-gold);
-}
-.section-nav .btn-outline-ge.active {
-    background: var(--ge-gold-dim);
-    border-color: var(--ge-gold);
-    color: var(--ge-gold);
-}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="inv-page">
 
-    <!-- Hero – same as invoice page -->
+    <!-- Hero (same as invoice page) -->
     <div class="inv-hero">
         <div class="inv-hero-inner">
-            <div class="inv-hero-eyebrow">✦ mInventory &middot; Analytics</div>
+            <div class="inv-hero-eyebrow">✦ mInventory · Analytics</div>
             <h2 class="inv-hero-title">BCG portfolio analysis,<br>stock velocity & profitability intelligence</h2>
             <p class="inv-hero-sub">Last 90 days · BCG Matrix &nbsp;|&nbsp; Last 30 days · Velocity</p>
         </div>
         <div class="d-flex gap-2 align-items-center">
             <button type="button" id="themeToggle" class="btn-hero-back" style="background: transparent; border: 1px solid var(--ge-border-hi);">🌙 Dark</button>
-            <a href="{{ url_for('inventory.inventory_dashboard') }}" class="btn-hero-back">← Back to Inventory</a>
+            <a href="{{ url_for('inventory.inventory') }}" class="btn-hero-back">← Back to Inventory</a>
         </div>
     </div>
 
-    <!-- BCG Matrix Section -->
+    <!-- ── BCG MATRIX (using your variables) ───────────────────────── -->
     <div class="ge-card">
         <div class="ge-card-header">
             <span class="step-pill">📊</span>
@@ -370,10 +363,19 @@ main.container-main {
                         <span>✦ STARS</span>
                         <span class="bcg-badge">High Sales · High Margin</span>
                     </div>
-                    <div class="bcg-item"><strong>Organic Almond Milk</strong> <span class="bcg-percent">+32%</span></div>
-                    <div class="bcg-item"><strong>SuperGreen Powder</strong> <span class="bcg-percent">+28%</span></div>
-                    <div class="bcg-item"><strong>Probiotic Kombucha</strong> <span class="bcg-percent">+41%</span></div>
-                    <div class="empty-message" style="margin-top: 0.5rem;">Your best performers – protect and grow these</div>
+                    {% if bcg_matrix.stars %}
+                        {% for item in bcg_matrix.stars[:4] %}
+                        <div class="bcg-item">
+                            <strong>{{ item.name }}</strong>
+                            <span class="bcg-percent">{{ item.units_sold|int }} sold · {{ "%.0f"|format(item.profit_margin) }}%</span>
+                        </div>
+                        {% endfor %}
+                        {% if bcg_matrix.stars|length > 4 %}
+                        <div class="empty-message" style="margin-top:0.5rem;">+{{ bcg_matrix.stars|length - 4 }} more</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="empty-message">No products qualify yet.<br>Sell more of your high-margin items.</div>
+                    {% endif %}
                 </div>
                 <!-- CASH COWS -->
                 <div class="bcg-quadrant">
@@ -381,9 +383,19 @@ main.container-main {
                         <span>🐄 CASH COWS</span>
                         <span class="bcg-badge">High Volume · Lower Margin</span>
                     </div>
-                    <div class="bcg-item"><strong>Whole Wheat Bread</strong> <span class="bcg-percent">+12%</span></div>
-                    <div class="bcg-item"><strong>Farm Fresh Eggs (12pk)</strong> <span class="bcg-percent">+9%</span></div>
-                    <div class="empty-message" style="margin-top: 0.5rem;">Reliable revenue engines – keep them stocked</div>
+                    {% if bcg_matrix.cash_cows %}
+                        {% for item in bcg_matrix.cash_cows[:4] %}
+                        <div class="bcg-item">
+                            <strong>{{ item.name }}</strong>
+                            <span class="bcg-percent">{{ item.units_sold|int }} sold · {{ "%.0f"|format(item.profit_margin) }}%</span>
+                        </div>
+                        {% endfor %}
+                        {% if bcg_matrix.cash_cows|length > 4 %}
+                        <div class="empty-message">+{{ bcg_matrix.cash_cows|length - 4 }} more</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="empty-message">None yet. High-volume items with thin margins appear here.</div>
+                    {% endif %}
                 </div>
                 <!-- QUESTION MARKS -->
                 <div class="bcg-quadrant">
@@ -391,9 +403,19 @@ main.container-main {
                         <span>❓ QUESTION MARKS</span>
                         <span class="bcg-badge">High Margin · Low Volume</span>
                     </div>
-                    <div class="bcg-item"><strong>Milk</strong> <span class="bcg-percent">22% sold</span></div>
-                    <div class="bcg-item"><strong>Artisan Sourdough</strong> <span class="bcg-percent">17% sold</span></div>
-                    <div class="empty-message" style="margin-top: 0.5rem;">High potential — invest in marketing these</div>
+                    {% if bcg_matrix.question_marks %}
+                        {% for item in bcg_matrix.question_marks[:4] %}
+                        <div class="bcg-item">
+                            <strong>{{ item.name }}</strong>
+                            <span class="bcg-percent">{{ item.units_sold|int }} sold · {{ "%.0f"|format(item.profit_margin) }}%</span>
+                        </div>
+                        {% endfor %}
+                        {% if bcg_matrix.question_marks|length > 4 %}
+                        <div class="empty-message">+{{ bcg_matrix.question_marks|length - 4 }} more</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="empty-message">None yet. Niche high-margin items appear here.</div>
+                    {% endif %}
                 </div>
                 <!-- DOGS -->
                 <div class="bcg-quadrant">
@@ -401,44 +423,122 @@ main.container-main {
                         <span>🐕 DOGS</span>
                         <span class="bcg-badge">Low Volume · Low Margin</span>
                     </div>
-                    <div class="bcg-item"><strong>Milk</strong> <span class="bcg-percent">3 sold · 29%</span></div>
-                    <div class="bcg-item"><strong>ABC test</strong> <span class="bcg-percent">3 sold · 23%</span></div>
-                    <div class="empty-message" style="margin-top: 0.5rem;">Review pricing or consider discontinuing</div>
+                    {% if bcg_matrix.dogs %}
+                        {% for item in bcg_matrix.dogs[:4] %}
+                        <div class="bcg-item">
+                            <strong>{{ item.name }}</strong>
+                            <span class="bcg-percent">{{ item.units_sold|int }} sold · {{ "%.0f"|format(item.profit_margin) }}%</span>
+                        </div>
+                        {% endfor %}
+                        {% if bcg_matrix.dogs|length > 4 %}
+                        <div class="empty-message">+{{ bcg_matrix.dogs|length - 4 }} more</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="empty-message">Great — no underperforming products.</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Stock Velocity Table -->
+    <!-- ── STOCK VELOCITY (your turnover variable) ──────────────────── -->
     <div class="ge-card">
         <div class="ge-card-header">
             <span class="step-pill">⚡</span>
             Stock Velocity <span style="font-size:0.7rem; font-weight:normal; margin-left:0.5rem;">(Last 30 days)</span>
             <div class="ms-auto section-nav" style="margin:0;">
-                <button class="btn-outline-ge active">Fast mover</button>
-                <button class="btn-outline-ge">Moderate</button>
-                <button class="btn-outline-ge">Slow</button>
+                <button class="btn-hero-back active" data-filter="all" style="padding:0.3rem 0.8rem;">All</button>
+                <button class="btn-hero-back" data-filter="fast" style="padding:0.3rem 0.8rem;">Fast mover</button>
+                <button class="btn-hero-back" data-filter="moderate" style="padding:0.3rem 0.8rem;">Moderate</button>
+                <button class="btn-hero-back" data-filter="slow" style="padding:0.3rem 0.8rem;">Slow</button>
             </div>
         </div>
         <div class="ge-card-body">
+            {% if turnover %}
             <div class="velocity-table-wrap">
-                <table class="velocity-table">
+                <table class="velocity-table" id="velocityTable">
                     <thead>
                         <tr><th>PRODUCT</th><th>IN STOCK</th><th>SOLD (30d)</th><th>VELOCITY</th><th>STATUS</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td><strong>Organic Almond Milk</strong></td><td>142</td><td>89</td><td><span class="badge-velocity badge-fast">Fast mover</span></td><td>✨ High Demand</td></tr>
-                        <tr><td><strong>Whole Wheat Bread</strong></td><td>203</td><td>124</td><td><span class="badge-velocity badge-fast">Fast mover</span></td><td>✔️ Stocked</td></tr>
-                        <tr><td><strong>Probiotic Kombucha</strong></td><td>68</td><td>77</td><td><span class="badge-velocity badge-fast">Fast mover</span></td><td>⚠️ Low stock alert</td></tr>
-                        <tr><td><strong>Farm Fresh Eggs</strong></td><td>312</td><td>98</td><td><span class="badge-velocity badge-moderate">Moderate</span></td><td>✔️ Stable</td></tr>
-                        <tr><td><strong>Artisan Sourdough</strong></td><td>45</td><td>28</td><td><span class="badge-velocity badge-moderate">Moderate</span></td><td>↗️ Growing</td></tr>
-                        <tr><td><strong>SuperGreen Powder</strong></td><td>19</td><td>11</td><td><span class="badge-velocity badge-slow">Slow</span></td><td>📉 Review pricing</td></tr>
-                        <tr><td><strong>ABC test SKU</strong></td><td>12</td><td>3</td><td><span class="badge-velocity badge-slow">Slow</span></td><td>❌ Discontinued soon</td></tr>
+                        {% for item in turnover %}
+                        {% set status_class = 'badge-fast' if item.status == 'Fast' else ('badge-moderate' if item.status == 'Moderate' else 'badge-slow') %}
+                        <tr data-status="{{ item.status|lower }}">
+                            <td><strong>{{ item.name }}</strong><br><span class="text-muted" style="font-size:0.7rem;">{{ "%.1f"|format(item.turnover_ratio) }}x ratio · {{ item.days_to_sell|int }}d to sell out</span></td>
+                            <td>{{ item.current_stock|int }}</td>
+                            <td>{{ item.units_sold|int }}</td>
+                            <td><span class="badge-velocity {{ status_class }}">{{ item.status }}</span></td>
+                            <td>{% if item.status == 'Fast' %}✨ High Demand{% elif item.status == 'Moderate' %}✔️ Stable{% else %}📉 Slow mover{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-message">No sales movement data yet. Create some invoices to see velocity.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── PROFITABILITY (your profitability variable) ─────────────── -->
+    {% if profitability %}
+    <div class="ge-card">
+        <div class="ge-card-header">
+            <span class="step-pill">💰</span>
+            Top Profit Contributors
+        </div>
+        <div class="ge-card-body">
+            <div class="profit-table-wrap">
+                <table class="profit-table">
+                    <thead>
+                        <tr><th>PRODUCT</th><th>UNITS SOLD</th><th>PROFIT / UNIT</th><th>TOTAL PROFIT</th></tr>
+                    </thead>
+                    <tbody>
+                        {% set max_profit = profitability|map(attribute='total_profit')|max %}
+                        {% for item in profitability %}
+                        {% set bar_pct = (item.total_profit / max_profit * 100)|int if max_profit > 0 else 0 %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td>{{ item.units_sold|int }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(item.profit_per_unit) }}</td>
+                            <td><div class="d-flex align-items-center gap-2"><div class="profit-bar-track flex-grow-1"><div class="profit-bar-fill" style="width: {{ bar_pct }}%"></div></div><span class="profit-amount">{{ currency_symbol }}{{ "%.0f"|format(item.total_profit) }}</span></div></td>
+                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+    {% endif %}
+
+    <!-- ── SLOW MOVERS (your slow_movers variable) ────────────────── -->
+    {% if slow_movers %}
+    <div class="ge-card">
+        <div class="ge-card-header">
+            <span class="step-pill">🐌</span>
+            Slow Movers (90+ Days No Sale)
+        </div>
+        <div class="ge-card-body">
+            <div class="velocity-table-wrap">
+                <table class="velocity-table">
+                    <thead>
+                        <tr><th>PRODUCT</th><th>STOCK</th><th>LAST SALE</th><th>DAYS INACTIVE</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in slow_movers[:10] %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td>{{ item.current_stock|int }}</td>
+                            <td>{{ item.last_sale_date }}</td>
+                            <td><span class="badge-velocity badge-slow">{{ item.days_inactive }}d</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 </div> <!-- /.inv-page -->
 
@@ -458,39 +558,31 @@ main.container-main {
             }
         }
         
-        if (savedTheme) {
-            applyTheme(savedTheme);
-        } else {
-            applyTheme('dark');
-        }
+        if (savedTheme) applyTheme(savedTheme);
+        else applyTheme('dark');
         
         if (themeToggle) {
             themeToggle.addEventListener('click', () => {
                 const isLight = document.body.classList.contains('light-mode');
-                const newTheme = isLight ? 'dark' : 'light';
-                applyTheme(newTheme);
-                localStorage.setItem('groweasy_theme', newTheme);
+                applyTheme(isLight ? 'dark' : 'light');
+                localStorage.setItem('groweasy_theme', isLight ? 'dark' : 'light');
             });
         }
 
-        // --- Velocity filter stub (UI only – can be extended) ---
-        const filterBtns = document.querySelectorAll('.section-nav .btn-outline-ge');
-        const tableRows = document.querySelectorAll('.velocity-table tbody tr');
+        // --- Velocity filter (fast/moderate/slow/all) ---
+        const filterBtns = document.querySelectorAll('.section-nav .btn-hero-back');
+        const tableRows = document.querySelectorAll('#velocityTable tbody tr');
         filterBtns.forEach(btn => {
             btn.addEventListener('click', function() {
                 filterBtns.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                const filter = this.innerText.trim().toLowerCase();
+                const filter = this.dataset.filter;
                 tableRows.forEach(row => {
-                    const velCell = row.querySelector('.badge-velocity');
-                    let vel = '';
-                    if (velCell) vel = velCell.innerText.trim().toLowerCase();
-                    if (filter === 'fast mover' && vel.includes('fast')) row.style.display = '';
-                    else if (filter === 'moderate' && vel.includes('moderate')) row.style.display = '';
-                    else if (filter === 'slow' && vel.includes('slow')) row.style.display = '';
-                    else if (filter === 'fast mover' && !vel.includes('fast')) row.style.display = 'none';
-                    else if (filter === 'moderate' && !vel.includes('moderate')) row.style.display = 'none';
-                    else if (filter === 'slow' && !vel.includes('slow')) row.style.display = 'none';
+                    if (filter === 'all') row.style.display = '';
+                    else {
+                        const status = row.dataset.status;
+                        row.style.display = (status === filter) ? '' : 'none';
+                    }
                 });
             });
         });
