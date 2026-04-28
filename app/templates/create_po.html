@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Create Purchase Order{% endblock %}
+{% block title %}Create Purchase Order — GrowEasy{% endblock %}
 
 {% block extra_head %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
 
 <script nonce="{{ nonce }}">
     (function(){
@@ -18,431 +18,439 @@
 </script>
 
 <style nonce="{{ nonce }}">
-/* ── GrowEasy Design Tokens ─────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   GROWEASY DESIGN TOKENS – identical to form.html
+═══════════════════════════════════════════════════════════════ */
 :root,
 [data-theme="dark"] {
-    --bg:         #0c110a;
-    --surface:    #131a10;
-    --surface-2:  #192214;
-    --surface-3:  #1f2c19;
-    --border:     #222e1c;
-    --border-hi:  #2e3f25;
-    --gold:       #c9a228;
-    --gold-2:     #e2c040;
-    --gold-dim:   rgba(201,162,40,.10);
-    --text:       #e2e8d4;
-    --text-2:     #b5c4a0;
-    --muted:      #7d9068;
-    --faint:      #485c38;
-    --green-acc:  #5aad78;
-    --danger:     #e07070;
-    --info:       #6db8d4;
-    --warning:    #d4a040;
-    --card-shadow: 0 1px 3px rgba(0,0,0,.40), 0 6px 24px rgba(0,0,0,.30);
-    --input-bg:   #192214;
-    --input-border: #2e3f25;
-    --code-bg:    #1f2c19;
-}
-[data-theme="light"] {
-    --bg:         #f4f6f0;
-    --surface:    #ffffff;
-    --surface-2:  #eef2e9;
-    --surface-3:  #e4edd9;
-    --border:     #d8e2d0;
-    --border-hi:  #c0d4b4;
-    --gold:       #9a7212;
-    --gold-2:     #b8890f;
-    --gold-dim:   rgba(154,114,18,.10);
-    --text:       #182012;
-    --text-2:     #3a5028;
-    --muted:      #6a8558;
-    --faint:      #a8c090;
-    --green-acc:  #2d8a50;
-    --danger:     #c0392b;
-    --info:       #1a7fa0;
-    --warning:    #c07800;
-    --card-shadow: 0 1px 3px rgba(0,0,0,.08), 0 6px 24px rgba(0,0,0,.06);
-    --input-bg:   #ffffff;
-    --input-border: #c0d4b4;
-    --code-bg:    #eef2e9;
+    --ge-bg:          #121f17;
+    --ge-surface:     #192a1f;
+    --ge-surface-2:   #21362a;
+    --ge-surface-3:   #2a4232;
+    --ge-border:      #2a4232;
+    --ge-border-hi:   #3b5a46;
+    --ge-gold:        #c9a228;
+    --ge-gold-2:      #d4b03a;
+    --ge-gold-dim:    rgba(201, 162, 40, 0.08);
+    --ge-gold-glow:   rgba(201, 162, 40, 0.12);
+    --ge-green:       #4ade80;
+    --ge-green-dim:   rgba(74, 222, 128, 0.06);
+    --ge-green-hi:    rgba(74, 222, 128, 0.12);
+    --ge-text:        #eaf7ef;
+    --ge-muted:       #9bb7a3;
+    --ge-faint:       #5c7c68;
+    --ge-danger:      #f87171;
+    --ge-info:        #6db8d4;
+    --ge-warning:     #fbbf24;
+    --ff-d:           'Bricolage Grotesque', sans-serif;
+    --ff-b:           'Figtree', sans-serif;
+    --radius-card:    16px;
+    --radius-input:   10px;
+    --shadow-card:    0 4px 12px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* ── Base & Fluid Layout ───────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
+[data-theme="light"] {
+    --ge-bg:          #f8fafc;
+    --ge-surface:     #ffffff;
+    --ge-surface-2:   #f1f5f9;
+    --ge-surface-3:   #e2e8f0;
+    --ge-border:      #cbd5e1;
+    --ge-border-hi:   #94a3b8;
+    --ge-text:        #0f172a;
+    --ge-muted:       #475569;
+    --ge-faint:       #94a3b8;
+    --ge-gold:        #b8860b;
+    --ge-gold-2:      #d4a017;
+    --ge-gold-dim:    rgba(184, 134, 11, 0.08);
+    --ge-gold-glow:   rgba(184, 134, 11, 0.15);
+    --ge-green:       #16a34a;
+    --ge-green-dim:   rgba(22, 163, 74, 0.08);
+    --ge-green-hi:    rgba(22, 163, 74, 0.15);
+    --shadow-card:    0 1px 3px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.05);
+}
+
+* { box-sizing: border-box; }
 
 body {
-    font-family: 'Figtree', sans-serif;
-    font-weight: 400;
-    background: var(--bg);
-    color: var(--text);
+    background: var(--ge-bg);
+    font-family: var(--ff-b);
+    color: var(--ge-text);
     min-height: 100vh;
-    line-height: 1.5;
 }
 
-/* Fluid full‑width wrapper */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE SHELL
+═══════════════════════════════════════════════════════════════ */
 .po-page {
-    width: 100%;
     min-height: 100vh;
-    background: var(--bg);
+    padding: 1.5rem;
+    background: var(--ge-bg);
 }
-
 .po-inner {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 1.5rem 2rem 2.5rem;
     width: 100%;
 }
 
-/* Hero */
-.po-hero {
+/* ═══════════════════════════════════════════════════════════════
+   HERO (identical to invoice page)
+═══════════════════════════════════════════════════════════════ */
+.inv-hero {
     position: relative;
-    overflow: hidden;
-    background: var(--surface-2);
-    border-bottom: 1px solid var(--border);
-    padding: 2rem 2rem;
+    background: var(--ge-surface-2);
+    border: 1px solid var(--ge-border-hi);
+    border-radius: 18px;
+    padding: 1.8rem 2rem 1.8rem 2.5rem;
+    margin-bottom: 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
 }
-
-/* Islamic hexagonal lattice */
-.po-hero::before {
+.inv-hero::before {
     content: '';
     position: absolute;
     inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zm0 0l28 16v16H0V82l28-16z' fill='none' stroke='%23c9a228' stroke-opacity='0.09' stroke-width='1'/%3E%3C/svg%3E");
-    background-size: 56px 100px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.18'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
     pointer-events: none;
+    opacity: 0.3;
 }
-
-/* Gold left stripe */
-.po-hero::after {
+.inv-hero::after {
     content: '';
     position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, var(--gold), var(--gold-2));
+    left: 0; top: 16px; bottom: 16px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--ge-gold-2) 0%, var(--ge-gold) 60%, transparent 100%);
+    border-radius: 0 2px 2px 0;
 }
-
-.po-hero-text { position: relative; z-index: 1; }
-.po-hero-text h2 {
-    font-family: 'Bricolage Grotesque', sans-serif;
-    font-weight: 800;
-    font-size: 1.6rem;
-    margin: 0;
-    letter-spacing: -0.02em;
-}
-.po-hero-text p {
-    margin: 0.25rem 0 0;
-    color: var(--muted);
-    font-size: 0.88rem;
-}
-
-.po-hero-actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 0.75rem; }
-
-/* Theme toggle */
-.theme-toggle {
-    background: var(--gold-dim);
-    border: 1px solid var(--border-hi);
-    color: var(--gold);
-    border-radius: 8px;
-    padding: 0.5rem 0.9rem;
-    font-size: 0.8rem;
+.inv-hero-inner { position: relative; z-index: 1; }
+.inv-hero-eyebrow {
+    font-size: 0.68rem;
     font-weight: 600;
-    cursor: pointer;
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ge-gold);
+    margin-bottom: 0.3rem;
 }
-.theme-toggle:hover { background: rgba(201,162,40,.18); border-color: var(--gold); }
-
-.btn-back {
-    background: var(--gold-dim);
-    border: 1px solid var(--border-hi);
-    color: var(--text-2);
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+.inv-hero-title {
+    font-family: var(--ff-d);
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+}
+.inv-hero-sub {
+    font-size: 0.82rem;
+    color: var(--ge-muted);
+    margin: 0.4rem 0 0;
+    font-weight: 300;
+    font-style: italic;
+}
+.btn-hero-back {
+    position: relative;
+    z-index: 1;
+    font-size: 0.8rem;
     font-weight: 500;
+    color: var(--ge-muted);
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--ge-border-hi);
+    border-radius: 8px;
+    padding: 0.5rem 1.1rem;
     text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    min-height: 40px;
+    transition: all 0.18s;
+    white-space: nowrap;
+    display: inline-block;
+    cursor: pointer;
 }
-.btn-back:hover { background: var(--surface-3); color: var(--text); border-color: var(--gold); }
+.btn-hero-back:hover {
+    color: var(--ge-text);
+    border-color: rgba(201,162,40,.4);
+    background: var(--ge-gold-dim);
+}
 
-/* Cards */
-.po-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: var(--card-shadow);
-    margin-bottom: 1.25rem;
+/* ═══════════════════════════════════════════════════════════════
+   CARDS (same as invoice card)
+═══════════════════════════════════════════════════════════════ */
+.ge-card {
+    background: var(--ge-surface);
+    border: 1px solid var(--ge-border-hi);
+    border-radius: var(--radius-card);
+    margin-bottom: 1.1rem;
     overflow: hidden;
+    box-shadow: var(--shadow-card);
 }
-.po-card-header {
-    padding: 0.85rem 1.4rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface-2);
+.ge-card-header {
+    padding: 0.8rem 1.4rem;
+    border-bottom: 1px solid var(--ge-border);
     display: flex;
     align-items: center;
     gap: 0.65rem;
-    font-family: 'Bricolage Grotesque', sans-serif;
+    font-family: var(--ff-d);
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    background: linear-gradient(90deg, var(--ge-surface-2) 0%, var(--ge-surface) 100%);
 }
-.po-card-body { padding: 1.4rem; }
-
-.step-num {
-    background: linear-gradient(135deg, var(--gold), var(--gold-2));
-    color: #0c110a;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
+.ge-card-body { padding: 1.5rem; }
+.ge-card-body.p-0 { padding: 0; }
+.step-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.68rem;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--ge-gold-dim);
+    border: 1px solid rgba(201,162,40,.25);
+    color: var(--ge-gold);
+    font-size: 0.65rem;
     font-weight: 800;
-    font-family: 'Bricolage Grotesque', sans-serif;
-    flex-shrink: 0;
-}
-
-/* Labels */
-.field-label {
-    font-size: 0.67rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    margin-bottom: 0.3rem;
-    font-family: 'Figtree', sans-serif;
+    font-family: var(--ff-b);
 }
 
 /* Form controls */
-.form-control,
-.form-select {
-    background: var(--input-bg) !important;
-    border: 1px solid var(--input-border) !important;
-    color: var(--text) !important;
-    border-radius: 8px;
-    font-family: 'Figtree', sans-serif;
-    font-size: 0.88rem;
-    padding: 0.5rem 0.75rem;
+.form-control, .form-select {
+    background: var(--ge-surface-3);
+    border: 1px solid var(--ge-border-hi);
+    color: var(--ge-text);
+    font-family: var(--ff-b);
+    font-size: 0.87rem;
+    border-radius: var(--radius-input);
+    padding: 0.6rem 0.9rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--gold) !important;
-    box-shadow: 0 0 0 3px rgba(201,162,40,.15) !important;
+.form-control:focus, .form-select:focus {
+    background: var(--ge-surface-2);
+    border-color: var(--ge-gold);
+    box-shadow: 0 0 0 2px rgba(201,162,40,0.2);
     outline: none;
+}
+.field-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--ge-muted);
+    margin-bottom: 0.4rem;
+    display: block;
 }
 
 /* Supplier preview */
 #supplierPreview {
-    background: var(--surface-2) !important;
-    border: 1px solid var(--border-hi) !important;
-    border-radius: 10px;
-    padding: 1rem 1.2rem;
+    background: var(--ge-surface-2);
+    border: 1px solid var(--ge-border-hi);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
 }
 
 /* Items table */
-.items-tbl { width: 100%; border-collapse: collapse; }
+.items-tbl {
+    width: 100%;
+    border-collapse: collapse;
+}
 .items-tbl th {
-    background: var(--surface-3);
-    color: var(--muted);
+    background: var(--ge-surface-3);
+    color: var(--ge-muted);
     padding: 0.65rem 0.85rem;
     font-size: 0.67rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
     text-align: left;
-    border-bottom: 1px solid var(--border-hi);
 }
 .items-tbl td {
     padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--ge-border);
     vertical-align: middle;
-    font-size: 0.88rem;
-}
-.items-tbl tr:hover td { background: var(--surface-2); }
-
-.item-total-cell {
-    font-family: 'Bricolage Grotesque', sans-serif;
-    font-weight: 700;
-    color: var(--gold);
-    font-size: 0.92rem;
 }
 .qty-input, .price-input {
-    background: var(--input-bg);
-    border: 1px solid var(--input-border);
-    color: var(--text);
-    border-radius: 7px;
-    font-family: 'Bricolage Grotesque', sans-serif;
-    font-weight: 600;
-    font-size: 0.88rem;
+    background: var(--ge-surface-3);
+    border: 1px solid var(--ge-border-hi);
+    color: var(--ge-text);
+    border-radius: 8px;
+    font-size: 0.85rem;
     padding: 0.4rem 0.55rem;
     width: 85px;
 }
-.btn-remove-row {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--danger);
-    border-radius: 7px;
-    padding: 0.4rem 0.6rem;
-    cursor: pointer;
-    min-height: 36px;
+.item-total-cell {
+    font-family: var(--ff-d);
+    font-weight: 700;
+    color: var(--ge-gold);
 }
-.btn-remove-row:hover { background: rgba(224,112,112,.12); border-color: var(--danger); }
-
+.btn-remove-row {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.2);
+    color: var(--ge-danger);
+    border-radius: 6px;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.btn-remove-row:hover {
+    background: rgba(248,113,113,0.2);
+}
 .subtotal-strip {
     padding: 0.85rem 1.2rem;
-    border-top: 1px solid var(--border);
-    background: var(--surface-2);
+    border-top: 1px solid var(--ge-border);
+    background: var(--ge-surface-2);
     display: flex;
     justify-content: flex-end;
-    align-items: center;
     gap: 1rem;
+    align-items: center;
 }
 #subtotalDisplay {
-    font-family: 'Bricolage Grotesque', sans-serif;
+    font-family: var(--ff-d);
     font-weight: 700;
     font-size: 1.2rem;
-    color: var(--gold);
+    color: var(--ge-gold);
+}
+
+/* Add from inventory button */
+.btn-add-inv {
+    background: var(--ge-gold-dim);
+    border: 1px solid var(--ge-border-hi);
+    color: var(--ge-gold);
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.btn-add-inv:hover {
+    background: var(--ge-gold-glow);
+    border-color: var(--ge-gold);
 }
 
 /* Totals box */
 .totals-box {
-    background: var(--surface-3);
-    border: 1px solid var(--border-hi);
+    background: var(--ge-surface-2);
+    border: 1px solid var(--ge-border-hi);
     border-radius: 12px;
-    padding: 1.2rem 1.4rem;
-    position: relative;
-    overflow: hidden;
-}
-.totals-box::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zm0 0l28 16v16H0V82l28-16z' fill='none' stroke='%23c9a228' stroke-opacity='0.06' stroke-width='1'/%3E%3C/svg%3E");
-    background-size: 56px 100px;
-    pointer-events: none;
+    padding: 1.2rem;
 }
 .totals-line {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.5rem;
-    color: var(--text-2);
+    color: var(--ge-muted);
 }
 .totals-grand {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-size: 1.25rem;
-    font-weight: 800;
     margin-top: 0.8rem;
-    padding-top: 0.85rem;
-    border-top: 1px solid var(--border-hi);
-    font-family: 'Bricolage Grotesque', sans-serif;
-    color: var(--text);
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--ge-border);
+    font-family: var(--ff-d);
+    font-weight: 800;
 }
-.totals-grand span:last-child { color: var(--gold-2); font-size: 1.45rem; }
+.totals-grand span:last-child {
+    font-size: 1.4rem;
+    color: var(--ge-gold-2);
+}
 
-/* Primary gold button */
+/* Primary button */
 .btn-po-submit {
-    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    background: linear-gradient(135deg, var(--ge-gold), var(--ge-gold-2));
     border: none;
     border-radius: 10px;
     color: #0c110a;
     font-weight: 700;
-    font-size: 0.97rem;
-    padding: 0.9rem 2rem;
+    font-size: 0.95rem;
+    padding: 0.8rem 1.5rem;
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
     cursor: pointer;
-    min-height: 52px;
+    transition: all 0.2s;
 }
-.btn-po-submit:hover { filter: brightness(1.08); transform: translateY(-1px); }
-
-/* Add from inventory button */
-.btn-add-inv {
-    background: var(--gold-dim);
-    border: 1px solid var(--border-hi);
-    color: var(--gold);
-    border-radius: 8px;
-    padding: 0.5rem 0.85rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    cursor: pointer;
-    min-height: 38px;
+.btn-po-submit:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
 }
-.btn-add-inv:hover { background: rgba(201,162,40,.2); border-color: var(--gold); }
 
-/* Modal */
+/* Modal (same as invoice modal) */
 .modal-content {
-    background: var(--surface) !important;
-    border: 1px solid var(--border-hi) !important;
-    border-radius: 16px;
+    background: var(--ge-surface);
+    border: 1px solid var(--ge-border-hi);
+    border-radius: var(--radius-card);
 }
 .modal-header-ge {
-    background: var(--surface-2);
-    border-bottom: 1px solid var(--border);
+    background: var(--ge-surface-2);
+    border-bottom: 1px solid var(--ge-border);
     padding: 1rem 1.4rem;
     display: flex;
     justify-content: space-between;
+    align-items: center;
 }
-.inv-table { width: 100%; border-collapse: collapse; }
+.modal-body-ge { padding: 1.2rem; }
+.modal-footer-ge {
+    padding: 0.8rem 1.2rem;
+    border-top: 1px solid var(--ge-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+.inv-table {
+    width: 100%;
+    border-collapse: collapse;
+}
 .inv-table th {
-    background: var(--surface-3);
-    padding: 0.6rem 0.8rem;
-    font-size: 0.67rem;
-    font-weight: 700;
+    background: var(--ge-surface-3);
+    padding: 0.6rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
 }
+.inv-table td {
+    padding: 0.6rem;
+    border-bottom: 1px solid var(--ge-border);
+}
 .form-check-input:checked {
-    background-color: var(--gold) !important;
-    border-color: var(--gold) !important;
+    background-color: var(--ge-gold);
+    border-color: var(--ge-gold);
+}
+.btn-ge-secondary {
+    background: var(--ge-surface-3);
+    border: 1px solid var(--ge-border);
+    color: var(--ge-muted);
+    border-radius: 8px;
+    padding: 0.4rem 1rem;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
-    .po-inner { padding: 1rem; }
-    .po-hero { padding: 1.5rem; }
+    .po-inner { padding: 0; }
+    .inv-hero { padding: 1.2rem; }
     .items-tbl, .items-tbl tbody, .items-tbl tr, .items-tbl td { display: block; width: 100%; }
     .items-tbl thead { display: none; }
-    .items-tbl tr { margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 12px; }
-    .items-tbl td { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-    .items-tbl td::before { content: attr(data-label); font-weight: 700; color: var(--gold); width: 40%; }
-    .qty-input, .price-input { width: 100px; }
-    .btn-po-submit { padding: 0.75rem; }
+    .items-tbl tr { margin-bottom: 1rem; border: 1px solid var(--ge-border); border-radius: 12px; }
+    .items-tbl td { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--ge-border); }
+    .items-tbl td::before { content: attr(data-label); font-weight: 700; width: 40%; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="po-page">
-    <div class="po-hero">
-        <div class="po-hero-text">
-            <h2><i class="bi bi-cart-plus me-2 text-gold"></i>Create Purchase Order</h2>
-            <p>Select supplier, add items, and confirm your order</p>
+    <!-- Hero -->
+    <div class="inv-hero">
+        <div class="inv-hero-inner">
+            <div class="inv-hero-eyebrow">✦ GrowEasy · Purchasing</div>
+            <h2 class="inv-hero-title">Create Purchase Order</h2>
+            <p class="inv-hero-sub">Select supplier, add items, and confirm your order</p>
         </div>
-        <div class="po-hero-actions">
-            <button class="theme-toggle" id="themeToggle" type="button">
-                <i class="bi bi-sun-fill" id="themeIcon"></i>
-                <span id="themeLabel">Light</span>
-            </button>
-            <a href="{{ url_for('purchases.purchase_orders') }}" class="btn-back">
-                <i class="bi bi-arrow-left"></i> All POs
-            </a>
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" id="themeToggle" class="btn-hero-back" style="background:transparent;">🌙 Dark</button>
+            <a href="{{ url_for('purchases.purchase_orders') }}" class="btn-hero-back">← All POs</a>
         </div>
     </div>
 
@@ -456,14 +464,14 @@ body {
 
             <div class="row g-3">
                 <div class="col-lg-8">
-                    <!-- Supplier -->
-                    <div class="po-card">
-                        <div class="po-card-header">
-                            <span class="step-num">1</span>
+                    <!-- Step 1: Supplier -->
+                    <div class="ge-card">
+                        <div class="ge-card-header">
+                            <span class="step-pill">1</span>
                             Supplier
                         </div>
-                        <div class="po-card-body">
-                            <label for="supplier_select" class="field-label mb-2">Select Registered Vendor</label>
+                        <div class="ge-card-body">
+                            <label class="field-label" for="supplier_select">Select Registered Vendor</label>
                             <select name="supplier_id" id="supplier_select" class="form-select mb-3" required>
                                 <option value="">— Choose a supplier —</option>
                                 {% for s in suppliers %}
@@ -477,8 +485,8 @@ body {
                                 {% endfor %}
                             </select>
                             <div id="supplierPreview" style="display:none;">
-                                <div class="section-label">Supplier Details</div>
-                                <div class="row g-2">
+                                <div class="field-label">Supplier Details</div>
+                                <div class="row g-2 mt-1">
                                     <div class="col-6"><div class="field-label">Name</div><div id="prevName" class="fw-semibold"></div></div>
                                     <div class="col-6"><div class="field-label">Phone</div><div id="prevPhone"></div></div>
                                     <div class="col-6"><div class="field-label">Email</div><div id="prevEmail"></div></div>
@@ -488,24 +496,26 @@ body {
                         </div>
                     </div>
 
-                    <!-- Items -->
-                    <div class="po-card">
-                        <div class="po-card-header">
-                            <span class="step-num">2</span>
+                    <!-- Step 2: Items -->
+                    <div class="ge-card">
+                        <div class="ge-card-header">
+                            <span class="step-pill">2</span>
                             Order Items
                             <button type="button" class="btn-add-inv ms-auto" data-bs-toggle="modal" data-bs-target="#inventoryModal">
                                 <i class="bi bi-plus-circle"></i> Add from Inventory
                             </button>
                         </div>
-                        <div class="po-card-body p-0">
+                        <div class="ge-card-body p-0">
                             <div class="table-responsive">
                                 <table class="items-tbl" id="itemsTable">
                                     <thead>
-                                        <tr><th>Product</th><th>SKU</th><th>Qty</th><th>Unit Price</th><th>Total</th><th></th></tr>
+                                        <tr><th style="width:38%;">Product</th><th>SKU</th><th style="width:100px;">Qty</th><th style="width:130px;">Unit Price</th><th style="width:110px;">Total</th><th style="width:44px;"></th></tr>
                                     </thead>
                                     <tbody id="itemsTbody">
                                         <tr id="emptyRow" class="empty-row">
-                                            <td colspan="6" class="text-center py-5 small"><i class="bi bi-cart3 me-1"></i> No items yet — click "Add from Inventory"</td>
+                                            <td colspan="6" class="text-center py-5 small text-muted">
+                                                <i class="bi bi-cart3 me-1"></i> No items yet — click "Add from Inventory"
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -519,50 +529,55 @@ body {
                 </div>
 
                 <div class="col-lg-4">
-                    <!-- Order Details -->
-                    <div class="po-card">
-                        <div class="po-card-header"><span class="step-num">3</span> Order Details</div>
-                        <div class="po-card-body">
+                    <!-- Step 3: Order Details -->
+                    <div class="ge-card">
+                        <div class="ge-card-header">
+                            <span class="step-pill">3</span>
+                            Order Details
+                        </div>
+                        <div class="ge-card-body">
                             <div class="mb-3">
-                                <label for="po_date" class="field-label">PO Date *</label>
+                                <label class="field-label" for="po_date">PO Date *</label>
                                 <input type="date" class="form-control form-control-sm" name="po_date" id="po_date" value="{{ today }}" required>
                             </div>
                             <div class="mb-3">
-                                <label for="delivery_date" class="field-label">Expected Delivery</label>
+                                <label class="field-label" for="delivery_date">Expected Delivery</label>
                                 <input type="date" class="form-control form-control-sm" name="delivery_date" id="delivery_date">
                             </div>
                             <div class="mb-3">
-                                <label for="delivery_method" class="field-label">Delivery Method</label>
+                                <label class="field-label" for="delivery_method">Delivery Method</label>
                                 <select class="form-select form-select-sm" name="delivery_method" id="delivery_method">
                                     <option>Pickup</option><option>Courier</option><option>Supplier Delivery</option>
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label for="sales_tax" class="field-label">Sales Tax (%)</label>
+                                <label class="field-label" for="sales_tax">Sales Tax (%)</label>
                                 <input type="number" class="form-control form-control-sm" name="sales_tax" id="sales_tax" value="17" min="0" max="100" step="0.1">
                             </div>
                             <div class="mb-3">
-                                <label for="shipping_terms" class="field-label">Shipping Terms</label>
+                                <label class="field-label" for="shipping_terms">Shipping Terms</label>
                                 <select class="form-select form-select-sm" name="shipping_terms" id="shipping_terms">
                                     <option>FOB Destination</option><option>FOB Origin</option><option>CIF</option><option>DDP</option>
                                 </select>
                             </div>
                             <div class="mb-0">
-                                <label for="po_notes" class="field-label">Notes</label>
+                                <label class="field-label" for="po_notes">Notes</label>
                                 <textarea class="form-control form-control-sm" name="po_notes" id="po_notes" rows="2" placeholder="Special instructions…"></textarea>
                             </div>
                         </div>
                     </div>
 
                     <!-- Totals + Submit -->
-                    <div class="po-card">
-                        <div class="po-card-body">
+                    <div class="ge-card">
+                        <div class="ge-card-body">
                             <div class="totals-box">
                                 <div class="totals-line"><span>Subtotal</span><span id="totSubtotal">{{ currency_symbol }}0.00</span></div>
                                 <div class="totals-line"><span>Tax (17%)</span><span id="totTax">{{ currency_symbol }}0.00</span></div>
                                 <div class="totals-grand"><span>Total</span><span id="totGrand">{{ currency_symbol }}0.00</span></div>
                             </div>
-                            <div class="mt-3"><button type="submit" class="btn-po-submit"><i class="bi bi-check-circle"></i> Create Purchase Order</button></div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn-po-submit"><i class="bi bi-check-circle"></i> Create Purchase Order</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -574,16 +589,18 @@ body {
 <!-- Inventory Modal -->
 <div class="modal fade" id="inventoryModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0">
+        <div class="modal-content">
             <div class="modal-header-ge">
-                <h5><i class="bi bi-box-seam gold-icon"></i> Add from Inventory</h5>
+                <h5 class="modal-title"><i class="bi bi-box-seam text-gold"></i> Add from Inventory</h5>
                 <button type="button" class="btn-close-ge" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="modal-body-ge">
-                <input type="text" id="modalItemSearch" class="form-control form-control-sm mb-3" placeholder="Search products or SKU…">
+                <input type="text" id="modalItemSearch" class="form-control mb-3" placeholder="Search products or SKU…">
                 <div class="table-responsive" style="max-height:370px; overflow-y:auto;">
                     <table class="inv-table">
-                        <thead><tr><th style="width:38px;"><input type="checkbox" id="selectAll" class="form-check-input" aria-label="Select all products"></th><th>Product</th><th>SKU</th><th>Stock</th><th>Cost Price</th></tr></thead>
+                        <thead>
+                            <tr><th style="width:38px;"><input type="checkbox" id="selectAll" class="form-check-input" aria-label="Select all"></th><th>Product</th><th>SKU</th><th>Stock</th><th>Cost Price</th></tr>
+                        </thead>
                         <tbody id="inventoryModalBody">
                             {% for item in inventory_items %}
                             <tr class="inv-row">
@@ -605,28 +622,29 @@ body {
 </div>
 
 <script nonce="{{ nonce }}">
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const currency = '{{ currency_symbol }}';
     const tbody = document.getElementById('itemsTbody');
     const taxInput = document.querySelector('[name="sales_tax"]');
 
-    // Theme toggle
+    // Theme toggle (same as invoice page)
     const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    const themeLabel = document.getElementById('themeLabel');
-    function applyTheme(t) {
-        document.documentElement.setAttribute('data-theme', t);
-        try { localStorage.setItem('ge-theme', t); } catch(e) {}
-        if (t === 'dark') { themeIcon.className = 'bi bi-sun-fill'; themeLabel.textContent = 'Light'; }
-        else { themeIcon.className = 'bi bi-moon-fill'; themeLabel.textContent = 'Dark'; }
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('ge-theme', theme);
+        themeToggle.innerHTML = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
     }
-    applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
-    themeToggle.addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+    const savedTheme = localStorage.getItem('ge-theme') || 'dark';
+    applyTheme(savedTheme);
+    themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
 
     // Supplier preview
     const supplierSel = document.getElementById('supplier_select');
     const preview = document.getElementById('supplierPreview');
-    supplierSel.addEventListener('change', function () {
+    supplierSel.addEventListener('change', function() {
         const opt = this.options[this.selectedIndex];
         if (!opt.value) { preview.style.display = 'none'; return; }
         document.getElementById('hidden_supplier_name').value = opt.dataset.name || '';
@@ -640,8 +658,8 @@ document.addEventListener('DOMContentLoaded', function () {
         preview.style.display = 'block';
     });
 
-    // Modal search
-    document.getElementById('modalItemSearch').addEventListener('input', function () {
+    // Modal search & select all (same as original)
+    document.getElementById('modalItemSearch').addEventListener('input', function() {
         const term = this.value.toLowerCase();
         document.querySelectorAll('#inventoryModalBody .inv-row').forEach(row => {
             const name = row.querySelector('.fw-semibold').textContent.toLowerCase();
@@ -649,17 +667,17 @@ document.addEventListener('DOMContentLoaded', function () {
             row.style.display = (name.includes(term) || sku.includes(term)) ? '' : 'none';
         });
     });
-
-    // Select all
-    document.getElementById('selectAll').addEventListener('change', function () {
+    document.getElementById('selectAll').addEventListener('change', function() {
         document.querySelectorAll('.item-check').forEach(cb => cb.checked = this.checked);
         updateSelectedCount();
     });
-    function updateSelectedCount() { document.getElementById('selectedCount').textContent = document.querySelectorAll('.item-check:checked').length + ' selected'; }
+    function updateSelectedCount() {
+        document.getElementById('selectedCount').textContent = document.querySelectorAll('.item-check:checked').length + ' selected';
+    }
     document.querySelectorAll('.item-check').forEach(cb => cb.addEventListener('change', updateSelectedCount));
 
     // Add selected items
-    document.getElementById('addInventoryItems').addEventListener('click', function () {
+    document.getElementById('addInventoryItems').addEventListener('click', function() {
         const checked = document.querySelectorAll('.item-check:checked');
         const existing = new Set([...document.querySelectorAll('[name="item_id[]"]')].map(i => i.value));
         checked.forEach(cb => {
@@ -667,37 +685,55 @@ document.addEventListener('DOMContentLoaded', function () {
             const price = parseFloat(cb.dataset.price) || 0;
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><span class="fw-semibold item-name-safe"></span><input type="hidden" name="item_id[]" value="${cb.dataset.id}"></td>
-                <td><code class="item-sku-safe"></code></td>
+                <td><span class="fw-semibold"></span><input type="hidden" name="item_id[]" value="${cb.dataset.id}"></td>
+                <td><code style="background:var(--ge-surface-3);"></code></td>
                 <td><input type="number" name="item_qty[]" value="1" min="1" class="qty-input" style="width:72px;" aria-label="Quantity"></td>
                 <td><input type="number" name="item_price[]" value="${price.toFixed(2)}" step="0.01" min="0" class="price-input" style="width:105px;" aria-label="Unit price"></td>
                 <td class="item-total-cell total-cell">${currency}${price.toFixed(2)}</td>
-                <td><button type="button" class="btn-remove-row remove-row" aria-label="Remove item"><i class="bi bi-trash"></i></button></td>
+                <td><button type="button" class="btn-remove-row remove-row"><i class="bi bi-trash"></i></button></td>
             `;
-            row.querySelector('.item-name-safe').textContent = cb.dataset.name;
-            row.querySelector('.item-sku-safe').textContent = cb.dataset.sku || '—';
+            row.querySelector('.fw-semibold').textContent = cb.dataset.name;
+            row.querySelector('code').textContent = cb.dataset.sku || '—';
             tbody.appendChild(row);
             cb.checked = false;
         });
         const emptyRow = document.getElementById('emptyRow');
         if (emptyRow && tbody.querySelectorAll('tr:not(#emptyRow)').length > 0) emptyRow.style.display = 'none';
-        const modalInst = bootstrap.Modal.getInstance(document.getElementById('inventoryModal')) || new bootstrap.Modal(document.getElementById('inventoryModal'));
-        modalInst.hide();
+        const modal = bootstrap.Modal.getInstance(document.getElementById('inventoryModal'));
+        modal?.hide();
         document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
         document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
         recalcTotals();
         updateSelectedCount();
     });
 
-    // Recalculate totals
-    tbody.addEventListener('input', e => { if (e.target.matches('.qty-input,.price-input')) { const row = e.target.closest('tr'); const qty = parseFloat(row.querySelector('.qty-input').value) || 0; const price = parseFloat(row.querySelector('.price-input').value) || 0; row.querySelector('.total-cell').textContent = currency + (qty * price).toFixed(2); recalcTotals(); } });
-    tbody.addEventListener('click', e => { if (e.target.closest('.remove-row')) { e.target.closest('tr').remove(); const remaining = tbody.querySelectorAll('tr:not(#emptyRow)').length; if (remaining === 0) document.getElementById('emptyRow').style.display = ''; recalcTotals(); } });
+    // Remove row & recalc
+    tbody.addEventListener('click', e => {
+        if (e.target.closest('.remove-row')) {
+            e.target.closest('tr').remove();
+            const remaining = tbody.querySelectorAll('tr:not(#emptyRow)').length;
+            if (remaining === 0) document.getElementById('emptyRow').style.display = '';
+            recalcTotals();
+        }
+    });
+    tbody.addEventListener('input', e => {
+        if (e.target.matches('.qty-input, .price-input')) {
+            const row = e.target.closest('tr');
+            const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+            row.querySelector('.total-cell').textContent = currency + (qty * price).toFixed(2);
+            recalcTotals();
+        }
+    });
     if (taxInput) taxInput.addEventListener('input', recalcTotals);
 
     function recalcTotals() {
         let sub = 0;
-        tbody.querySelectorAll('tr:not(#emptyRow)').forEach(row => { const qty = parseFloat(row.querySelector('.qty-input')?.value) || 0; const price = parseFloat(row.querySelector('.price-input')?.value) || 0; sub += qty * price; });
+        tbody.querySelectorAll('tr:not(#emptyRow)').forEach(row => {
+            const qty = parseFloat(row.querySelector('.qty-input')?.value) || 0;
+            const price = parseFloat(row.querySelector('.price-input')?.value) || 0;
+            sub += qty * price;
+        });
         const taxRate = parseFloat((taxInput && taxInput.value) || 17) / 100;
         const tax = sub * taxRate;
         const grand = sub + tax;
