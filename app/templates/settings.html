@@ -572,6 +572,13 @@ main.container-main {
                                        value="{{ user_profile['company_tax_id'] or '' }}"
                                        placeholder="NTN / VAT">
                             </div>
+                            <div class="col-12">
+                                <label class="field-label">Business Email</label>
+                                <input type="email" name="company_email" class="form-control"
+                                       value="{{ user_profile.get('company_email') or '' }}"
+                                       placeholder="invoices@yourcompany.com">
+                                <span class="field-hint">Printed on invoices (separate from your login email)</span>
+                            </div>
                         </div>
 
                         <!-- ── FBR / Pakistan Tax Panel ── -->

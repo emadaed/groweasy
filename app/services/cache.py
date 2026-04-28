@@ -46,3 +46,13 @@ def init_cache(app):
 def get_user_profile_cached(user_id):
     from app.services.auth import get_user_profile
     return get_user_profile(user_id)
+
+
+def invalidate_user_profile_cache(user_id):
+    """
+    Delete the memoized cache entry for a specific user's profile.
+    Must be called after any update_user_profile() call so the next
+    GET request reads fresh data from the DB instead of stale cache.
+    """
+    cache.delete_memoized(get_user_profile_cached, user_id)
+    logger.debug("Invalidated profile cache for user %s", user_id)

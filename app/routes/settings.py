@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, make_response
 from app.services.auth import get_user_profile, update_user_profile, change_user_password, verify_user
-from app.services.cache import get_user_profile_cached 
+from app.services.cache import get_user_profile_cached, invalidate_user_profile_cache  # FIX: added invalidate import
 from app.services.session_manager import SessionManager
 
 settings_bp = Blueprint('settings', __name__)
@@ -16,17 +16,29 @@ def settings():
     if request.method == 'POST':
         # Handle profile update
         if 'update_profile' in request.form:
+            # FIX: explicitly convert the checkbox value to a Python bool.
+            # When unchecked, request.form.get('show_fbr_fields') returns None,
+            # which update_user_profile() silently skips — so FALSE was never
+            # written to the DB.  Mapping to bool here fixes that.
+            show_fbr = request.form.get('show_fbr_fields') == 'on'
+
             update_user_profile(
                 session['user_id'],
                 company_name=request.form.get('company_name'),
                 company_address=request.form.get('company_address'),
                 company_phone=request.form.get('company_phone'),
+                company_email=request.form.get('company_email'),
                 company_tax_id=request.form.get('company_tax_id'),
                 seller_ntn=request.form.get('seller_ntn'),
                 seller_strn=request.form.get('seller_strn'),
                 preferred_currency=request.form.get('preferred_currency'),
-                show_fbr_fields=request.form.get('show_fbr_fields') == 'on'
+                show_fbr_fields=show_fbr,  # FIX: always a bool, never None
             )
+
+            # FIX: bust the memoized cache so the redirect GET reads fresh DB data.
+            # Without this the page re-renders with the old (stale) profile and
+            # the toggle appears to revert even though the DB was updated correctly.
+            invalidate_user_profile_cache(session['user_id'])
 
             flash('✅ Settings updated successfully!', 'success')
             response = make_response(redirect(url_for('settings.settings')))
