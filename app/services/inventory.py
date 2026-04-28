@@ -325,19 +325,21 @@ class InventoryManager:
                             UPDATE inventory_items SET current_stock = :total WHERE id = :pid
                         """), {"total": total, "pid": product_id})
                     
-                    # Log movement in stock_movements with location info
+                    # Log movement — clean type, location_id stored as column
                     with DB_ENGINE.begin() as conn:
                         conn.execute(text("""
                             INSERT INTO stock_movements
-                            (user_id, product_id, movement_type, quantity, reference_id, notes)
-                            VALUES (:uid, :pid, :type, :qty, :ref, :notes)
+                            (user_id, product_id, movement_type, quantity,
+                             reference_id, notes, location_id)
+                            VALUES (:uid, :pid, :type, :qty, :ref, :notes, :loc_id)
                         """), {
-                            "uid": user_id,
-                            "pid": product_id,
-                            "type": f"{movement_type}_location_{location_id}",
-                            "qty": quantity_delta,
-                            "ref": reference_id,
-                            "notes": f"{notes or ''} (Location ID: {location_id})"
+                            "uid":    user_id,
+                            "pid":    product_id,
+                            "type":   movement_type,        # clean — no _location_X suffix
+                            "qty":    quantity_delta,
+                            "ref":    reference_id,
+                            "notes":  notes or '',
+                            "loc_id": location_id
                         })
                     return True
                 return False

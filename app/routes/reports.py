@@ -147,23 +147,25 @@ def stock_movements():
         return redirect(url_for('auth.login'))
     account_id = session['account_id']
 
-    from_date = request.args.get('from')
-    to_date = request.args.get('to')
+    from_date  = request.args.get('from')
+    to_date    = request.args.get('to')
     product_id = request.args.get('product_id')
 
-    # Join with inventory_items to filter by account_id
     query = """
-        SELECT sm.id, i.name as product_name, i.sku, sm.movement_type, sm.quantity,
-               sm.reference_id, sm.notes, sm.created_at
+        SELECT sm.id, i.name AS product_name, i.sku,
+               sm.movement_type, sm.quantity,
+               sm.reference_id, sm.notes, sm.created_at,
+               COALESCE(l.location_name, '') AS location_name
         FROM stock_movements sm
         JOIN inventory_items i ON sm.product_id = i.id
+        LEFT JOIN locations l ON l.id = sm.location_id
         WHERE i.account_id = :aid
     """
     params = {"aid": account_id}
     if from_date and to_date:
         query += " AND sm.created_at::date BETWEEN :from AND :to"
         params["from"] = from_date
-        params["to"] = to_date
+        params["to"]   = to_date
     if product_id:
         query += " AND sm.product_id = :pid"
         params["pid"] = product_id
@@ -172,10 +174,9 @@ def stock_movements():
     with DB_ENGINE.connect() as conn:
         rows = conn.execute(text(query), params).fetchall()
 
-        # Get products for filter dropdown – also by account_id
         products = conn.execute(text("""
-            SELECT id, name FROM inventory_items 
-            WHERE account_id = :aid AND is_active = TRUE 
+            SELECT id, name FROM inventory_items
+            WHERE account_id = :aid AND is_active = TRUE
             ORDER BY name
         """), {"aid": account_id}).fetchall()
 
@@ -184,26 +185,28 @@ def stock_movements():
         from io import StringIO
         output = StringIO()
         writer = csv.writer(output)
-        writer.writerow(['ID', 'Product', 'SKU', 'Type', 'Quantity', 'Reference', 'Notes', 'Date'])
+        writer.writerow(['ID', 'Product', 'SKU', 'Type', 'Quantity',
+                         'Reference', 'Location', 'Notes', 'Date'])
         for r in rows:
-            writer.writerow([r[0], r[1], r[2] or '—', r[3], r[4], r[5], r[6], r[7]])
+            writer.writerow([r[0], r[1], r[2] or '—', r[3], r[4],
+                             r[5], r[8] or '—', r[6], r[7]])
         response = make_response(output.getvalue())
         response.headers['Content-Type'] = 'text/csv'
-        response.headers['Content-Disposition'] = 'attachment; filename=stock_movements.csv'
+        response.headers['Content-Disposition'] = \
+            'attachment; filename=stock_movements.csv'
         return response
 
-    movements = []
-    for r in rows:
-        movements.append({
-            'id': r[0],
-            'product_name': r[1],
-            'sku': r[2] or '—',
-            'movement_type': r[3],
-            'quantity': r[4],
-            'reference_id': r[5],
-            'notes': r[6],
-            'created_at': r[7]
-        })
+    movements = [{
+        'id':            r[0],
+        'product_name':  r[1],
+        'sku':           r[2] or '—',
+        'movement_type': r[3],
+        'quantity':      r[4],
+        'reference_id':  r[5],
+        'notes':         r[6],
+        'created_at':    r[7],
+        'location_name': r[8] or ''
+    } for r in rows]
 
     return render_template('stock_movements.html',
                            movements=movements,

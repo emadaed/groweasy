@@ -152,7 +152,6 @@ def mark_po_received(po_number):
             return redirect(url_for('purchases.purchase_orders'))
 
         # FIX: Aggregate by po_number only (not user_id).
-        # The original code used WHERE user_id = :uid which meant receipts entered
         # by one team member (e.g. the owner) were invisible to another (e.g. an
         # assistant), causing the remaining-qty calculation to be wrong in a team.
         # user_id is still stored in the INSERT below for audit purposes.
@@ -192,6 +191,20 @@ def mark_po_received(po_number):
         receipts_to_insert = []
         today = datetime.now().date()
 
+        # ── Determine receiving location
+        # Prefer a location the user selected in the form; fall back to
+        # the account's first active location so the dashboard stays correct.
+        location_id = request.form.get('receive_location_id', type=int)
+        if not location_id:
+            with DB_ENGINE.connect() as conn:
+                loc_row = conn.execute(text("""
+                    SELECT id FROM locations
+                    WHERE account_id = :aid AND is_active = TRUE
+                    ORDER BY id ASC LIMIT 1
+                """), {"aid": account_id}).first()
+                location_id = loc_row[0] if loc_row else None
+        # ─────────────────────────────────────────────────────────────────
+
         for item in items:
             product_id = item['product_id']
             form_key = f'receive_qty_{product_id}'
@@ -213,7 +226,8 @@ def mark_po_received(po_number):
                     qty_to_receive,
                     'purchase_receive',
                     po_number,
-                    f"Partial receipt for PO {po_number}"
+                    f"Received via PO {po_number} into location {location_id}",
+                    location_id=location_id    # ← KEY FIX
                 ):
                     added_units += qty_to_receive
                 else:

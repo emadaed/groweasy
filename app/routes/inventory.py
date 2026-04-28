@@ -349,6 +349,10 @@ def adjust_stock_audit():
             flash('❌ Invalid adjustment type', 'error')
             return redirect(url_for('inventory.inventory'))
 
+        # Always adjust at Main location — get or create it
+        with DB_ENGINE.begin() as conn:
+            location_id = _get_or_create_main_location(conn, account_id)
+
         success = InventoryManager.update_stock_delta(
             user_id=user_id,
             account_id=account_id,
@@ -356,7 +360,8 @@ def adjust_stock_audit():
             quantity_delta=delta,
             movement_type=movement_type,
             reference_id=f"ADJ-{int(time.time())}",
-            notes=f"{reason}: {notes}".strip()
+            notes=f"{reason}: {notes}".strip(),
+            location_id=location_id              # ← KEY FIX
         )
 
         if success and (new_cost_price or new_selling_price):
