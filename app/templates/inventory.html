@@ -1,4 +1,4 @@
-<!-- templates/inventory.html - PAGINATED VERSION WITH FIXED SUMMARY CARDS + EDIT BUTTON -->
+<!-- templates/inventory.html - PAGINATED VERSION WITH GROWEASY COLOR SCHEME -->
 {% extends "base.html" %}
 
 {% block extra_head %}
@@ -7,17 +7,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet" nonce="{{ nonce }}">
 
 <style nonce="{{ nonce }}">
-/* ── GrowEasy Design Tokens ───────────────────────────────────────── */
-:root {
-  --font-display: 'Bricolage Grotesque', sans-serif;
-  --font-body:    'Figtree', sans-serif;
-  --card-shadow:  0 2px 12px rgba(0,0,0,.25);
-  --card-shadow-hover: 0 6px 24px rgba(0,0,0,.35);
-  --radius: 14px;
-  --transition: .2s ease;
-}
-
-[data-theme="dark"], :root {
+/* ── GrowEasy Design Tokens ───────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
   --bg:          #0c110a;
   --surface:     #131a10;
   --surface-2:   #192214;
@@ -36,34 +28,38 @@
   --info:        #6db8d4;
   --warning:     #d4a040;
   --modal-overlay: rgba(0,0,0,.65);
+  --card-shadow: 0 2px 12px rgba(0,0,0,.25);
+  --radius: 14px;
 }
 
 [data-theme="light"] {
-  --bg:        #f4f6f0;
-  --surface:   #ffffff;
-  --surface-2: #eef2e9;
-  --surface-3: #e4ede0;
-  --border:    #d8e2d0;
-  --border-hi: #c0d4b4;
-  --gold:      #9a7212;
-  --gold-2:    #b88c1a;
-  --gold-dim:  rgba(154,114,18,.10);
-  --text:      #182012;
-  --text-2:    #3a5030;
-  --muted:     #6a8558;
-  --faint:     #a8bfa0;
-  --green-acc: #2d8a50;
-  --danger:    #c0392b;
-  --info:      #1a7fa0;
-  --warning:   #b8860b;
+  --bg:          #f4f6f0;
+  --surface:     #ffffff;
+  --surface-2:   #eef2e9;
+  --surface-3:   #e4ede0;
+  --border:      #d8e2d0;
+  --border-hi:   #c0d4b4;
+  --gold:        #9a7212;
+  --gold-2:      #b88c1a;
+  --gold-dim:    rgba(154,114,18,.10);
+  --text:        #182012;
+  --text-2:      #3a5030;
+  --muted:       #6a8558;
+  --faint:       #a8bfa0;
+  --green-acc:   #2d8a50;
+  --danger:      #c0392b;
+  --info:        #1a7fa0;
+  --warning:     #b8860b;
   --modal-overlay: rgba(0,0,0,.4);
+  --card-shadow: 0 1px 4px rgba(0,0,0,.08);
+  --radius: 14px;
 }
 
-/* ── Reset / Base ────────────────────────────────────────────────── */
+/* Base & Fluid Layout */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: var(--font-body);
+  font-family: 'Figtree', sans-serif;
   font-weight: 400;
   background: var(--bg);
   color: var(--text);
@@ -72,7 +68,7 @@ body {
   line-height: 1.6;
 }
 
-/* ── Islamic Lattice Hero ─────────────────────────────────────────── */
+/* Islamic Lattice Hero */
 .ge-hero {
   position: relative;
   width: 100%;
@@ -87,168 +83,95 @@ body {
   gap: 1rem;
   flex-wrap: wrap;
 }
-
 .ge-hero::after {
   content: '';
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 4px;
   background: linear-gradient(180deg, var(--gold), var(--gold-2));
-  border-radius: 0 2px 2px 0;
 }
-
 .ge-hero-left h1 {
-  font-family: var(--font-display);
+  font-family: 'Bricolage Grotesque', sans-serif;
   font-weight: 800;
   font-size: 1.55rem;
-  color: var(--text);
-  line-height: 1.15;
   display: flex;
   align-items: center;
   gap: .5rem;
 }
+.ge-hero-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 
-.ge-hero-left p {
-  font-size: .85rem;
-  color: var(--muted);
-  margin-top: .2rem;
-  font-weight: 400;
-}
-
-.ge-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  align-items: center;
-}
-
-/* ── Page Wrapper ────────────────────────────────────────────────── */
+/* Fluid Page Wrapper */
 .ge-page {
+  max-width: 1600px;
+  margin: 0 auto;
   padding: 1.5rem 2rem 3rem;
-  max-width: 100%;
+  width: 100%;
 }
 
-/* ── Buttons ─────────────────────────────────────────────────────── */
-.btn-ge-primary {
-  font-family: var(--font-body);
+/* Buttons */
+.btn-ge-primary, .btn-ge-outline, .btn-ge-success, .btn-ge-danger {
+  font-family: 'Figtree', sans-serif;
   font-weight: 600;
   font-size: .85rem;
-  padding: .45rem 1rem;
+  padding: .5rem 1rem;
   border-radius: 8px;
-  border: none;
   cursor: pointer;
-  transition: filter var(--transition), transform var(--transition);
-  background: linear-gradient(135deg, var(--gold), var(--gold-2));
-  color: #0c110a;
   display: inline-flex;
   align-items: center;
   gap: .35rem;
   text-decoration: none;
+  min-height: 40px;
 }
-.btn-ge-primary:hover { filter: brightness(1.08); transform: translateY(-1px); color: #0c110a; }
-
+.btn-ge-primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  border: none;
+  color: #0c110a;
+}
+.btn-ge-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
 .btn-ge-outline {
-  font-family: var(--font-body);
-  font-weight: 500;
-  font-size: .85rem;
-  padding: .4rem .9rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-hi);
-  cursor: pointer;
-  transition: background var(--transition), border-color var(--transition);
   background: transparent;
+  border: 1px solid var(--border-hi);
   color: var(--text-2);
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  text-decoration: none;
 }
 .btn-ge-outline:hover { background: var(--surface-2); border-color: var(--gold); color: var(--gold); }
-
-.btn-ge-success {
-  background: var(--green-acc);
-  color: #0c110a;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: .85rem;
-  padding: .45rem 1rem;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  text-decoration: none;
-  transition: filter var(--transition);
-}
-.btn-ge-success:hover { filter: brightness(1.1); color: #0c110a; }
-
-.btn-ge-danger {
-  background: var(--danger);
-  color: #fff;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: .85rem;
-  padding: .45rem 1rem;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  transition: filter var(--transition);
-}
-.btn-ge-danger:hover { filter: brightness(1.1); }
-
-.btn-ge-sm {
-  font-size: .78rem;
-  padding: .28rem .7rem;
-}
-
+.btn-ge-success { background: var(--green-acc); border: none; color: #0c110a; }
+.btn-ge-danger { background: var(--danger); border: none; color: #fff; }
+.btn-ge-sm { font-size: .78rem; padding: .3rem .7rem; }
 .btn-ge-icon {
   background: transparent;
   border: 1px solid var(--border-hi);
   border-radius: 7px;
-  padding: .28rem .55rem;
+  padding: .4rem .6rem;
   font-size: .8rem;
   color: var(--text-2);
   cursor: pointer;
-  transition: all var(--transition);
-  display: inline-flex;
-  align-items: center;
-  gap: .25rem;
+  min-height: 36px;
 }
-.btn-ge-icon:hover { background: var(--surface-2); border-color: var(--gold); color: var(--gold); }
-.btn-ge-icon.edit:hover  { border-color: var(--warning); color: var(--warning); }
-.btn-ge-icon.danger:hover { border-color: var(--danger); color: var(--danger); }
-.btn-ge-icon.info:hover  { border-color: var(--info); color: var(--info); }
+.btn-ge-icon:hover { background: var(--surface-2); border-color: var(--gold); }
 
-/* ── Theme Toggle ────────────────────────────────────────────────── */
+/* Theme Toggle */
 #themeToggleBtn {
   background: var(--surface-2);
   border: 1px solid var(--border-hi);
   border-radius: 8px;
-  padding: .4rem .75rem;
+  padding: .5rem .75rem;
   color: var(--text-2);
   font-size: .85rem;
   cursor: pointer;
-  font-family: var(--font-body);
-  font-weight: 500;
-  transition: all var(--transition);
   display: inline-flex;
   align-items: center;
   gap: .4rem;
+  min-height: 40px;
 }
 #themeToggleBtn:hover { border-color: var(--gold); color: var(--gold); }
 
-/* ── Summary Cards ───────────────────────────────────────────────── */
+/* Summary Cards */
 .ge-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: .75rem;
   margin-bottom: 1.5rem;
 }
-
 @media (max-width: 900px) { .ge-summary-grid { grid-template-columns: repeat(2,1fr); } }
 @media (max-width: 500px) { .ge-summary-grid { grid-template-columns: 1fr; } }
 
@@ -257,12 +180,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem 1.25rem;
-  box-shadow: var(--card-shadow);
   position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: .15rem;
 }
 .ge-stat-card::before {
   content: '';
@@ -274,29 +192,21 @@ body {
 .ge-stat-card.in-stock::before{ background: var(--green-acc); }
 .ge-stat-card.low::before     { background: var(--warning); }
 .ge-stat-card.out::before     { background: var(--danger); }
-
 .ge-stat-label {
   font-size: .67rem;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--muted);
-  font-family: var(--font-body);
 }
 .ge-stat-value {
-  font-family: var(--font-display);
+  font-family: 'Bricolage Grotesque', sans-serif;
   font-weight: 800;
   font-size: 2rem;
   line-height: 1;
-  color: var(--text);
-}
-.ge-stat-sub {
-  font-size: .78rem;
-  color: var(--muted);
-  font-weight: 400;
 }
 
-/* ── Cards ───────────────────────────────────────────────────────── */
+/* Cards */
 .ge-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -305,127 +215,54 @@ body {
   overflow: hidden;
   margin-bottom: 1.25rem;
 }
-
 .ge-card-header {
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
   padding: .75rem 1.25rem;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: .75rem;
 }
-
 .ge-card-header-label {
-  font-family: var(--font-display);
+  font-family: 'Bricolage Grotesque', sans-serif;
   font-weight: 600;
   font-size: .95rem;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: .5rem;
 }
-
 .ge-card-body { padding: 1.25rem; }
 .ge-card-body.p-0 { padding: 0; }
 
-/* ── Low Stock Alert Card ────────────────────────────────────────── */
+/* Low Stock Alert */
 .ge-alert-card {
   background: var(--surface);
   border: 1px solid var(--warning);
   border-radius: var(--radius);
-  box-shadow: var(--card-shadow);
   margin-bottom: 1.25rem;
-  overflow: hidden;
 }
 .ge-alert-header {
   background: rgba(212,160,64,.1);
   border-bottom: 1px solid rgba(212,160,64,.25);
   padding: .6rem 1.25rem;
   display: flex;
-  align-items: center;
   justify-content: space-between;
 }
-.ge-alert-header span {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: .9rem;
-  color: var(--warning);
-}
-.ge-alert-body {
-  padding: .75rem 1.25rem;
-  max-height: 180px;
-  overflow-y: auto;
-}
-.ge-alert-item {
-  font-size: .82rem;
-  color: var(--text-2);
-  padding: .2rem 0;
-  border-bottom: 1px solid var(--border);
-}
-.ge-alert-item:last-child { border-bottom: none; }
-.ge-alert-item strong { color: var(--text); }
-.ge-alert-item .sku { color: var(--muted); }
+.ge-alert-body { padding: .75rem 1.25rem; max-height: 180px; overflow-y: auto; }
+.ge-alert-item { font-size: .82rem; color: var(--text-2); border-bottom: 1px solid var(--border); padding: .2rem 0; }
 
-/* ── Section Label Divider ───────────────────────────────────────── */
-.ge-section-label {
-  font-size: .67rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-family: var(--font-body);
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  margin-bottom: .75rem;
-}
-.ge-section-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-/* ── Search & Filter ─────────────────────────────────────────────── */
-.ge-filter-grid {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: .75rem;
-  align-items: end;
-}
-@media (max-width: 640px) { .ge-filter-grid { grid-template-columns: 1fr; } }
-
-/* ── Form Controls ───────────────────────────────────────────────── */
-.ge-input,
-.ge-select,
-.ge-textarea {
+/* Form Controls */
+.ge-input, .ge-select, .ge-textarea {
   width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--border-hi);
   border-radius: 8px;
   padding: .5rem .85rem;
-  font-family: var(--font-body);
+  font-family: 'Figtree', sans-serif;
   font-size: .875rem;
   color: var(--text);
-  transition: border-color var(--transition), box-shadow var(--transition);
-  outline: none;
-  appearance: none;
 }
 .ge-input:focus, .ge-select:focus, .ge-textarea:focus {
   border-color: var(--gold);
   box-shadow: 0 0 0 3px var(--gold-dim);
+  outline: none;
 }
-.ge-input::placeholder { color: var(--faint); }
-.ge-input[readonly] { opacity: .7; cursor: not-allowed; }
-
-.ge-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237d9068' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right .85rem center;
-  padding-right: 2.2rem;
-}
-
 .ge-field-label {
   display: block;
   font-size: .67rem;
@@ -434,91 +271,57 @@ body {
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: .35rem;
-  font-family: var(--font-body);
 }
-
-.ge-field { margin-bottom: .9rem; }
-
 .ge-checkbox-row {
   display: flex;
   align-items: center;
   gap: .5rem;
   cursor: pointer;
   font-size: .875rem;
-  color: var(--text-2);
   padding: .35rem 0;
 }
-.ge-checkbox-row input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--gold);
-  cursor: pointer;
-}
+.ge-checkbox-row input { accent-color: var(--gold); width: 18px; height: 18px; }
 
-/* ── Table ───────────────────────────────────────────────────────── */
+/* Table */
 .ge-table-wrap { overflow-x: auto; }
-
 .ge-table {
   width: 100%;
   border-collapse: collapse;
   font-size: .84rem;
-  font-family: var(--font-body);
 }
-
-.ge-table thead tr {
-  background: var(--surface-2);
-  border-bottom: 2px solid var(--border-hi);
-}
+.ge-table thead tr { background: var(--surface-2); border-bottom: 2px solid var(--border-hi); }
 .ge-table thead th {
   padding: .6rem 1rem;
   font-size: .67rem;
   font-weight: 700;
-  letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--muted);
   text-align: left;
-  white-space: nowrap;
 }
-
-.ge-table tbody tr {
-  border-bottom: 1px solid var(--border);
-  transition: background var(--transition);
-}
+.ge-table tbody tr { border-bottom: 1px solid var(--border); }
 .ge-table tbody tr:hover { background: var(--surface-2); }
-.ge-table tbody tr.row-danger { background: rgba(224,112,112,.07); }
-.ge-table tbody tr.row-warning { background: rgba(212,160,64,.07); }
-.ge-table tbody tr.row-danger:hover  { background: rgba(224,112,112,.12); }
-.ge-table tbody tr.row-warning:hover { background: rgba(212,160,64,.12); }
-
-.ge-table td {
-  padding: .6rem 1rem;
-  color: var(--text-2);
-  vertical-align: middle;
-}
-.ge-table td strong { color: var(--text); font-weight: 600; }
+.ge-table td { padding: .6rem 1rem; color: var(--text-2); }
+.ge-table td strong { color: var(--text); }
 .ge-table td code {
   background: var(--surface-3);
   border-radius: 4px;
   padding: .1em .4em;
-  font-size: .82em;
   color: var(--gold);
-  font-family: 'Courier New', monospace;
 }
 
-/* ── Badges ──────────────────────────────────────────────────────── */
+/* Badges */
 .ge-badge {
   display: inline-block;
   padding: .18em .65em;
   border-radius: 6px;
   font-size: .75rem;
   font-weight: 600;
-  font-family: var(--font-body);
 }
-.ge-badge-success { background: rgba(90,173,120,.15); color: var(--green-acc); border: 1px solid rgba(90,173,120,.25); }
-.ge-badge-warning { background: rgba(212,160,64,.15); color: var(--warning); border: 1px solid rgba(212,160,64,.25); }
-.ge-badge-danger  { background: rgba(224,112,112,.15); color: var(--danger); border: 1px solid rgba(224,112,112,.25); }
+.ge-badge-success { background: rgba(90,173,120,.15); color: var(--green-acc); }
+.ge-badge-warning { background: rgba(212,160,64,.15); color: var(--warning); }
+.ge-badge-danger  { background: rgba(224,112,112,.15); color: var(--danger); }
 
-/* ── Pagination ──────────────────────────────────────────────────── */
+/* Pagination */
 .ge-pagination {
   display: flex;
   gap: .35rem;
@@ -530,20 +333,22 @@ body {
   background: var(--surface-2);
   border: 1px solid var(--border-hi);
   border-radius: 7px;
-  padding: .3rem .75rem;
+  padding: .4rem .8rem;
   font-size: .82rem;
-  font-family: var(--font-body);
   color: var(--text-2);
   cursor: pointer;
-  transition: all var(--transition);
-  min-width: 36px;
+  min-width: 40px;
   text-align: center;
+  min-height: 40px;
 }
-.ge-page-btn:hover:not(.active):not(.disabled) { border-color: var(--gold); color: var(--gold); }
-.ge-page-btn.active { background: linear-gradient(135deg,var(--gold),var(--gold-2)); color: #0c110a; border-color: transparent; font-weight: 700; }
+.ge-page-btn.active {
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  color: #0c110a;
+  border-color: transparent;
+}
 .ge-page-btn.disabled { opacity: .4; cursor: not-allowed; }
 
-/* ── Modal ───────────────────────────────────────────────────────── */
+/* Modals */
 .ge-modal-backdrop {
   display: none;
   position: fixed;
@@ -556,50 +361,26 @@ body {
   backdrop-filter: blur(3px);
 }
 .ge-modal-backdrop.open { display: flex; }
-
 .ge-modal {
   background: var(--surface);
   border: 1px solid var(--border-hi);
   border-radius: var(--radius);
-  box-shadow: 0 20px 60px rgba(0,0,0,.45);
-  width: 100%;
   max-width: 680px;
+  width: 100%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: modalIn .18s ease;
 }
 .ge-modal.sm { max-width: 440px; }
-
-@keyframes modalIn {
-  from { opacity: 0; transform: translateY(12px) scale(.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 .ge-modal-header {
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
   padding: 1rem 1.5rem;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
 }
-.ge-modal-header h2 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.05rem;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-}
-.ge-modal-header.warning { border-left: 4px solid var(--warning); }
-.ge-modal-header.danger  { border-left: 4px solid var(--danger); }
-.ge-modal-header.info    { border-left: 4px solid var(--info); }
-.ge-modal-header.primary { border-left: 4px solid var(--gold); }
-
+.ge-modal-header h2 { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 1.05rem; }
 .ge-modal-close {
   background: none;
   border: none;
@@ -607,18 +388,8 @@ body {
   font-size: 1.25rem;
   cursor: pointer;
   padding: .2rem .4rem;
-  border-radius: 6px;
-  transition: all var(--transition);
-  line-height: 1;
 }
-.ge-modal-close:hover { background: var(--surface-3); color: var(--text); }
-
-.ge-modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
+.ge-modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
 .ge-modal-footer {
   background: var(--surface-2);
   border-top: 1px solid var(--border);
@@ -626,15 +397,11 @@ body {
   display: flex;
   gap: .5rem;
   justify-content: flex-end;
-  flex-shrink: 0;
 }
-
-/* ── Inner card within modal ─────────────────────────────────────── */
 .ge-inner-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
   margin-bottom: 1rem;
 }
 .ge-inner-card-header {
@@ -642,55 +409,17 @@ body {
   border-bottom: 1px solid var(--border);
   padding: .5rem 1rem;
 }
-.ge-inner-card-header h3 {
-  font-family: var(--font-display);
-  font-size: .85rem;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: .02em;
-}
-.ge-inner-card-header.warning h3 { color: var(--warning); }
-.ge-inner-card-header.info    h3 { color: var(--info); }
-.ge-inner-card-header.muted   h3 { color: var(--muted); }
-
 .ge-inner-card-body { padding: 1rem; }
 
-/* ── Alert banner ────────────────────────────────────────────────── */
-.ge-alert-banner {
-  background: rgba(212,160,64,.1);
-  border: 1px solid rgba(212,160,64,.3);
-  border-radius: 8px;
-  padding: .65rem 1rem;
-  font-size: .84rem;
-  color: var(--warning);
-  margin-bottom: 1rem;
-}
-.ge-alert-banner strong { font-weight: 700; }
-
-/* ── Row grid helpers ────────────────────────────────────────────── */
-.ge-row { display: grid; gap: .75rem; }
-.ge-row-2 { grid-template-columns: 1fr 1fr; }
-.ge-row-3 { grid-template-columns: 1fr 1fr 1fr; }
-.ge-row-4 { grid-template-columns: repeat(4, 1fr); }
-@media (max-width: 540px) {
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .ge-page { padding: 1rem; }
+  .ge-hero { padding: 1rem; }
+  .ge-filter-grid { grid-template-columns: 1fr; }
   .ge-row-2, .ge-row-3, .ge-row-4 { grid-template-columns: 1fr; }
 }
-
-/* ── Scrollbar ───────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--faint); }
-
-/* ── Utility ─────────────────────────────────────────────────────── */
-.text-muted  { color: var(--muted); }
-.text-danger { color: var(--danger); }
-.text-center { text-align: center; }
-.w-full { width: 100%; }
-.mt-1 { margin-top: .5rem; }
 </style>
 
-<!-- Early theme apply — prevents flash -->
 <script nonce="{{ nonce }}">
 (function(){
   var t = localStorage.getItem('ge-theme') || 'dark';
@@ -700,7 +429,6 @@ body {
 {% endblock %}
 
 {% block content %}
-<!-- ── Hero Header ──────────────────────────────────────────────── -->
 <div class="ge-hero">
   <div class="ge-hero-left">
     <h1>📦 Inventory Management</h1>
@@ -711,27 +439,16 @@ body {
       <span id="themeIcon">🌙</span>
       <span id="themeLabel">Light Mode</span>
     </button>
-    <a href="{{ url_for('inventory.bulk_upload') }}" class="btn-ge-outline">
-      <i class="bi bi-cloud-upload"></i> Bulk Import
-    </a>
-    <a href="{{ url_for('inventory.inventory_dashboard') }}" class="btn-ge-outline">
-      <i class="bi bi-building"></i> Locations
-    </a>
-    <a href="{{ url_for('inventory.inventory_catalog') }}" class="btn-ge-outline">
-      <i class="bi bi-grid-3x3-gap-fill"></i> Catalog
-    </a>
-    <button class="btn-ge-primary" id="openAddProductBtn">
-      ➕ Add Product
-    </button>
-    <a href="{{ url_for('inventory.download_inventory_report') }}" class="btn-ge-success">
-      📊 Export CSV
-    </a>
+    <a href="{{ url_for('inventory.bulk_upload') }}" class="btn-ge-outline"><i class="bi bi-cloud-upload"></i> Bulk Import</a>
+    <a href="{{ url_for('inventory.inventory_dashboard') }}" class="btn-ge-outline"><i class="bi bi-building"></i> Locations</a>
+    <a href="{{ url_for('inventory.inventory_catalog') }}" class="btn-ge-outline"><i class="bi bi-grid-3x3-gap-fill"></i> Catalog</a>
+    <button class="btn-ge-primary" id="openAddProductBtn">➕ Add Product</button>
+    <a href="{{ url_for('inventory.download_inventory_report') }}" class="btn-ge-success">📊 Export CSV</a>
   </div>
 </div>
 
 <div class="ge-page">
-
-  <!-- ── Low Stock Alerts ───────────────────────────────────────── -->
+  <!-- Low Stock Alerts -->
   {% if low_stock_alerts %}
   <div class="ge-alert-card">
     <div class="ge-alert-header">
@@ -741,521 +458,148 @@ body {
     <div class="ge-alert-body">
       <div class="ge-row ge-row-2">
         {% for alert in low_stock_alerts %}
-        <div class="ge-alert-item">
-          <strong>{{ alert.name }}</strong>:
-          {{ alert.current_stock }} units (Min: {{ alert.reorder_level }})
-          {% if alert.sku and alert.sku != 'N/A' %}
-            <span class="sku">({{ alert.sku }})</span>
-          {% endif %}
-        </div>
+        <div class="ge-alert-item"><strong>{{ alert.name }}</strong>: {{ alert.current_stock }} units (Min: {{ alert.reorder_level }}) {% if alert.sku and alert.sku != 'N/A' %}<span class="sku">({{ alert.sku }})</span>{% endif %}</div>
         {% endfor %}
       </div>
     </div>
   </div>
   {% endif %}
 
-  <!-- ── Summary Cards ─────────────────────────────────────────── -->
+  <!-- Summary Cards -->
   <div class="ge-summary-grid">
-    <div class="ge-stat-card total">
-      <div class="ge-stat-label">Total Products</div>
-      <div class="ge-stat-value">{{ inventory_summary.total }}</div>
-      <div class="ge-stat-sub">All inventory items</div>
-    </div>
-    <div class="ge-stat-card in-stock">
-      <div class="ge-stat-label">In Stock</div>
-      <div class="ge-stat-value">{{ inventory_summary.in_stock }}</div>
-      <div class="ge-stat-sub">Above minimum level</div>
-    </div>
-    <div class="ge-stat-card low">
-      <div class="ge-stat-label">Low Stock</div>
-      <div class="ge-stat-value">{{ inventory_summary.low_stock }}</div>
-      <div class="ge-stat-sub">≤ Minimum level</div>
-    </div>
-    <div class="ge-stat-card out">
-      <div class="ge-stat-label">Out of Stock</div>
-      <div class="ge-stat-value">{{ inventory_summary.out_of_stock }}</div>
-      <div class="ge-stat-sub">Zero units remaining</div>
-    </div>
+    <div class="ge-stat-card total"><div class="ge-stat-label">Total Products</div><div class="ge-stat-value">{{ inventory_summary.total }}</div></div>
+    <div class="ge-stat-card in-stock"><div class="ge-stat-label">In Stock</div><div class="ge-stat-value">{{ inventory_summary.in_stock }}</div></div>
+    <div class="ge-stat-card low"><div class="ge-stat-label">Low Stock</div><div class="ge-stat-value">{{ inventory_summary.low_stock }}</div></div>
+    <div class="ge-stat-card out"><div class="ge-stat-label">Out of Stock</div><div class="ge-stat-value">{{ inventory_summary.out_of_stock }}</div></div>
   </div>
 
-  <!-- ── Search & Filter ───────────────────────────────────────── -->
+  <!-- Search & Filter -->
   <div class="ge-card">
     <div class="ge-card-body">
-      <div class="ge-filter-grid">
+      <div class="ge-filter-grid" style="display:grid; gap:.75rem; grid-template-columns:1fr auto auto;">
         <div class="ge-field">
           <label class="ge-field-label" for="searchInventory">Search Products</label>
           <input type="text" id="searchInventory" class="ge-input" placeholder="🔍 Search by name or SKU…">
         </div>
         <div class="ge-field">
           <label class="ge-field-label" for="stockFilter">Stock Status</label>
-          <select id="stockFilter" class="ge-select">
-            <option value="">All Stock</option>
-            <option value="low">Low Stock (≤ Min)</option>
-            <option value="out">Out of Stock</option>
-          </select>
+          <select id="stockFilter" class="ge-select"><option value="">All Stock</option><option value="low">Low Stock (≤ Min)</option><option value="out">Out of Stock</option></select>
         </div>
-        <div class="ge-field" style="display:flex;align-items:flex-end;">
-          <button id="resetFilters" class="btn-ge-outline w-full">Reset</button>
-        </div>
+        <div style="display:flex;align-items:flex-end;"><button id="resetFilters" class="btn-ge-outline" style="width:100%;">Reset</button></div>
       </div>
     </div>
   </div>
 
-  <!-- ── Inventory Table ───────────────────────────────────────── -->
+  <!-- Inventory Table -->
   <div class="ge-card">
-    <div class="ge-card-header">
-      <span class="ge-card-header-label">📋 All Products</span>
-    </div>
+    <div class="ge-card-header"><span class="ge-card-header-label">📋 All Products</span></div>
     <div class="ge-card-body p-0">
       <div class="ge-table-wrap">
-        <table class="ge-table" role="grid" aria-label="Product inventory list">
-          <thead>
-            <tr>
-              <th scope="col">Product Name</th>
-              <th scope="col">SKU</th>
-              <th scope="col">Category</th>
-              <th scope="col">Current Stock</th>
-              <th scope="col">Min Stock</th>
-              <th scope="col">Cost Price</th>
-              <th scope="col">Selling Price</th>
-              <th scope="col">Supplier</th>
-              <th scope="col">Location</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="inventoryTableBody">
-            <tr><td colspan="10" class="text-center text-muted" style="padding:2rem;">Loading products…</td></tr>
-          </tbody>
+        <table class="ge-table">
+          <thead><tr><th>Product Name</th><th>SKU</th><th>Category</th><th>Current Stock</th><th>Min Stock</th><th>Cost Price</th><th>Selling Price</th><th>Supplier</th><th>Location</th><th>Actions</th></tr></thead>
+          <tbody id="inventoryTableBody"><tr><td colspan="10" class="text-center text-muted" style="padding:2rem;">Loading products…</td></tr></tbody>
         </table>
       </div>
-      <div class="ge-pagination" id="inventoryPagination" role="navigation" aria-label="Pagination"></div>
+      <div class="ge-pagination" id="inventoryPagination"></div>
     </div>
   </div>
+</div>
 
-</div><!-- /ge-page -->
-
-<!-- ══════════════════════════════════════════════════════════════════
-     ADD PRODUCT MODAL
-══════════════════════════════════════════════════════════════════ -->
-<div class="ge-modal-backdrop" id="addProductModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+<!-- Add Product Modal -->
+<div class="ge-modal-backdrop" id="addProductModal">
   <div class="ge-modal">
-    <div class="ge-modal-header primary">
-      <h2 id="addModalTitle">➕ Add New Product</h2>
-      <button class="ge-modal-close" data-close-modal="addProductModal" aria-label="Close">✕</button>
-    </div>
+    <div class="ge-modal-header"><h2>➕ Add New Product</h2><button class="ge-modal-close" data-close-modal="addProductModal">✕</button></div>
     <form method="POST" action="{{ url_for('inventory.add_product') }}" id="addProductForm">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="ge-modal-body">
-
-        <div class="ge-row ge-row-2">
-          <div class="ge-field">
-            <label class="ge-field-label" for="addProductName">Product Name *</label>
-            <input type="text" class="ge-input" id="addProductName" name="name" required>
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="addProductSku">SKU (Unique)</label>
-            <input type="text" class="ge-input" id="addProductSku" name="sku" placeholder="PROD-001">
-          </div>
-        </div>
-
-        <div class="ge-field">
-          <label class="ge-field-label" for="addProductBarcode">Barcode (EAN/UPC)</label>
-          <input type="text" class="ge-input" id="addProductBarcode" name="barcode" placeholder="1234567890123">
-        </div>
-
-        <div class="ge-row ge-row-2">
-          <div class="ge-field">
-            <label class="ge-field-label" for="addProductCategory">Category</label>
-            <select class="ge-select" id="addProductCategory" name="category">
-              <option value="">Select</option>
-              <option>Services</option><option>Electronics</option><option>Clothing</option>
-              <option>Food</option><option>Office Supplies</option><option>Raw Materials</option><option>Other</option>
-            </select>
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="addProductSupplier">Supplier</label>
-            <input type="text" class="ge-input" id="addProductSupplier" name="supplier">
-          </div>
-        </div>
-
-        <div class="ge-row ge-row-3">
-          <div class="ge-field">
-            <label class="ge-field-label" for="addCurrentStock">Current Stock</label>
-            <input type="number" class="ge-input" id="addCurrentStock" name="current_stock" value="0" min="0">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="addMinStock">Min Stock Level</label>
-            <input type="number" class="ge-input" id="addMinStock" name="min_stock_level" value="5" min="1">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="addLocation">Location</label>
-            <input type="text" class="ge-input" id="addLocation" name="location">
-          </div>
-        </div>
-
-        <div class="ge-row ge-row-2">
-          <div class="ge-field">
-            <label class="ge-field-label" for="addCostPrice">Cost Price ({{ currency_symbol }})</label>
-            <input type="number" step="0.01" class="ge-input" id="addCostPrice" name="cost_price">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="addSellingPrice">Selling Price ({{ currency_symbol }})</label>
-            <input type="number" step="0.01" class="ge-input" id="addSellingPrice" name="selling_price">
-          </div>
-        </div>
-
-        <div class="ge-row ge-row-3">
-          <div class="ge-field">
-            <label class="ge-field-label" for="addUnitType">Unit Type</label>
-            <select class="ge-select" id="addUnitType" name="unit_type">
-              <option value="piece">Piece</option><option value="weight">Weight</option>
-              <option value="volume">Volume</option><option value="length">Length</option>
-            </select>
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="addPackSize">Pack Size</label>
-            <input type="number" step="0.1" class="ge-input" id="addPackSize" name="pack_size" value="1.0">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="addWeightKg">Weight per Unit (kg)</label>
-            <input type="number" step="0.001" class="ge-input" id="addWeightKg" name="weight_kg">
-          </div>
-        </div>
-
-        <div class="ge-field">
-          <label class="ge-checkbox-row">
-            <input type="checkbox" name="is_perishable" id="isPerishable">
-            This is a perishable item (has expiry date)
-          </label>
-        </div>
-
-        <div id="perishableFields" style="display:none;">
-          <div class="ge-row ge-row-2">
-            <div class="ge-field">
-              <label class="ge-field-label" for="addExpiryDate">Expiry Date</label>
-              <input type="date" class="ge-input" id="addExpiryDate" name="expiry_date">
-            </div>
-            <div class="ge-field">
-              <label class="ge-field-label" for="addBatchNumber">Batch Number</label>
-              <input type="text" class="ge-input" id="addBatchNumber" name="batch_number">
-            </div>
-          </div>
-        </div>
-
-        <div class="ge-field">
-          <label class="ge-field-label" for="addDescription">Description</label>
-          <textarea class="ge-textarea" id="addDescription" name="description" rows="2"></textarea>
-        </div>
-
+        <div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="addProductName">Product Name *</label><input type="text" class="ge-input" id="addProductName" name="name" required></div><div class="ge-field"><label class="ge-field-label" for="addProductSku">SKU</label><input type="text" class="ge-input" id="addProductSku" name="sku" placeholder="PROD-001"></div></div>
+        <div class="ge-field"><label class="ge-field-label" for="addProductBarcode">Barcode</label><input type="text" class="ge-input" id="addProductBarcode" name="barcode" placeholder="1234567890123"></div>
+        <div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="addProductCategory">Category</label><select class="ge-select" id="addProductCategory" name="category"><option value="">Select</option><option>Services</option><option>Electronics</option><option>Clothing</option><option>Food</option><option>Office Supplies</option><option>Raw Materials</option><option>Other</option></select></div><div class="ge-field"><label class="ge-field-label" for="addProductSupplier">Supplier</label><input type="text" class="ge-input" id="addProductSupplier" name="supplier"></div></div>
+        <div class="ge-row ge-row-3"><div class="ge-field"><label class="ge-field-label" for="addCurrentStock">Current Stock</label><input type="number" class="ge-input" id="addCurrentStock" name="current_stock" value="0" min="0"></div><div class="ge-field"><label class="ge-field-label" for="addMinStock">Min Stock Level</label><input type="number" class="ge-input" id="addMinStock" name="min_stock_level" value="5" min="1"></div><div class="ge-field"><label class="ge-field-label" for="addLocation">Location</label><input type="text" class="ge-input" id="addLocation" name="location"></div></div>
+        <div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="addCostPrice">Cost Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="ge-input" id="addCostPrice" name="cost_price"></div><div class="ge-field"><label class="ge-field-label" for="addSellingPrice">Selling Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="ge-input" id="addSellingPrice" name="selling_price"></div></div>
+        <div class="ge-row ge-row-3"><div class="ge-field"><label class="ge-field-label" for="addUnitType">Unit Type</label><select class="ge-select" id="addUnitType" name="unit_type"><option value="piece">Piece</option><option value="weight">Weight</option><option value="volume">Volume</option><option value="length">Length</option></select></div><div class="ge-field"><label class="ge-field-label" for="addPackSize">Pack Size</label><input type="number" step="0.1" class="ge-input" id="addPackSize" name="pack_size" value="1.0"></div><div class="ge-field"><label class="ge-field-label" for="addWeightKg">Weight per Unit (kg)</label><input type="number" step="0.001" class="ge-input" id="addWeightKg" name="weight_kg"></div></div>
+        <label class="ge-checkbox-row"><input type="checkbox" name="is_perishable" id="isPerishable"> This is a perishable item (has expiry date)</label>
+        <div id="perishableFields" style="display:none;"><div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="addExpiryDate">Expiry Date</label><input type="date" class="ge-input" id="addExpiryDate" name="expiry_date"></div><div class="ge-field"><label class="ge-field-label" for="addBatchNumber">Batch Number</label><input type="text" class="ge-input" id="addBatchNumber" name="batch_number"></div></div></div>
+        <div class="ge-field"><label class="ge-field-label" for="addDescription">Description</label><textarea class="ge-textarea" id="addDescription" name="description" rows="2"></textarea></div>
       </div>
-      <div class="ge-modal-footer">
-        <button type="button" class="btn-ge-outline" data-close-modal="addProductModal">Cancel</button>
-        <button type="submit" class="btn-ge-primary">Add Product</button>
-      </div>
+      <div class="ge-modal-footer"><button type="button" class="btn-ge-outline" data-close-modal="addProductModal">Cancel</button><button type="submit" class="btn-ge-primary">Add Product</button></div>
     </form>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     EDIT PRODUCT MODAL
-══════════════════════════════════════════════════════════════════ -->
-<div class="ge-modal-backdrop" id="editProductModal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+<!-- Edit Product Modal -->
+<div class="ge-modal-backdrop" id="editProductModal">
   <div class="ge-modal">
-    <div class="ge-modal-header warning">
-      <h2 id="editModalTitle">✏️ Edit Product</h2>
-      <button class="ge-modal-close" data-close-modal="editProductModal" aria-label="Close">✕</button>
-    </div>
+    <div class="ge-modal-header"><h2>✏️ Edit Product</h2><button class="ge-modal-close" data-close-modal="editProductModal">✕</button></div>
     <form method="POST" action="{{ url_for('inventory.update_product') }}" id="editProductForm">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="product_id" id="editProductIdFull">
       <div class="ge-modal-body">
-
-        <div class="ge-row ge-row-2">
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductNameFull">Product Name *</label>
-            <input type="text" class="ge-input" id="editProductNameFull" name="name" required>
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductSku">SKU</label>
-            <input type="text" class="ge-input" id="editProductSku" name="sku">
-          </div>
-        </div>
-
-        <div class="ge-field">
-          <label class="ge-field-label" for="editProductBarcode">Barcode</label>
-          <input type="text" class="ge-input" id="editProductBarcode" name="barcode">
-        </div>
-
-        <div class="ge-row ge-row-2">
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductCategory">Category</label>
-            <select class="ge-select" id="editProductCategory" name="category">
-              <option value="">Select</option>
-              <option>Services</option><option>Electronics</option><option>Clothing</option>
-              <option>Food</option><option>Office Supplies</option><option>Raw Materials</option><option>Other</option>
-            </select>
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductSupplier">Supplier</label>
-            <input type="text" class="ge-input" id="editProductSupplier" name="supplier">
-          </div>
-        </div>
-
-        <div class="ge-row ge-row-3">
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductMinStock">Min Stock Level</label>
-            <input type="number" class="ge-input" id="editProductMinStock" name="min_stock_level">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductLocation">Location</label>
-            <input type="text" class="ge-input" id="editProductLocation" name="location">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductUnitType">Unit Type</label>
-            <select class="ge-select" id="editProductUnitType" name="unit_type">
-              <option value="piece">Piece</option><option value="weight">Weight</option>
-              <option value="volume">Volume</option><option value="length">Length</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="ge-row ge-row-2">
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductCostPrice">Cost Price ({{ currency_symbol }})</label>
-            <input type="number" step="0.01" class="ge-input" id="editProductCostPrice" name="cost_price">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductSellingPrice">Selling Price ({{ currency_symbol }})</label>
-            <input type="number" step="0.01" class="ge-input" id="editProductSellingPrice" name="selling_price">
-          </div>
-        </div>
-
-        <div class="ge-row ge-row-2">
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductExpiryDate">Expiry Date</label>
-            <input type="date" class="ge-input" id="editProductExpiryDate" name="expiry_date">
-          </div>
-          <div class="ge-field">
-            <label class="ge-field-label" for="editProductBatchNumber">Batch Number</label>
-            <input type="text" class="ge-input" id="editProductBatchNumber" name="batch_number">
-          </div>
-        </div>
-
-        <div class="ge-field">
-          <label class="ge-field-label" for="editProductDescription">Description</label>
-          <textarea class="ge-textarea" id="editProductDescription" name="description" rows="2"></textarea>
-        </div>
-
+        <div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="editProductNameFull">Product Name *</label><input type="text" class="ge-input" id="editProductNameFull" name="name" required></div><div class="ge-field"><label class="ge-field-label" for="editProductSku">SKU</label><input type="text" class="ge-input" id="editProductSku" name="sku"></div></div>
+        <div class="ge-field"><label class="ge-field-label" for="editProductBarcode">Barcode</label><input type="text" class="ge-input" id="editProductBarcode" name="barcode"></div>
+        <div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="editProductCategory">Category</label><select class="ge-select" id="editProductCategory" name="category"><option value="">Select</option><option>Services</option><option>Electronics</option><option>Clothing</option><option>Food</option><option>Office Supplies</option><option>Raw Materials</option><option>Other</option></select></div><div class="ge-field"><label class="ge-field-label" for="editProductSupplier">Supplier</label><input type="text" class="ge-input" id="editProductSupplier" name="supplier"></div></div>
+        <div class="ge-row ge-row-3"><div class="ge-field"><label class="ge-field-label" for="editProductMinStock">Min Stock Level</label><input type="number" class="ge-input" id="editProductMinStock" name="min_stock_level"></div><div class="ge-field"><label class="ge-field-label" for="editProductLocation">Location</label><input type="text" class="ge-input" id="editProductLocation" name="location"></div><div class="ge-field"><label class="ge-field-label" for="editProductUnitType">Unit Type</label><select class="ge-select" id="editProductUnitType" name="unit_type"><option value="piece">Piece</option><option value="weight">Weight</option><option value="volume">Volume</option><option value="length">Length</option></select></div></div>
+        <div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="editProductCostPrice">Cost Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="ge-input" id="editProductCostPrice" name="cost_price"></div><div class="ge-field"><label class="ge-field-label" for="editProductSellingPrice">Selling Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="ge-input" id="editProductSellingPrice" name="selling_price"></div></div>
+        <div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="editProductExpiryDate">Expiry Date</label><input type="date" class="ge-input" id="editProductExpiryDate" name="expiry_date"></div><div class="ge-field"><label class="ge-field-label" for="editProductBatchNumber">Batch Number</label><input type="text" class="ge-input" id="editProductBatchNumber" name="batch_number"></div></div>
+        <div class="ge-field"><label class="ge-field-label" for="editProductDescription">Description</label><textarea class="ge-textarea" id="editProductDescription" name="description" rows="2"></textarea></div>
       </div>
-      <div class="ge-modal-footer">
-        <button type="button" class="btn-ge-outline" data-close-modal="editProductModal">Cancel</button>
-        <button type="submit" class="btn-ge-primary" style="background:linear-gradient(135deg,var(--warning),#e8b548);color:#0c110a;">Update Product</button>
-      </div>
+      <div class="ge-modal-footer"><button type="button" class="btn-ge-outline" data-close-modal="editProductModal">Cancel</button><button type="submit" class="btn-ge-primary">Update Product</button></div>
     </form>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     DELETE PRODUCT MODAL
-══════════════════════════════════════════════════════════════════ -->
-<div class="ge-modal-backdrop" id="deleteProductModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+<!-- Delete Product Modal -->
+<div class="ge-modal-backdrop" id="deleteProductModal">
   <div class="ge-modal sm">
-    <div class="ge-modal-header danger">
-      <h2 id="deleteModalTitle">🗑️ Remove Product</h2>
-      <button class="ge-modal-close" data-close-modal="deleteProductModal" aria-label="Close">✕</button>
-    </div>
+    <div class="ge-modal-header"><h2>🗑️ Remove Product</h2><button class="ge-modal-close" data-close-modal="deleteProductModal">✕</button></div>
     <form method="POST" action="{{ url_for('inventory.delete_product') }}" id="deleteProductForm">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="product_id" id="deleteProductId">
       <div class="ge-modal-body">
-        <div class="ge-alert-banner">
-          <strong>⚠️ Warning:</strong> This will remove the product from active inventory. Transaction history will be preserved.
-        </div>
-        <div class="ge-field">
-          <label class="ge-field-label" for="deleteProductName">Product to Remove</label>
-          <input type="text" class="ge-input" id="deleteProductName" readonly>
-        </div>
-        <div class="ge-field">
-          <label class="ge-field-label" for="deleteReason">Reason for Removal *</label>
-          <select name="reason" class="ge-select" id="deleteReason" required>
-            <option value="">Select reason…</option>
-            <option>Discontinued</option><option>Expired/Damaged</option>
-            <option>Low Demand</option><option>Supplier Issue</option><option>Other</option>
-          </select>
-        </div>
-        <div class="ge-field">
-          <label class="ge-field-label" for="deleteNotes">Additional Notes</label>
-          <textarea name="notes" class="ge-textarea" id="deleteNotes" rows="2"></textarea>
-        </div>
+        <div class="ge-alert-banner" style="background:rgba(212,160,64,.1); padding:.65rem 1rem; border-radius:8px; margin-bottom:1rem;"><strong>⚠️ Warning:</strong> This will remove the product from active inventory. Transaction history will be preserved.</div>
+        <div class="ge-field"><label class="ge-field-label" for="deleteProductName">Product to Remove</label><input type="text" class="ge-input" id="deleteProductName" readonly></div>
+        <div class="ge-field"><label class="ge-field-label" for="deleteReason">Reason for Removal *</label><select name="reason" class="ge-select" id="deleteReason" required><option value="">Select reason…</option><option>Discontinued</option><option>Expired/Damaged</option><option>Low Demand</option><option>Supplier Issue</option><option>Other</option></select></div>
+        <div class="ge-field"><label class="ge-field-label" for="deleteNotes">Additional Notes</label><textarea name="notes" class="ge-textarea" id="deleteNotes" rows="2"></textarea></div>
       </div>
-      <div class="ge-modal-footer">
-        <button type="button" class="btn-ge-outline" data-close-modal="deleteProductModal">Cancel</button>
-        <button type="submit" class="btn-ge-danger">Remove Product</button>
-      </div>
+      <div class="ge-modal-footer"><button type="button" class="btn-ge-outline" data-close-modal="deleteProductModal">Cancel</button><button type="submit" class="btn-ge-danger">Remove Product</button></div>
     </form>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     ADJUST STOCK MODAL
-══════════════════════════════════════════════════════════════════ -->
-<div class="ge-modal-backdrop" id="editStockModal" role="dialog" aria-modal="true" aria-labelledby="stockModalTitle">
+<!-- Adjust Stock Modal -->
+<div class="ge-modal-backdrop" id="editStockModal">
   <div class="ge-modal">
-    <div class="ge-modal-header info">
-      <h2 id="stockModalTitle">📊 Stock &amp; Price Adjustment</h2>
-      <button class="ge-modal-close" data-close-modal="editStockModal" aria-label="Close">✕</button>
-    </div>
+    <div class="ge-modal-header"><h2>📊 Stock &amp; Price Adjustment</h2><button class="ge-modal-close" data-close-modal="editStockModal">✕</button></div>
     <form method="POST" action="{{ url_for('inventory.adjust_stock_audit') }}" id="adjustStockForm">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="product_id" id="editProductId">
       <div class="ge-modal-body">
-
-        <!-- Product Details -->
-        <div class="ge-inner-card">
-          <div class="ge-inner-card-header">
-            <h3>Product Details</h3>
-          </div>
-          <div class="ge-inner-card-body">
-            <div class="ge-row ge-row-2">
-              <div class="ge-field">
-                <label class="ge-field-label" for="editProductName">Product Name</label>
-                <input type="text" class="ge-input" id="editProductName" readonly>
-              </div>
-              <div class="ge-field">
-                <label class="ge-field-label" for="editCurrentStock">Current Stock</label>
-                <input type="number" class="ge-input" id="editCurrentStock" readonly>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Stock Adjustment -->
-        <div class="ge-inner-card">
-          <div class="ge-inner-card-header warning">
-            <h3>Stock Adjustment</h3>
-          </div>
-          <div class="ge-inner-card-body">
-            <div class="ge-field">
-              <label class="ge-field-label" for="adjustmentType">Adjustment Type *</label>
-              <select class="ge-select" id="adjustmentType" name="adjustment_type" required>
-                <option value="">Select type…</option>
-                <option value="add_stock">Add Stock</option>
-                <option value="remove_stock">Remove Stock</option>
-                <option value="set_stock">Set Exact Quantity</option>
-                <option value="damaged">Damaged Goods</option>
-                <option value="found_stock">Found Stock</option>
-              </select>
-            </div>
-            <div class="ge-row ge-row-2">
-              <div class="ge-field">
-                <label class="ge-field-label" for="adjustQuantity" id="quantityLabel">Quantity *</label>
-                <input type="number" class="ge-input" id="adjustQuantity" name="quantity" min="0" step="1" required>
-              </div>
-              <div class="ge-field">
-                <label class="ge-field-label" for="adjustUnitCost">Unit Cost (Optional)</label>
-                <input type="number" step="0.01" class="ge-input" id="adjustUnitCost" name="unit_cost">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Price Adjustment -->
-        <div class="ge-inner-card">
-          <div class="ge-inner-card-header info">
-            <h3>Price Adjustment (Optional)</h3>
-          </div>
-          <div class="ge-inner-card-body">
-            <div class="ge-row ge-row-2">
-              <div class="ge-field">
-                <label class="ge-field-label" for="editCostPrice">New Cost Price ({{ currency_symbol }})</label>
-                <input type="number" step="0.01" class="ge-input" id="editCostPrice" name="new_cost_price">
-              </div>
-              <div class="ge-field">
-                <label class="ge-field-label" for="editSellingPrice">New Selling Price ({{ currency_symbol }})</label>
-                <input type="number" step="0.01" class="ge-input" id="editSellingPrice" name="new_selling_price">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Audit Information -->
-        <div class="ge-inner-card">
-          <div class="ge-inner-card-header muted">
-            <h3>Audit Information</h3>
-          </div>
-          <div class="ge-inner-card-body">
-            <div class="ge-field">
-              <label class="ge-field-label" for="adjustReason">Reason for Adjustment *</label>
-              <select class="ge-select" id="adjustReason" name="reason" required>
-                <option value="">Select reason…</option>
-                <option value="purchase_order">Purchase Order Arrival</option>
-                <option value="damaged_goods">Damaged/Expired Goods</option>
-                <option value="stock_take">Stock Take/Count</option>
-                <option value="price_change">Supplier Price Change</option>
-                <option value="market_adjustment">Market Price Adjustment</option>
-                <option value="manual_correction">Manual Correction</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="ge-field">
-              <label class="ge-field-label" for="adjustNotes">Additional Notes</label>
-              <textarea class="ge-textarea" id="adjustNotes" name="notes" rows="2"></textarea>
-            </div>
-            <label class="ge-checkbox-row">
-              <input type="checkbox" name="create_audit" id="createAudit" checked>
-              Create audit trail for this adjustment
-            </label>
-          </div>
-        </div>
-
+        <div class="ge-inner-card"><div class="ge-inner-card-header"><h3>Product Details</h3></div><div class="ge-inner-card-body"><div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="editProductName">Product Name</label><input type="text" class="ge-input" id="editProductName" readonly></div><div class="ge-field"><label class="ge-field-label" for="editCurrentStock">Current Stock</label><input type="number" class="ge-input" id="editCurrentStock" readonly></div></div></div></div>
+        <div class="ge-inner-card"><div class="ge-inner-card-header"><h3>Stock Adjustment</h3></div><div class="ge-inner-card-body"><div class="ge-field"><label class="ge-field-label" for="adjustmentType">Adjustment Type *</label><select class="ge-select" id="adjustmentType" name="adjustment_type" required><option value="">Select type…</option><option value="add_stock">Add Stock</option><option value="remove_stock">Remove Stock</option><option value="set_stock">Set Exact Quantity</option><option value="damaged">Damaged Goods</option><option value="found_stock">Found Stock</option></select></div><div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" id="quantityLabel">Quantity *</label><input type="number" class="ge-input" id="adjustQuantity" name="quantity" min="0" step="1" required></div><div class="ge-field"><label class="ge-field-label" for="adjustUnitCost">Unit Cost (Optional)</label><input type="number" step="0.01" class="ge-input" id="adjustUnitCost" name="unit_cost"></div></div></div></div>
+        <div class="ge-inner-card"><div class="ge-inner-card-header"><h3>Price Adjustment (Optional)</h3></div><div class="ge-inner-card-body"><div class="ge-row ge-row-2"><div class="ge-field"><label class="ge-field-label" for="editCostPrice">New Cost Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="ge-input" id="editCostPrice" name="new_cost_price"></div><div class="ge-field"><label class="ge-field-label" for="editSellingPrice">New Selling Price ({{ currency_symbol }})</label><input type="number" step="0.01" class="ge-input" id="editSellingPrice" name="new_selling_price"></div></div></div></div>
+        <div class="ge-inner-card"><div class="ge-inner-card-header"><h3>Audit Information</h3></div><div class="ge-inner-card-body"><div class="ge-field"><label class="ge-field-label" for="adjustReason">Reason for Adjustment *</label><select class="ge-select" id="adjustReason" name="reason" required><option value="">Select reason…</option><option value="purchase_order">Purchase Order Arrival</option><option value="damaged_goods">Damaged/Expired Goods</option><option value="stock_take">Stock Take/Count</option><option value="price_change">Supplier Price Change</option><option value="market_adjustment">Market Price Adjustment</option><option value="manual_correction">Manual Correction</option><option value="other">Other</option></select></div><div class="ge-field"><label class="ge-field-label" for="adjustNotes">Additional Notes</label><textarea class="ge-textarea" id="adjustNotes" name="notes" rows="2"></textarea></div><label class="ge-checkbox-row"><input type="checkbox" name="create_audit" id="createAudit" checked> Create audit trail for this adjustment</label></div></div>
       </div>
-      <div class="ge-modal-footer">
-        <button type="button" class="btn-ge-outline" data-close-modal="editStockModal">Cancel</button>
-        <button type="submit" class="btn-ge-primary">Save Adjustments</button>
-      </div>
+      <div class="ge-modal-footer"><button type="button" class="btn-ge-outline" data-close-modal="editStockModal">Cancel</button><button type="submit" class="btn-ge-primary">Save Adjustments</button></div>
     </form>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     SCRIPTS
-══════════════════════════════════════════════════════════════════ -->
 <script nonce="{{ nonce }}">
 let currentPage = 1;
 let totalPages  = 1;
 let currentSearch      = '';
 let currentStockFilter = '';
 
-/* ── Helpers ──────────────────────────────────────────────────── */
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/[&<>"']/g, m =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
+function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-/* ── Modal open/close wiring ─────────────────────────────────── */
 document.getElementById('openAddProductBtn').addEventListener('click', () => openModal('addProductModal'));
+document.querySelectorAll('[data-close-modal]').forEach(btn => btn.addEventListener('click', function() { closeModal(this.dataset.closeModal); }));
+document.querySelectorAll('.ge-modal-backdrop').forEach(backdrop => backdrop.addEventListener('click', function(e) { if (e.target === this) closeModal(this.id); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.ge-modal-backdrop.open').forEach(m => closeModal(m.id)); });
 
-document.querySelectorAll('[data-close-modal]').forEach(btn => {
-  btn.addEventListener('click', function() { closeModal(this.dataset.closeModal); });
-});
-
-document.querySelectorAll('.ge-modal-backdrop').forEach(backdrop => {
-  backdrop.addEventListener('click', function(e) {
-    if (e.target === this) closeModal(this.id);
-  });
-});
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.ge-modal-backdrop.open').forEach(m => closeModal(m.id));
-  }
-});
-
-/* ── Theme toggle ─────────────────────────────────────────────── */
+// Theme toggle
 (function() {
   function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
@@ -1265,204 +609,91 @@ document.addEventListener('keydown', e => {
   }
   var current = localStorage.getItem('ge-theme') || 'dark';
   applyTheme(current);
-  document.getElementById('themeToggleBtn').addEventListener('click', function() {
-    applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  });
+  document.getElementById('themeToggleBtn').addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 })();
 
-/* ── Inventory API ────────────────────────────────────────────── */
+// Inventory API
 function loadInventory() {
   let url = '/api/v1/inventory?page=' + currentPage + '&per_page=50';
-  if (currentSearch)      url += '&search=' + encodeURIComponent(currentSearch);
-  fetch(url, { credentials: 'same-origin' })
-    .then(r => r.json())
-    .then(data => {
-      totalPages = data.total_pages || 1;
-      renderTable(data.products || []);
-      renderPagination();
-    })
-    .catch(() => {
-      document.getElementById('inventoryTableBody').innerHTML =
-        '<tr><td colspan="10" class="text-center text-danger" style="padding:1.5rem;">Error loading products</td></tr>';
-    });
+  if (currentSearch) url += '&search=' + encodeURIComponent(currentSearch);
+  fetch(url, { credentials: 'same-origin' }).then(r => r.json()).then(data => {
+    totalPages = data.total_pages || 1;
+    renderTable(data.products || []);
+    renderPagination();
+  }).catch(() => { document.getElementById('inventoryTableBody').innerHTML = '<tr><td colspan="10" class="text-center text-danger">Error loading products</td></tr>'; });
 }
 
 function renderTable(products) {
   const tbody = document.getElementById('inventoryTableBody');
   let filtered = [...products];
-  if (currentStockFilter === 'low')
-    filtered = filtered.filter(p => (p.current_stock||0) <= (p.min_stock_level||0) && (p.current_stock||0) > 0);
-  else if (currentStockFilter === 'out')
-    filtered = filtered.filter(p => (p.current_stock||0) === 0);
-
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="padding:2rem;">No products found</td></tr>';
-    return;
-  }
-
+  if (currentStockFilter === 'low') filtered = filtered.filter(p => (p.current_stock||0) <= (p.min_stock_level||0) && (p.current_stock||0) > 0);
+  else if (currentStockFilter === 'out') filtered = filtered.filter(p => (p.current_stock||0) === 0);
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No products found</td></tr>'; return; }
   let html = '';
   filtered.forEach(p => {
-    const stock = p.current_stock || 0;
-    const min   = p.min_stock_level || 0;
+    const stock = p.current_stock || 0, min = p.min_stock_level || 0;
     const rowCls = stock === 0 ? 'row-danger' : (stock <= min ? 'row-warning' : '');
     const badgeCls = stock === 0 ? 'ge-badge-danger' : (stock <= min ? 'ge-badge-warning' : 'ge-badge-success');
-
-    html += `<tr class="${rowCls}">
-      <td><strong>${escapeHtml(p.name)}</strong></td>
-      <td><code>${escapeHtml(p.sku) || 'N/A'}</code></td>
-      <td>${escapeHtml(p.category) || 'General'}</td>
-      <td><span class="ge-badge ${badgeCls}">${stock}</span></td>
-      <td>${min}</td>
-      <td>{{ currency_symbol }}${(p.cost_price||0).toFixed(2)}</td>
-      <td>{{ currency_symbol }}${(p.selling_price||0).toFixed(2)}</td>
-      <td>${escapeHtml(p.supplier) || 'N/A'}</td>
-      <td>${escapeHtml(p.location) || 'Main'}</td>
-      <td>
-        <div style="display:flex;gap:.3rem;flex-wrap:wrap;">
-          <button class="btn-ge-icon edit edit-product-btn"
-            data-id="${p.id}"
-            data-name="${escapeHtml(p.name)}"
-            data-sku="${escapeHtml(p.sku||'')}"
-            data-barcode="${escapeHtml(p.barcode||'')}"
-            data-category="${escapeHtml(p.category||'')}"
-            data-supplier="${escapeHtml(p.supplier||'')}"
-            data-min-stock="${p.min_stock_level||5}"
-            data-location="${escapeHtml(p.location||'')}"
-            data-unit-type="${p.unit_type||'piece'}"
-            data-cost="${p.cost_price||0}"
-            data-price="${p.selling_price||0}"
-            data-expiry="${p.expiry_date||''}"
-            data-batch="${p.batch_number||''}"
-            data-description="${escapeHtml(p.description||'')}">✏️ Edit</button>
-          <button class="btn-ge-icon info edit-stock-btn"
-            data-id="${p.id}"
-            data-name="${escapeHtml(p.name)}"
-            data-stock="${stock}"
-            data-cost="${p.cost_price||''}"
-            data-price="${p.selling_price||''}">📝 Adjust</button>
-          <button class="btn-ge-icon danger delete-product-btn"
-            data-id="${p.id}"
-            data-name="${escapeHtml(p.name)}">🗑️</button>
-        </div>
-      </td>
-    </tr>`;
+    html += `<tr class="${rowCls}"><td><strong>${escapeHtml(p.name)}</strong></td><td><code>${escapeHtml(p.sku) || 'N/A'}</code></td><td>${escapeHtml(p.category) || 'General'}</td><td><span class="ge-badge ${badgeCls}">${stock}</span></td><td>${min}</td><td>{{ currency_symbol }}${(p.cost_price||0).toFixed(2)}</td><td>{{ currency_symbol }}${(p.selling_price||0).toFixed(2)}</td><td>${escapeHtml(p.supplier) || 'N/A'}</td><td>${escapeHtml(p.location) || 'Main'}</td><td><div style="display:flex;gap:.3rem;flex-wrap:wrap;"><button class="btn-ge-icon edit edit-product-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-sku="${escapeHtml(p.sku||'')}" data-barcode="${escapeHtml(p.barcode||'')}" data-category="${escapeHtml(p.category||'')}" data-supplier="${escapeHtml(p.supplier||'')}" data-min-stock="${p.min_stock_level||5}" data-location="${escapeHtml(p.location||'')}" data-unit-type="${p.unit_type||'piece'}" data-cost="${p.cost_price||0}" data-price="${p.selling_price||0}" data-expiry="${p.expiry_date||''}" data-batch="${p.batch_number||''}" data-description="${escapeHtml(p.description||'')}">✏️ Edit</button><button class="btn-ge-icon info edit-stock-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-stock="${stock}" data-cost="${p.cost_price||''}" data-price="${p.selling_price||''}">📝 Adjust</button><button class="btn-ge-icon danger delete-product-btn" data-id="${p.id}" data-name="${escapeHtml(p.name)}">🗑️</button></div></td></tr>`;
   });
   tbody.innerHTML = html;
-
-  /* Re-attach dynamic button listeners */
-  tbody.querySelectorAll('.edit-product-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.getElementById('editProductIdFull').value      = this.dataset.id;
-      document.getElementById('editProductNameFull').value    = this.dataset.name;
-      document.getElementById('editProductSku').value         = this.dataset.sku || '';
-      document.getElementById('editProductBarcode').value     = this.dataset.barcode || '';
-      document.getElementById('editProductCategory').value    = this.dataset.category || '';
-      document.getElementById('editProductSupplier').value    = this.dataset.supplier || '';
-      document.getElementById('editProductMinStock').value    = this.dataset.minStock || 5;
-      document.getElementById('editProductLocation').value    = this.dataset.location || '';
-      document.getElementById('editProductUnitType').value    = this.dataset.unitType || 'piece';
-      document.getElementById('editProductCostPrice').value   = this.dataset.cost || 0;
-      document.getElementById('editProductSellingPrice').value= this.dataset.price || 0;
-      document.getElementById('editProductExpiryDate').value  = this.dataset.expiry || '';
-      document.getElementById('editProductBatchNumber').value = this.dataset.batch || '';
-      document.getElementById('editProductDescription').value = this.dataset.description || '';
-      openModal('editProductModal');
-    });
-  });
-
-  tbody.querySelectorAll('.edit-stock-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.getElementById('editProductId').value    = this.dataset.id;
-      document.getElementById('editProductName').value  = this.dataset.name;
-      document.getElementById('editCurrentStock').value = this.dataset.stock;
-      const cp = this.dataset.cost  ? 'Current: {{ currency_symbol }}' + parseFloat(this.dataset.cost).toFixed(2)  : '';
-      const sp = this.dataset.price ? 'Current: {{ currency_symbol }}' + parseFloat(this.dataset.price).toFixed(2) : '';
-      document.getElementById('editCostPrice').placeholder    = cp;
-      document.getElementById('editSellingPrice').placeholder = sp;
-      openModal('editStockModal');
-    });
-  });
-
-  tbody.querySelectorAll('.delete-product-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.getElementById('deleteProductId').value   = this.dataset.id;
-      document.getElementById('deleteProductName').value = this.dataset.name;
-      openModal('deleteProductModal');
-    });
-  });
+  tbody.querySelectorAll('.edit-product-btn').forEach(btn => btn.addEventListener('click', function() {
+    document.getElementById('editProductIdFull').value = this.dataset.id;
+    document.getElementById('editProductNameFull').value = this.dataset.name;
+    document.getElementById('editProductSku').value = this.dataset.sku || '';
+    document.getElementById('editProductBarcode').value = this.dataset.barcode || '';
+    document.getElementById('editProductCategory').value = this.dataset.category || '';
+    document.getElementById('editProductSupplier').value = this.dataset.supplier || '';
+    document.getElementById('editProductMinStock').value = this.dataset.minStock || 5;
+    document.getElementById('editProductLocation').value = this.dataset.location || '';
+    document.getElementById('editProductUnitType').value = this.dataset.unitType || 'piece';
+    document.getElementById('editProductCostPrice').value = this.dataset.cost || 0;
+    document.getElementById('editProductSellingPrice').value = this.dataset.price || 0;
+    document.getElementById('editProductExpiryDate').value = this.dataset.expiry || '';
+    document.getElementById('editProductBatchNumber').value = this.dataset.batch || '';
+    document.getElementById('editProductDescription').value = this.dataset.description || '';
+    openModal('editProductModal');
+  }));
+  tbody.querySelectorAll('.edit-stock-btn').forEach(btn => btn.addEventListener('click', function() {
+    document.getElementById('editProductId').value = this.dataset.id;
+    document.getElementById('editProductName').value = this.dataset.name;
+    document.getElementById('editCurrentStock').value = this.dataset.stock;
+    const cp = this.dataset.cost ? 'Current: {{ currency_symbol }}' + parseFloat(this.dataset.cost).toFixed(2) : '';
+    const sp = this.dataset.price ? 'Current: {{ currency_symbol }}' + parseFloat(this.dataset.price).toFixed(2) : '';
+    document.getElementById('editCostPrice').placeholder = cp;
+    document.getElementById('editSellingPrice').placeholder = sp;
+    openModal('editStockModal');
+  }));
+  tbody.querySelectorAll('.delete-product-btn').forEach(btn => btn.addEventListener('click', function() {
+    document.getElementById('deleteProductId').value = this.dataset.id;
+    document.getElementById('deleteProductName').value = this.dataset.name;
+    openModal('deleteProductModal');
+  }));
 }
 
 function renderPagination() {
   const pg = document.getElementById('inventoryPagination');
   pg.innerHTML = '';
   if (totalPages <= 1) return;
-
-  const maxVis = 5;
-  let start = Math.max(1, currentPage - Math.floor(maxVis/2));
-  let end   = Math.min(totalPages, start + maxVis - 1);
-  if (end - start + 1 < maxVis) start = Math.max(1, end - maxVis + 1);
-
-  const mkBtn = (label, page, cls) => {
-    const b = document.createElement('button');
-    b.className = 'ge-page-btn ' + cls;
-    b.textContent = label;
-    if (!cls.includes('disabled')) {
-      b.addEventListener('click', () => { currentPage = page; loadInventory(); });
-    }
-    pg.appendChild(b);
-  };
-
+  let start = Math.max(1, currentPage - 2), end = Math.min(totalPages, start + 4);
+  if (end - start < 4) start = Math.max(1, end - 4);
+  const mkBtn = (label, page, cls) => { let b = document.createElement('button'); b.className = 'ge-page-btn ' + cls; b.textContent = label; if (!cls.includes('disabled')) b.addEventListener('click', () => { currentPage = page; loadInventory(); }); pg.appendChild(b); };
   mkBtn('‹ Prev', currentPage - 1, currentPage === 1 ? 'disabled' : '');
-  for (let i = start; i <= end; i++) mkBtn(i, i, i === currentPage ? 'active' : '');
+  for (let i=start; i<=end; i++) mkBtn(i, i, i === currentPage ? 'active' : '');
   mkBtn('Next ›', currentPage + 1, currentPage === totalPages ? 'disabled' : '');
 }
 
-/* ── Filter / Search listeners ───────────────────────────────── */
-document.getElementById('searchInventory').addEventListener('input', function() {
-  currentSearch = this.value; currentPage = 1; loadInventory();
-});
-document.getElementById('stockFilter').addEventListener('change', function() {
-  currentStockFilter = this.value; currentPage = 1; loadInventory();
-});
-document.getElementById('resetFilters').addEventListener('click', function() {
-  document.getElementById('searchInventory').value = '';
-  document.getElementById('stockFilter').value = '';
-  currentSearch = ''; currentStockFilter = ''; currentPage = 1;
-  loadInventory();
-});
+document.getElementById('searchInventory').addEventListener('input', function() { currentSearch = this.value; currentPage = 1; loadInventory(); });
+document.getElementById('stockFilter').addEventListener('change', function() { currentStockFilter = this.value; currentPage = 1; loadInventory(); });
+document.getElementById('resetFilters').addEventListener('click', function() { document.getElementById('searchInventory').value = ''; document.getElementById('stockFilter').value = ''; currentSearch = ''; currentStockFilter = ''; currentPage = 1; loadInventory(); });
 
-/* ── DOMContentLoaded ─────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function() {
   loadInventory();
-
-  /* Perishable toggle */
-  const perishableChk   = document.getElementById('isPerishable');
-  const perishableBlock = document.getElementById('perishableFields');
-  if (perishableChk && perishableBlock) {
-    const toggle = () => { perishableBlock.style.display = perishableChk.checked ? 'block' : 'none'; };
-    perishableChk.addEventListener('change', toggle);
-    toggle();
-  }
-
-  /* Adjustment type → quantity label */
-  const adjType  = document.getElementById('adjustmentType');
-  const qtyLabel = document.getElementById('quantityLabel');
-  if (adjType && qtyLabel) {
-    adjType.addEventListener('change', function() {
-      const labels = {
-        add_stock:    'Quantity to Add *',
-        remove_stock: 'Quantity to Remove *',
-        set_stock:    'New Total Quantity *',
-        damaged:      'Damaged Quantity *',
-        found_stock:  'Found Quantity *'
-      };
-      qtyLabel.textContent = labels[this.value] || 'Quantity *';
-    });
-  }
-
-  /* View all low stock */
-  const viewAllBtn = document.getElementById('viewAllLowStockBtn');
-  if (viewAllBtn) viewAllBtn.addEventListener('click', () => alert('Full low stock report coming soon!'));
+  const perishableChk = document.getElementById('isPerishable'), perishableBlock = document.getElementById('perishableFields');
+  if (perishableChk && perishableBlock) { const toggle = () => { perishableBlock.style.display = perishableChk.checked ? 'block' : 'none'; }; perishableChk.addEventListener('change', toggle); toggle(); }
+  const adjType = document.getElementById('adjustmentType'), qtyLabel = document.getElementById('quantityLabel');
+  if (adjType && qtyLabel) adjType.addEventListener('change', function() { const labels = { add_stock:'Quantity to Add *', remove_stock:'Quantity to Remove *', set_stock:'New Total Quantity *', damaged:'Damaged Quantity *', found_stock:'Found Quantity *' }; qtyLabel.textContent = labels[this.value] || 'Quantity *'; });
+  document.getElementById('viewAllLowStockBtn')?.addEventListener('click', () => alert('Full low stock report coming soon!'));
 });
 </script>
 {% endblock %}

@@ -18,7 +18,7 @@
 </script>
 
 <style nonce="{{ nonce }}">
-/* ── Token Layer ─────────────────────────────────────────────── */
+/* ── GrowEasy Design Tokens ─────────────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
     --bg:         #0c110a;
@@ -67,7 +67,7 @@
     --code-bg:    #eef2e9;
 }
 
-/* ── Base ───────────────────────────────────────────────────── */
+/* ── Base & Fluid Layout ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
@@ -76,30 +76,30 @@ body {
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    line-height: 1.5;
 }
 
-/* ── Page wrapper — full viewport width ─────────────────────── */
+/* Fluid full‑width wrapper */
 .po-page {
-    padding: 0;
-    background: var(--bg);
-    min-height: 100vh;
     width: 100%;
+    min-height: 100vh;
+    background: var(--bg);
 }
 
 .po-inner {
-    width: 100%;
-    max-width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
     padding: 1.5rem 2rem 2.5rem;
+    width: 100%;
 }
 
-/* ── Hero ───────────────────────────────────────────────────── */
+/* Hero */
 .po-hero {
     position: relative;
     overflow: hidden;
     background: var(--surface-2);
     border-bottom: 1px solid var(--border);
-    padding: 2rem 2rem 2rem;
-    margin-bottom: 0;
+    padding: 2rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -107,7 +107,7 @@ body {
     gap: 1rem;
 }
 
-/* Islamic hexagonal lattice — bg pattern */
+/* Islamic hexagonal lattice */
 .po-hero::before {
     content: '';
     position: absolute;
@@ -117,7 +117,7 @@ body {
     pointer-events: none;
 }
 
-/* Gold left accent stripe */
+/* Gold left stripe */
 .po-hero::after {
     content: '';
     position: absolute;
@@ -132,14 +132,12 @@ body {
     font-weight: 800;
     font-size: 1.6rem;
     margin: 0;
-    color: var(--text);
     letter-spacing: -0.02em;
 }
 .po-hero-text p {
     margin: 0.25rem 0 0;
     color: var(--muted);
     font-size: 0.88rem;
-    font-weight: 400;
 }
 
 .po-hero-actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 0.75rem; }
@@ -150,32 +148,34 @@ body {
     border: 1px solid var(--border-hi);
     color: var(--gold);
     border-radius: 8px;
-    padding: 0.45rem 0.9rem;
+    padding: 0.5rem 0.9rem;
     font-size: 0.8rem;
     font-weight: 600;
-    font-family: 'Figtree', sans-serif;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    display: flex; align-items: center; gap: 0.4rem;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 .theme-toggle:hover { background: rgba(201,162,40,.18); border-color: var(--gold); }
 
-/* Back button */
 .btn-back {
     background: var(--gold-dim);
     border: 1px solid var(--border-hi);
     color: var(--text-2);
     border-radius: 8px;
-    padding: 0.45rem 1rem;
+    padding: 0.5rem 1rem;
     font-size: 0.85rem;
     font-weight: 500;
     text-decoration: none;
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 40px;
 }
 .btn-back:hover { background: var(--surface-3); color: var(--text); border-color: var(--gold); }
 
-/* ── Cards ──────────────────────────────────────────────────── */
+/* Cards */
 .po-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -194,7 +194,6 @@ body {
     font-family: 'Bricolage Grotesque', sans-serif;
     font-weight: 700;
     font-size: 0.9rem;
-    color: var(--text);
 }
 .po-card-body { padding: 1.4rem; }
 
@@ -202,15 +201,18 @@ body {
     background: linear-gradient(135deg, var(--gold), var(--gold-2));
     color: #0c110a;
     border-radius: 50%;
-    width: 22px; height: 22px;
-    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.68rem;
     font-weight: 800;
     font-family: 'Bricolage Grotesque', sans-serif;
     flex-shrink: 0;
 }
 
-/* ── Field labels ───────────────────────────────────────────── */
+/* Labels */
 .field-label {
     font-size: 0.67rem;
     font-weight: 700;
@@ -221,7 +223,7 @@ body {
     font-family: 'Figtree', sans-serif;
 }
 
-/* ── Form controls ──────────────────────────────────────────── */
+/* Form controls */
 .form-control,
 .form-select {
     background: var(--input-bg) !important;
@@ -230,31 +232,24 @@ body {
     border-radius: 8px;
     font-family: 'Figtree', sans-serif;
     font-size: 0.88rem;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    padding: 0.5rem 0.75rem;
 }
 .form-control:focus,
 .form-select:focus {
     border-color: var(--gold) !important;
     box-shadow: 0 0 0 3px rgba(201,162,40,.15) !important;
     outline: none;
-    color: var(--text) !important;
-    background: var(--input-bg) !important;
 }
-.form-control::placeholder { color: var(--faint); }
-.form-select option { background: var(--surface-2); color: var(--text); }
 
-/* ── Supplier preview box ───────────────────────────────────── */
+/* Supplier preview */
 #supplierPreview {
     background: var(--surface-2) !important;
     border: 1px solid var(--border-hi) !important;
     border-radius: 10px;
     padding: 1rem 1.2rem;
 }
-#supplierPreview .fw-semibold { color: var(--text); font-weight: 600; }
-#supplierPreview .text-secondary,
-#prevPhone, #prevEmail, #prevAddress { color: var(--text-2) !important; font-size: 0.84rem; }
 
-/* ── Items table ────────────────────────────────────────────── */
+/* Items table */
 .items-tbl { width: 100%; border-collapse: collapse; }
 .items-tbl th {
     background: var(--surface-3);
@@ -265,17 +260,14 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.08em;
     text-align: left;
-    font-family: 'Figtree', sans-serif;
     border-bottom: 1px solid var(--border-hi);
 }
 .items-tbl td {
     padding: 0.75rem 0.85rem;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
-    color: var(--text);
     font-size: 0.88rem;
 }
-.items-tbl tr:last-child td { border-bottom: none; }
 .items-tbl tr:hover td { background: var(--surface-2); }
 
 .item-total-cell {
@@ -284,17 +276,28 @@ body {
     color: var(--gold);
     font-size: 0.92rem;
 }
-.items-tbl code {
-    background: var(--code-bg);
-    color: var(--green-acc);
-    padding: 0.15rem 0.45rem;
-    border-radius: 5px;
-    font-size: 0.8rem;
-    border: 1px solid var(--border);
+.qty-input, .price-input {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text);
+    border-radius: 7px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.4rem 0.55rem;
+    width: 85px;
 }
-.items-tbl .fw-semibold { color: var(--text); font-weight: 600; }
+.btn-remove-row {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--danger);
+    border-radius: 7px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    min-height: 36px;
+}
+.btn-remove-row:hover { background: rgba(224,112,112,.12); border-color: var(--danger); }
 
-/* Subtotal below table */
 .subtotal-strip {
     padding: 0.85rem 1.2rem;
     border-top: 1px solid var(--border);
@@ -304,7 +307,6 @@ body {
     align-items: center;
     gap: 1rem;
 }
-.subtotal-strip .field-label { margin: 0; }
 #subtotalDisplay {
     font-family: 'Bricolage Grotesque', sans-serif;
     font-weight: 700;
@@ -312,7 +314,7 @@ body {
     color: var(--gold);
 }
 
-/* ── Totals box ─────────────────────────────────────────────── */
+/* Totals box */
 .totals-box {
     background: var(--surface-3);
     border: 1px solid var(--border-hi);
@@ -329,18 +331,11 @@ body {
     background-size: 56px 100px;
     pointer-events: none;
 }
-.totals-box > * { position: relative; }
 .totals-line {
     display: flex;
     justify-content: space-between;
-    font-size: 0.88rem;
     margin-bottom: 0.5rem;
     color: var(--text-2);
-}
-.totals-line span:last-child {
-    font-family: 'Bricolage Grotesque', sans-serif;
-    font-weight: 600;
-    color: var(--text);
 }
 .totals-grand {
     display: flex;
@@ -356,7 +351,7 @@ body {
 }
 .totals-grand span:last-child { color: var(--gold-2); font-size: 1.45rem; }
 
-/* ── Primary gold button ────────────────────────────────────── */
+/* Primary gold button */
 .btn-po-submit {
     background: linear-gradient(135deg, var(--gold), var(--gold-2));
     border: none;
@@ -365,218 +360,76 @@ body {
     font-weight: 700;
     font-size: 0.97rem;
     padding: 0.9rem 2rem;
-    font-family: 'Figtree', sans-serif;
-    box-shadow: 0 4px 16px rgba(201,162,40,.35);
-    transition: all 0.15s;
     width: 100%;
-    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     cursor: pointer;
+    min-height: 52px;
 }
-.btn-po-submit:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 22px rgba(201,162,40,.45);
-    color: #0c110a;
-}
-.btn-po-submit:active { transform: translateY(0); }
+.btn-po-submit:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
-/* ── Add from inventory btn ─────────────────────────────────── */
+/* Add from inventory button */
 .btn-add-inv {
     background: var(--gold-dim);
     border: 1px solid var(--border-hi);
     color: var(--gold);
     border-radius: 8px;
-    padding: 0.38rem 0.85rem;
+    padding: 0.5rem 0.85rem;
     font-size: 0.82rem;
     font-weight: 600;
-    font-family: 'Figtree', sans-serif;
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     cursor: pointer;
-    white-space: nowrap;
+    min-height: 38px;
 }
-.btn-add-inv:hover { background: rgba(201,162,40,.2); border-color: var(--gold); color: var(--gold-2); }
+.btn-add-inv:hover { background: rgba(201,162,40,.2); border-color: var(--gold); }
 
-/* Remove row button */
-.btn-remove-row {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--danger);
-    border-radius: 7px;
-    padding: 0.25rem 0.55rem;
-    font-size: 0.78rem;
-    cursor: pointer;
-    transition: all 0.12s;
-}
-.btn-remove-row:hover { background: rgba(224,112,112,.12); border-color: var(--danger); }
-
-/* ── Modal ──────────────────────────────────────────────────── */
+/* Modal */
 .modal-content {
     background: var(--surface) !important;
     border: 1px solid var(--border-hi) !important;
     border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.5);
-    overflow: hidden;
 }
 .modal-header-ge {
     background: var(--surface-2);
     border-bottom: 1px solid var(--border);
     padding: 1rem 1.4rem;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex;
+    justify-content: space-between;
 }
-.modal-header-ge h5 {
-    font-family: 'Bricolage Grotesque', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--text);
-    margin: 0;
-    display: flex; align-items: center; gap: 0.5rem;
-}
-.modal-header-ge .gold-icon { color: var(--gold); }
-.modal-body-ge { padding: 1.2rem 1.4rem; }
-.modal-footer-ge {
-    padding: 0.9rem 1.4rem;
-    border-top: 1px solid var(--border);
-    background: var(--surface-2);
-    display: flex; align-items: center; gap: 0.75rem;
-}
-
-/* Modal table */
 .inv-table { width: 100%; border-collapse: collapse; }
 .inv-table th {
     background: var(--surface-3);
-    color: var(--muted);
     padding: 0.6rem 0.8rem;
     font-size: 0.67rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    text-align: left;
-    border-bottom: 1px solid var(--border-hi);
-    position: sticky; top: 0; z-index: 2;
-    font-family: 'Figtree', sans-serif;
-}
-.inv-table td {
-    padding: 0.65rem 0.8rem;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-    color: var(--text);
-    font-size: 0.86rem;
-}
-.inv-table tr.inv-row:hover td { background: var(--surface-2); }
-.inv-table .fw-semibold { color: var(--text); font-weight: 600; }
-.inv-table code {
-    background: var(--code-bg);
-    color: var(--green-acc);
-    padding: 0.12rem 0.4rem;
-    border-radius: 4px;
-    font-size: 0.79rem;
-    border: 1px solid var(--border);
-}
-
-/* Checkboxes gold tint */
-.form-check-input {
-    background-color: var(--input-bg) !important;
-    border: 2px solid var(--border-hi) !important;
 }
 .form-check-input:checked {
     background-color: var(--gold) !important;
     border-color: var(--gold) !important;
 }
-.form-check-input:focus { box-shadow: 0 0 0 3px rgba(201,162,40,.2) !important; }
 
-/* Selected count badge */
-#selectedCount {
-    color: var(--muted);
-    font-size: 0.82rem;
+/* Responsive */
+@media (max-width: 768px) {
+    .po-inner { padding: 1rem; }
+    .po-hero { padding: 1.5rem; }
+    .items-tbl, .items-tbl tbody, .items-tbl tr, .items-tbl td { display: block; width: 100%; }
+    .items-tbl thead { display: none; }
+    .items-tbl tr { margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 12px; }
+    .items-tbl td { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    .items-tbl td::before { content: attr(data-label); font-weight: 700; color: var(--gold); width: 40%; }
+    .qty-input, .price-input { width: 100px; }
+    .btn-po-submit { padding: 0.75rem; }
 }
-
-/* Cancel / secondary btn */
-.btn-ge-secondary {
-    background: var(--surface-3);
-    border: 1px solid var(--border);
-    color: var(--text-2);
-    border-radius: 8px;
-    padding: 0.42rem 1rem;
-    font-size: 0.84rem;
-    font-weight: 500;
-    font-family: 'Figtree', sans-serif;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.btn-ge-secondary:hover { border-color: var(--border-hi); color: var(--text); }
-
-/* ── Empty state ────────────────────────────────────────────── */
-.empty-row td {
-    color: var(--faint) !important;
-    font-size: 0.85rem;
-}
-
-/* ── Section label divider ──────────────────────────────────── */
-.section-label {
-    font-size: 0.67rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-.section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-}
-
-/* ── Misc ───────────────────────────────────────────────────── */
-.text-gold { color: var(--gold) !important; }
-.text-muted-ge { color: var(--muted) !important; }
-
-/* Bootstrap overrides for dark modal backdrop */
-.modal-backdrop { background: rgba(0,0,0,.7) !important; }
-
-/* Ensure btn-close is visible in dark */
-.btn-close-ge {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    font-size: 1.1rem;
-    cursor: pointer;
-    line-height: 1;
-    padding: 0.25rem;
-    transition: color 0.12s;
-}
-.btn-close-ge:hover { color: var(--text); }
-
-/* ── Qty/price inputs in table ─────────────────────────────── */
-.qty-input, .price-input {
-    background: var(--input-bg) !important;
-    border: 1px solid var(--input-border) !important;
-    color: var(--text) !important;
-    border-radius: 7px;
-    font-family: 'Bricolage Grotesque', sans-serif;
-    font-weight: 600;
-    font-size: 0.88rem;
-    padding: 0.3rem 0.55rem;
-    transition: border-color 0.15s;
-}
-.qty-input:focus, .price-input:focus {
-    border-color: var(--gold) !important;
-    box-shadow: 0 0 0 2px rgba(201,162,40,.15) !important;
-    outline: none;
-}
-
-/* Remove default Bootstrap blue focus rings on form controls above */
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="po-page">
-
-    <!-- Hero -->
     <div class="po-hero">
         <div class="po-hero-text">
             <h2><i class="bi bi-cart-plus me-2 text-gold"></i>Create Purchase Order</h2>
@@ -593,28 +446,24 @@ body {
         </div>
     </div>
 
-    <!-- Main content -->
     <div class="po-inner">
         <form method="POST" action="{{ url_for('purchases.create_po_process') }}" id="poForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="supplier_name"    id="hidden_supplier_name">
+            <input type="hidden" name="supplier_name" id="hidden_supplier_name">
             <input type="hidden" name="supplier_address" id="hidden_supplier_address">
-            <input type="hidden" name="supplier_email"   id="hidden_supplier_email">
-            <input type="hidden" name="supplier_phone"   id="hidden_supplier_phone">
+            <input type="hidden" name="supplier_email" id="hidden_supplier_email">
+            <input type="hidden" name="supplier_phone" id="hidden_supplier_phone">
 
             <div class="row g-3">
-
-                <!-- ── LEFT COLUMN ─────────────────────────── -->
                 <div class="col-lg-8">
-
-                    <!-- Step 1: Supplier -->
+                    <!-- Supplier -->
                     <div class="po-card">
                         <div class="po-card-header">
                             <span class="step-num">1</span>
                             Supplier
                         </div>
                         <div class="po-card-body">
-                            <div class="field-label mb-2">Select Registered Vendor</div>
+                            <label for="supplier_select" class="field-label mb-2">Select Registered Vendor</label>
                             <select name="supplier_id" id="supplier_select" class="form-select mb-3" required>
                                 <option value="">— Choose a supplier —</option>
                                 {% for s in suppliers %}
@@ -627,39 +476,24 @@ body {
                                 </option>
                                 {% endfor %}
                             </select>
-
-                            <!-- Supplier info preview -->
                             <div id="supplierPreview" style="display:none;">
                                 <div class="section-label">Supplier Details</div>
                                 <div class="row g-2">
-                                    <div class="col-6">
-                                        <div class="field-label">Name</div>
-                                        <div id="prevName" class="fw-semibold"></div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="field-label">Phone</div>
-                                        <div id="prevPhone"></div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="field-label">Email</div>
-                                        <div id="prevEmail" style="font-size:0.83rem;"></div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="field-label">Address</div>
-                                        <div id="prevAddress" style="font-size:0.83rem;"></div>
-                                    </div>
+                                    <div class="col-6"><div class="field-label">Name</div><div id="prevName" class="fw-semibold"></div></div>
+                                    <div class="col-6"><div class="field-label">Phone</div><div id="prevPhone"></div></div>
+                                    <div class="col-6"><div class="field-label">Email</div><div id="prevEmail"></div></div>
+                                    <div class="col-6"><div class="field-label">Address</div><div id="prevAddress"></div></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Step 2: Items -->
+                    <!-- Items -->
                     <div class="po-card">
                         <div class="po-card-header">
                             <span class="step-num">2</span>
                             Order Items
-                            <button type="button" class="btn-add-inv ms-auto"
-                                    data-bs-toggle="modal" data-bs-target="#inventoryModal">
+                            <button type="button" class="btn-add-inv ms-auto" data-bs-toggle="modal" data-bs-target="#inventoryModal">
                                 <i class="bi bi-plus-circle"></i> Add from Inventory
                             </button>
                         </div>
@@ -667,20 +501,11 @@ body {
                             <div class="table-responsive">
                                 <table class="items-tbl" id="itemsTable">
                                     <thead>
-                                        <tr>
-                                            <th style="width:38%;">Product</th>
-                                            <th>SKU</th>
-                                            <th style="width:100px;">Qty</th>
-                                            <th style="width:130px;">Unit Price</th>
-                                            <th style="width:110px;">Total</th>
-                                            <th style="width:44px;"></th>
-                                        </tr>
+                                        <tr><th>Product</th><th>SKU</th><th>Qty</th><th>Unit Price</th><th>Total</th><th></th></tr>
                                     </thead>
                                     <tbody id="itemsTbody">
                                         <tr id="emptyRow" class="empty-row">
-                                            <td colspan="6" class="text-center py-5 small">
-                                                <i class="bi bi-cart3 me-1"></i> No items yet — click "Add from Inventory"
-                                            </td>
+                                            <td colspan="6" class="text-center py-5 small"><i class="bi bi-cart3 me-1"></i> No items yet — click "Add from Inventory"</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -691,53 +516,40 @@ body {
                             </div>
                         </div>
                     </div>
-
                 </div>
 
-                <!-- ── RIGHT COLUMN ────────────────────────── -->
                 <div class="col-lg-4">
-
-                    <!-- Step 3: Order Details -->
+                    <!-- Order Details -->
                     <div class="po-card">
-                        <div class="po-card-header">
-                            <span class="step-num">3</span>
-                            Order Details
-                        </div>
+                        <div class="po-card-header"><span class="step-num">3</span> Order Details</div>
                         <div class="po-card-body">
                             <div class="mb-3">
-                                <div class="field-label">PO Date *</div>
-                                <input type="date" class="form-control form-control-sm" name="po_date" value="{{ today }}" required>
+                                <label for="po_date" class="field-label">PO Date *</label>
+                                <input type="date" class="form-control form-control-sm" name="po_date" id="po_date" value="{{ today }}" required>
                             </div>
                             <div class="mb-3">
-                                <div class="field-label">Expected Delivery</div>
-                                <input type="date" class="form-control form-control-sm" name="delivery_date">
+                                <label for="delivery_date" class="field-label">Expected Delivery</label>
+                                <input type="date" class="form-control form-control-sm" name="delivery_date" id="delivery_date">
                             </div>
                             <div class="mb-3">
-                                <div class="field-label">Delivery Method</div>
-                                <select class="form-select form-select-sm" name="delivery_method">
-                                    <option>Pickup</option>
-                                    <option>Courier</option>
-                                    <option>Supplier Delivery</option>
+                                <label for="delivery_method" class="field-label">Delivery Method</label>
+                                <select class="form-select form-select-sm" name="delivery_method" id="delivery_method">
+                                    <option>Pickup</option><option>Courier</option><option>Supplier Delivery</option>
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <div class="field-label">Sales Tax (%)</div>
-                                <input type="number" class="form-control form-control-sm" name="sales_tax"
-                                       value="17" min="0" max="100" step="0.1">
+                                <label for="sales_tax" class="field-label">Sales Tax (%)</label>
+                                <input type="number" class="form-control form-control-sm" name="sales_tax" id="sales_tax" value="17" min="0" max="100" step="0.1">
                             </div>
                             <div class="mb-3">
-                                <div class="field-label">Shipping Terms</div>
-                                <select class="form-select form-select-sm" name="shipping_terms">
-                                    <option>FOB Destination</option>
-                                    <option>FOB Origin</option>
-                                    <option>CIF</option>
-                                    <option>DDP</option>
+                                <label for="shipping_terms" class="field-label">Shipping Terms</label>
+                                <select class="form-select form-select-sm" name="shipping_terms" id="shipping_terms">
+                                    <option>FOB Destination</option><option>FOB Origin</option><option>CIF</option><option>DDP</option>
                                 </select>
                             </div>
                             <div class="mb-0">
-                                <div class="field-label">Notes</div>
-                                <textarea class="form-control form-control-sm" name="po_notes" rows="2"
-                                          placeholder="Special instructions…"></textarea>
+                                <label for="po_notes" class="field-label">Notes</label>
+                                <textarea class="form-control form-control-sm" name="po_notes" id="po_notes" rows="2" placeholder="Special instructions…"></textarea>
                             </div>
                         </div>
                     </div>
@@ -746,73 +558,37 @@ body {
                     <div class="po-card">
                         <div class="po-card-body">
                             <div class="totals-box">
-                                <div class="totals-line">
-                                    <span>Subtotal</span>
-                                    <span id="totSubtotal">{{ currency_symbol }}0.00</span>
-                                </div>
-                                <div class="totals-line">
-                                    <span>Tax (17%)</span>
-                                    <span id="totTax">{{ currency_symbol }}0.00</span>
-                                </div>
-                                <div class="totals-grand">
-                                    <span>Total</span>
-                                    <span id="totGrand">{{ currency_symbol }}0.00</span>
-                                </div>
+                                <div class="totals-line"><span>Subtotal</span><span id="totSubtotal">{{ currency_symbol }}0.00</span></div>
+                                <div class="totals-line"><span>Tax (17%)</span><span id="totTax">{{ currency_symbol }}0.00</span></div>
+                                <div class="totals-grand"><span>Total</span><span id="totGrand">{{ currency_symbol }}0.00</span></div>
                             </div>
-                            <div class="mt-3">
-                                <button type="submit" class="btn-po-submit">
-                                    <i class="bi bi-check-circle"></i> Create Purchase Order
-                                </button>
-                            </div>
+                            <div class="mt-3"><button type="submit" class="btn-po-submit"><i class="bi bi-check-circle"></i> Create Purchase Order</button></div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- ── Inventory Selection Modal ────────────────────────────── -->
+<!-- Inventory Modal -->
 <div class="modal fade" id="inventoryModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-0">
             <div class="modal-header-ge">
                 <h5><i class="bi bi-box-seam gold-icon"></i> Add from Inventory</h5>
-                <button type="button" class="btn-close-ge" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+                <button type="button" class="btn-close-ge" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="modal-body-ge">
-                <input type="text" id="modalItemSearch" class="form-control form-control-sm mb-3"
-                       placeholder="Search products or SKU…">
-                <div class="table-responsive" style="max-height:370px; overflow-y:auto; border-radius:10px; border:1px solid var(--border);">
+                <input type="text" id="modalItemSearch" class="form-control form-control-sm mb-3" placeholder="Search products or SKU…">
+                <div class="table-responsive" style="max-height:370px; overflow-y:auto;">
                     <table class="inv-table">
-                        <thead>
-                            <tr>
-                                <th style="width:38px;">
-                                    <input type="checkbox" id="selectAll" class="form-check-input">
-                                </th>
-                                <th>Product</th>
-                                <th>SKU</th>
-                                <th>Stock</th>
-                                <th>Cost Price</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th style="width:38px;"><input type="checkbox" id="selectAll" class="form-check-input" aria-label="Select all products"></th><th>Product</th><th>SKU</th><th>Stock</th><th>Cost Price</th></tr></thead>
                         <tbody id="inventoryModalBody">
                             {% for item in inventory_items %}
                             <tr class="inv-row">
-                                <td>
-                                    <input type="checkbox" class="form-check-input item-check"
-                                           data-id="{{ item.id }}"
-                                           data-name="{{ item.name|e }}"
-                                           data-sku="{{ item.sku|e }}"
-                                           data-price="{{ item.cost_price }}">
-                                </td>
-                                <td class="fw-semibold">{{ item.name }}</td>
-                                <td><code>{{ item.sku or '—' }}</code></td>
-                                <td>{{ item.current_stock }}</td>
-                                <td>{{ currency_symbol }}{{ "%.2f"|format(item.cost_price) }}</td>
+                                <td><input type="checkbox" class="form-check-input item-check" data-id="{{ item.id }}" data-name="{{ item.name|e }}" data-sku="{{ item.sku|e }}" data-price="{{ item.cost_price }}" aria-label="Select {{ item.name }}"></td>
+                                <td class="fw-semibold">{{ item.name }}</td><td><code>{{ item.sku or '—' }}</code></td><td>{{ item.current_stock }}</td><td>{{ currency_symbol }}{{ "%.2f"|format(item.cost_price) }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -822,9 +598,7 @@ body {
             <div class="modal-footer-ge">
                 <span id="selectedCount" class="me-auto">0 selected</span>
                 <button type="button" class="btn-ge-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn-add-inv" id="addInventoryItems">
-                    <i class="bi bi-plus-circle"></i> Add Selected
-                </button>
+                <button type="button" class="btn-add-inv" id="addInventoryItems"><i class="bi bi-plus-circle"></i> Add Selected</button>
             </div>
         </div>
     </div>
@@ -833,171 +607,104 @@ body {
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function () {
     const currency = '{{ currency_symbol }}';
-    const tbody    = document.getElementById('itemsTbody');
+    const tbody = document.getElementById('itemsTbody');
     const taxInput = document.querySelector('[name="sales_tax"]');
 
-    /* ── Theme toggle ─────────────────────────────────────── */
+    // Theme toggle
     const themeToggle = document.getElementById('themeToggle');
-    const themeIcon   = document.getElementById('themeIcon');
-    const themeLabel  = document.getElementById('themeLabel');
-
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
     function applyTheme(t) {
         document.documentElement.setAttribute('data-theme', t);
         try { localStorage.setItem('ge-theme', t); } catch(e) {}
-        if (t === 'dark') {
-            themeIcon.className  = 'bi bi-sun-fill';
-            themeLabel.textContent = 'Light';
-        } else {
-            themeIcon.className  = 'bi bi-moon-fill';
-            themeLabel.textContent = 'Dark';
-        }
+        if (t === 'dark') { themeIcon.className = 'bi bi-sun-fill'; themeLabel.textContent = 'Light'; }
+        else { themeIcon.className = 'bi bi-moon-fill'; themeLabel.textContent = 'Dark'; }
     }
-
-    // Init label from current theme
     applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+    themeToggle.addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 
-    themeToggle.addEventListener('click', function () {
-        const current = document.documentElement.getAttribute('data-theme') || 'dark';
-        applyTheme(current === 'dark' ? 'light' : 'dark');
-    });
-
-    /* ── Supplier select sync ─────────────────────────────── */
+    // Supplier preview
     const supplierSel = document.getElementById('supplier_select');
-    const preview     = document.getElementById('supplierPreview');
-
+    const preview = document.getElementById('supplierPreview');
     supplierSel.addEventListener('change', function () {
         const opt = this.options[this.selectedIndex];
         if (!opt.value) { preview.style.display = 'none'; return; }
-        document.getElementById('hidden_supplier_name').value    = opt.dataset.name    || '';
+        document.getElementById('hidden_supplier_name').value = opt.dataset.name || '';
         document.getElementById('hidden_supplier_address').value = opt.dataset.address || '';
-        document.getElementById('hidden_supplier_email').value   = opt.dataset.email   || '';
-        document.getElementById('hidden_supplier_phone').value   = opt.dataset.phone   || '';
-        document.getElementById('prevName').textContent    = opt.dataset.name    || '—';
-        document.getElementById('prevPhone').textContent   = opt.dataset.phone   || '—';
-        document.getElementById('prevEmail').textContent   = opt.dataset.email   || '—';
+        document.getElementById('hidden_supplier_email').value = opt.dataset.email || '';
+        document.getElementById('hidden_supplier_phone').value = opt.dataset.phone || '';
+        document.getElementById('prevName').textContent = opt.dataset.name || '—';
+        document.getElementById('prevPhone').textContent = opt.dataset.phone || '—';
+        document.getElementById('prevEmail').textContent = opt.dataset.email || '—';
         document.getElementById('prevAddress').textContent = opt.dataset.address || '—';
         preview.style.display = 'block';
     });
 
-    /* ── Modal search filter ──────────────────────────────── */
+    // Modal search
     document.getElementById('modalItemSearch').addEventListener('input', function () {
         const term = this.value.toLowerCase();
-        document.querySelectorAll('#inventoryModalBody .inv-row').forEach(function (row) {
+        document.querySelectorAll('#inventoryModalBody .inv-row').forEach(row => {
             const name = row.querySelector('.fw-semibold').textContent.toLowerCase();
-            const sku  = row.querySelector('code').textContent.toLowerCase();
+            const sku = row.querySelector('code').textContent.toLowerCase();
             row.style.display = (name.includes(term) || sku.includes(term)) ? '' : 'none';
         });
     });
 
-    /* ── Select all checkbox ──────────────────────────────── */
+    // Select all
     document.getElementById('selectAll').addEventListener('change', function () {
-        document.querySelectorAll('.item-check').forEach(function (cb) {
-            cb.checked = document.getElementById('selectAll').checked;
-        });
+        document.querySelectorAll('.item-check').forEach(cb => cb.checked = this.checked);
         updateSelectedCount();
     });
+    function updateSelectedCount() { document.getElementById('selectedCount').textContent = document.querySelectorAll('.item-check:checked').length + ' selected'; }
+    document.querySelectorAll('.item-check').forEach(cb => cb.addEventListener('change', updateSelectedCount));
 
-    document.querySelectorAll('.item-check').forEach(function (cb) {
-        cb.addEventListener('change', updateSelectedCount);
-    });
-
-    function updateSelectedCount() {
-        const n = document.querySelectorAll('.item-check:checked').length;
-        document.getElementById('selectedCount').textContent = n + ' selected';
-    }
-
-    /* ── Add selected items to table ─────────────────────── */
+    // Add selected items
     document.getElementById('addInventoryItems').addEventListener('click', function () {
-        const checked  = document.querySelectorAll('.item-check:checked');
-        const existing = new Set(
-            [...document.querySelectorAll('[name="item_id[]"]')].map(function (i) { return i.value; })
-        );
-
-        checked.forEach(function (cb) {
+        const checked = document.querySelectorAll('.item-check:checked');
+        const existing = new Set([...document.querySelectorAll('[name="item_id[]"]')].map(i => i.value));
+        checked.forEach(cb => {
             if (existing.has(String(cb.dataset.id))) return;
             const price = parseFloat(cb.dataset.price) || 0;
-            const row   = document.createElement('tr');
-            row.innerHTML =
-                '<td>' +
-                    '<span class="fw-semibold item-name-safe"></span>' +
-                    '<input type="hidden" name="item_id[]" value="' + cb.dataset.id + '">' +
-                '</td>' +
-                '<td><code class="item-sku-safe"></code></td>' +
-                '<td>' +
-                    '<input type="number" name="item_qty[]" value="1" min="1"' +
-                    ' class="qty-input" style="width:72px;">' +
-                '</td>' +
-                '<td>' +
-                    '<input type="number" name="item_price[]" value="' + price.toFixed(2) + '"' +
-                    ' step="0.01" min="0" class="price-input" style="width:105px;">' +
-                '</td>' +
-                '<td class="item-total-cell total-cell">' + currency + price.toFixed(2) + '</td>' +
-                '<td>' +
-                    '<button type="button" class="btn-remove-row remove-row">' +
-                        '<i class="bi bi-trash"></i>' +
-                    '</button>' +
-                '</td>';
-
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><span class="fw-semibold item-name-safe"></span><input type="hidden" name="item_id[]" value="${cb.dataset.id}"></td>
+                <td><code class="item-sku-safe"></code></td>
+                <td><input type="number" name="item_qty[]" value="1" min="1" class="qty-input" style="width:72px;" aria-label="Quantity"></td>
+                <td><input type="number" name="item_price[]" value="${price.toFixed(2)}" step="0.01" min="0" class="price-input" style="width:105px;" aria-label="Unit price"></td>
+                <td class="item-total-cell total-cell">${currency}${price.toFixed(2)}</td>
+                <td><button type="button" class="btn-remove-row remove-row" aria-label="Remove item"><i class="bi bi-trash"></i></button></td>
+            `;
             row.querySelector('.item-name-safe').textContent = cb.dataset.name;
-            row.querySelector('.item-sku-safe').textContent  = cb.dataset.sku || '—';
+            row.querySelector('.item-sku-safe').textContent = cb.dataset.sku || '—';
             tbody.appendChild(row);
             cb.checked = false;
         });
-
         const emptyRow = document.getElementById('emptyRow');
-        if (emptyRow && tbody.querySelectorAll('tr:not(#emptyRow)').length > 0) {
-            emptyRow.style.display = 'none';
-        }
-
-        const modalEl   = document.getElementById('inventoryModal');
-        const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        if (emptyRow && tbody.querySelectorAll('tr:not(#emptyRow)').length > 0) emptyRow.style.display = 'none';
+        const modalInst = bootstrap.Modal.getInstance(document.getElementById('inventoryModal')) || new bootstrap.Modal(document.getElementById('inventoryModal'));
         modalInst.hide();
-        document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
         document.body.classList.remove('modal-open');
         document.body.style.overflow = '';
-
         recalcTotals();
         updateSelectedCount();
     });
 
-    /* ── Live recalculation ───────────────────────────────── */
-    tbody.addEventListener('input', function (e) {
-        if (e.target.matches('.qty-input,.price-input')) {
-            const row   = e.target.closest('tr');
-            const qty   = parseFloat(row.querySelector('.qty-input').value)   || 0;
-            const price = parseFloat(row.querySelector('.price-input').value) || 0;
-            row.querySelector('.total-cell').textContent = currency + (qty * price).toFixed(2);
-            recalcTotals();
-        }
-    });
-
-    tbody.addEventListener('click', function (e) {
-        if (e.target.closest('.remove-row')) {
-            e.target.closest('tr').remove();
-            const remaining = tbody.querySelectorAll('tr:not(#emptyRow)').length;
-            const emptyRow  = document.getElementById('emptyRow');
-            if (emptyRow && remaining === 0) emptyRow.style.display = '';
-            recalcTotals();
-        }
-    });
-
-    if (taxInput) { taxInput.addEventListener('input', recalcTotals); }
+    // Recalculate totals
+    tbody.addEventListener('input', e => { if (e.target.matches('.qty-input,.price-input')) { const row = e.target.closest('tr'); const qty = parseFloat(row.querySelector('.qty-input').value) || 0; const price = parseFloat(row.querySelector('.price-input').value) || 0; row.querySelector('.total-cell').textContent = currency + (qty * price).toFixed(2); recalcTotals(); } });
+    tbody.addEventListener('click', e => { if (e.target.closest('.remove-row')) { e.target.closest('tr').remove(); const remaining = tbody.querySelectorAll('tr:not(#emptyRow)').length; if (remaining === 0) document.getElementById('emptyRow').style.display = ''; recalcTotals(); } });
+    if (taxInput) taxInput.addEventListener('input', recalcTotals);
 
     function recalcTotals() {
-        var sub = 0;
-        tbody.querySelectorAll('tr:not(#emptyRow)').forEach(function (row) {
-            const qty   = parseFloat(row.querySelector('.qty-input')  && row.querySelector('.qty-input').value)   || 0;
-            const price = parseFloat(row.querySelector('.price-input') && row.querySelector('.price-input').value) || 0;
-            sub += qty * price;
-        });
+        let sub = 0;
+        tbody.querySelectorAll('tr:not(#emptyRow)').forEach(row => { const qty = parseFloat(row.querySelector('.qty-input')?.value) || 0; const price = parseFloat(row.querySelector('.price-input')?.value) || 0; sub += qty * price; });
         const taxRate = parseFloat((taxInput && taxInput.value) || 17) / 100;
-        const tax     = sub * taxRate;
-        const grand   = sub + tax;
-
+        const tax = sub * taxRate;
+        const grand = sub + tax;
         document.getElementById('subtotalDisplay').textContent = currency + sub.toFixed(2);
-        document.getElementById('totSubtotal').textContent     = currency + sub.toFixed(2);
-        document.getElementById('totTax').textContent          = currency + tax.toFixed(2);
-        document.getElementById('totGrand').textContent        = currency + grand.toFixed(2);
+        document.getElementById('totSubtotal').textContent = currency + sub.toFixed(2);
+        document.getElementById('totTax').textContent = currency + tax.toFixed(2);
+        document.getElementById('totGrand').textContent = currency + grand.toFixed(2);
     }
 });
 </script>
