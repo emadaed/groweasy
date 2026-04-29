@@ -24,9 +24,14 @@
     <!-- Custom Invoice CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/invoice.min.css') }}?v=8">
 
-    <!-- CSP via HTTP headers in middleware.py (server-side, authoritative) -->
-    <!-- CSRF token for AJAX calls — read with document.querySelector('meta[name="csrf-token"]').content -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- Correct CSP - frame-ancestors removed (it's ignored in meta anyway) -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'nonce-{{ nonce }}' https://cdn.jsdelivr.net;
+                   style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                   img-src 'self' data: blob:;
+                   font-src 'self' https://cdn.jsdelivr.net;
+                   connect-src 'self';">
 
     <style nonce="{{ nonce }}">
         /* Original styles (keep as is) */
@@ -41,22 +46,22 @@
         footer {
             margin-top: 4rem;
             padding: 2rem 0;
-            background: #0a2b1f;
+            background: #f8f9fa;
             border-top: 1px solid #dee2e6;
         }
         footer a {
-            color: #e2e6ea;
+            color: #6c757d;
             text-decoration: none;
             transition: color 0.3s;
         }
         footer a:hover {
-            color: #728476;
+            color: #28a745;
         }
 
         /* Sidebar styles */
         body {
             overflow-x: hidden;
-            background-color: #c9f7e6;
+            background-color: #f8f9fa;
         }
         .wrapper {
             display: flex;
@@ -66,7 +71,7 @@
         #sidebar {
             min-width: 250px;
             max-width: 250px;
-            background: linear-gradient(145deg, #33a24d 0%, #20c997 100%);
+            background: linear-gradient(135deg, #28a745, #20c997);
             color: #fff;
             transition: all 0.3s;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
@@ -122,7 +127,7 @@
             display: flex;
             align-items: center;
             padding: 12px 20px;
-            color: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.9);
             text-decoration: none;
             transition: 0.2s;
             white-space: nowrap;
@@ -179,7 +184,7 @@
             transition: all 0.3s;
         }
         .toggle-btn {
-            background: rgba(201,162,40,0.2);
+            background: rgba(255,255,255,0.2);
             border: none;
             color: white;
             border-radius: 50%;
@@ -192,7 +197,7 @@
             transition: 0.2s;
         }
         .toggle-btn:hover {
-            background: rgba(201,162,40,0.5);
+            background: rgba(255,255,255,0.3);
         }
         .user-info-bar {
             background: white;
@@ -230,7 +235,6 @@
             }
         }
     </style>
-    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <div class="wrapper">
@@ -313,10 +317,10 @@
                         <li><a class="dropdown-item" href="{{ url_for('inventory.inventory_reports') }}"><i class="bi bi-graph-up-arrow me-2"></i>Inventory Analytics</a></li>
                     </ul>
                 </li>
-                {% if session.get('role') == 'owner' %}
+                {% if session.role == 'owner' %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('users.list_users') }}">
-                        <i class="bi bi-people-fill"></i> Team
+                        <i class="fas fa-users"></i> Team
                     </a>
                 </li>
                 {% endif %}                
@@ -483,6 +487,5 @@
             // The CSS hover effect for dropdowns is still there for collapsed mode.
         });
     </script>
-    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/groweasy_toast.js') }}"></script>
 </body>
 </html>
