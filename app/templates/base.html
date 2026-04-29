@@ -24,14 +24,9 @@
     <!-- Custom Invoice CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/invoice.min.css') }}?v=8">
 
-    <!-- Correct CSP - frame-ancestors removed (it's ignored in meta anyway) -->
-    <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self';
-                   script-src 'self' 'nonce-{{ nonce }}' https://cdn.jsdelivr.net;
-                   style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
-                   img-src 'self' data: blob:;
-                   font-src 'self' https://cdn.jsdelivr.net;
-                   connect-src 'self';">
+    <!-- CSP via HTTP headers in middleware.py (server-side, authoritative) -->
+    <!-- CSRF token for AJAX calls — read with document.querySelector('meta[name="csrf-token"]').content -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <style nonce="{{ nonce }}">
         /* Original styles (keep as is) */
@@ -235,6 +230,7 @@
             }
         }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <div class="wrapper">
@@ -317,10 +313,10 @@
                         <li><a class="dropdown-item" href="{{ url_for('inventory.inventory_reports') }}"><i class="bi bi-graph-up-arrow me-2"></i>Inventory Analytics</a></li>
                     </ul>
                 </li>
-                {% if session.role == 'owner' %}
+                {% if session.get('role') == 'owner' %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('users.list_users') }}">
-                        <i class="fas fa-users"></i> Team
+                        <i class="bi bi-people-fill"></i> Team
                     </a>
                 </li>
                 {% endif %}                
@@ -487,5 +483,6 @@
             // The CSS hover effect for dropdowns is still there for collapsed mode.
         });
     </script>
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/groweasy_toast.js') }}"></script>
 </body>
 </html>
