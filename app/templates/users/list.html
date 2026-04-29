@@ -1,134 +1,201 @@
 {% extends "base.html" %}
+
+{% block title %}Team Members - GrowEasy ERP{% endblock %}
+
+{% block extra_head %}
+<!-- same fonts + early theme + full style block (including hero, table, card) -->
+<!-- I'll give you the essential part – you can reuse the style from dashboard.html but with added modal styles -->
+<!-- For brevity, I'll include the minimal necessary styles – they match the system -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+<style nonce="{{ nonce }}">
+/* use the exact same tokens + hero + card + table styles from dashboard.html */
+/* I'll copy the essential parts here to keep the file self‑contained */
+main.container-main { max-width:100%!important; background:transparent!important; box-shadow:none!important; padding:0!important; margin:0!important; border-radius:0!important; }
+:root,[data-theme="dark"] { --bg:#07100a; --surface:#0c1810; --surface-2:#111f14; --surface-3:#172b1a; --border:#1b2e1e; --border-hi:#253d29; --gold:#c9a228; --gold-2:#e8c84a; --gold-dim:rgba(201,162,40,.10); --gold-glow:rgba(201,162,40,.16); --green-acc:#22c55e; --text:#dff0e2; --text-2:#a8c4ad; --muted:#7a9580; --faint:#3d5441; --danger:#f87171; --warning:#fbbf24; --info:#38bdf8; --card-shadow:0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.30); --hero-bg:linear-gradient(135deg, #0a1f10 0%, #071e18 100%); }
+[data-theme="light"] { --bg:#f5f7f2; --surface:#ffffff; --surface-2:#f0f4ed; --surface-3:#e8efe4; --border:#dde8d8; --border-hi:#c5d9bc; --gold:#9a7510; --gold-2:#b8920e; --gold-dim:rgba(154,117,16,.09); --gold-glow:rgba(154,117,16,.16); --green-acc:#16a34a; --text:#152318; --text-2:#3d5c42; --muted:#6b8a6f; --faint:#a8c4ad; --danger:#dc2626; --warning:#d97706; --info:#0284c7; --card-shadow:0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05); --hero-bg:linear-gradient(135deg, #e8f0e4 0%, #ddecd5 100%); }
+.team-page { font-family:'Figtree',sans-serif; background:var(--bg); min-height:100vh; padding:1.4rem 1.5rem 2.5rem; color:var(--text); transition:background 0.25s,color 0.25s; }
+.team-page .container-custom { max-width:1400px; margin:0 auto; }
+.db-hero { position:relative; background:var(--hero-bg); border:1px solid var(--border-hi); border-radius:18px; padding:1.6rem 2rem 1.6rem 2.4rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; overflow:hidden; box-shadow:var(--card-shadow); }
+.db-hero::before { content:''; position:absolute; inset:0; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.15'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E"); background-repeat:repeat; pointer-events:none; }
+.db-hero::after { content:''; position:absolute; left:0; top:14px; bottom:14px; width:3px; background:linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 60%, transparent 100%); border-radius:0 2px 2px 0; }
+.db-hero-inner { position:relative; z-index:1; }
+.db-hero-eyebrow { font-size:0.66rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); margin-bottom:0.25rem; }
+.db-hero-title { font-family:'Bricolage Grotesque',sans-serif; font-size:1.55rem; font-weight:800; color:var(--text); margin:0; letter-spacing:-0.025em; line-height:1.1; }
+.db-hero-sub { font-size:0.8rem; color:var(--muted); margin:0.3rem 0 0; font-style:italic; }
+.hero-actions { position:relative; z-index:1; display:flex; gap:0.6rem; flex-wrap:wrap; }
+.btn-theme-toggle { font-family:'Figtree',sans-serif; font-size:0.78rem; font-weight:600; color:var(--gold); background:var(--gold-dim); border:1px solid rgba(201,162,40,.25); border-radius:8px; padding:0.45rem 0.9rem; cursor:pointer; transition:all 0.18s; }
+.btn-theme-toggle:hover { background:var(--gold-glow); border-color:rgba(201,162,40,.4); }
+.btn-hero-action { font-family:'Figtree',sans-serif; font-size:0.78rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,.03); border:1px solid var(--border-hi); border-radius:8px; padding:0.45rem 0.9rem; text-decoration:none; transition:all 0.18s; display:inline-block; }
+.btn-hero-action:hover { color:var(--text); border-color:var(--border-hi); background:var(--surface-2); }
+.ge-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--card-shadow); overflow:hidden; margin-bottom:1.5rem; }
+.ge-card-header { padding:0.75rem 1.2rem; border-bottom:1px solid var(--border); background:var(--surface-2); font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:0.82rem; color:var(--text); display:flex; justify-content:space-between; align-items:center; }
+.ge-card-body { padding:0; }
+.table-responsive { overflow-x:auto; }
+.table { color:var(--text); margin-bottom:0; min-width:500px; }
+.table thead th { background:var(--surface-2); color:var(--muted); font-size:0.7rem; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border); padding:0.9rem 1rem; }
+.table tbody tr { border-bottom:1px solid var(--border); transition:background 0.12s; }
+.table tbody tr:hover { background:var(--gold-dim); }
+.table td { padding:0.9rem 1rem; vertical-align:middle; }
+.badge { font-weight:600; padding:0.35rem 0.7rem; border-radius:20px; }
+.badge.bg-danger { background:var(--danger-dim) !important; color:var(--danger) !important; }
+.badge.bg-info { background:var(--info-dim) !important; color:var(--info) !important; }
+.badge.bg-secondary { background:var(--surface-3) !important; color:var(--muted) !important; }
+.btn-sm { padding:0.3rem 0.7rem; border-radius:6px; font-size:0.7rem; }
+.btn-outline-primary { border:1px solid var(--border-hi); background:transparent; color:var(--text-2); }
+.btn-outline-primary:hover { border-color:var(--gold); background:var(--gold-dim); color:var(--gold); }
+.btn-outline-danger { border:1px solid var(--border-hi); background:transparent; color:var(--danger); }
+.btn-outline-danger:hover { background:var(--danger-dim); border-color:var(--danger); }
+.modal-content { background:var(--surface); border:1px solid var(--border-hi); color:var(--text); }
+.modal-header { background:var(--surface-2); border-bottom:1px solid var(--border); }
+.modal-footer { background:var(--surface-2); border-top:1px solid var(--border); }
+@media (max-width:768px) { .team-page { padding:1rem; } .db-hero { flex-direction:column; align-items:flex-start; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>👥 Team Members</h2>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
-            <i class="bi bi-person-plus-fill"></i> Invite User
-        </button>
-    </div>
-
-    <!-- Existing Users Table -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5>Current Team</h5>
+<div class="team-page">
+    <div class="container-custom">
+        <div class="db-hero">
+            <div class="db-hero-inner">
+                <div class="db-hero-eyebrow">✦ GrowEasy · Team</div>
+                <h2 class="db-hero-title">Team Members</h2>
+                <p class="db-hero-sub">Manage your team and pending invitations</p>
+            </div>
+            <div class="hero-actions">
+                <button class="btn-theme-toggle" id="themeToggle">☀️ Light</button>
+                <button class="btn-hero-action" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                    <i class="bi bi-person-plus-fill"></i> Invite User
+                </button>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Joined</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user.email }}</td>
-                            <td>
-                                <span class="badge bg-{{ 'danger' if user.role == 'owner' else 'info' if user.role == 'accountant' else 'secondary' }}">
-                                    {{ user.role|capitalize }}
-                                </span>
-                            </td>
-                            <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
-                            <td>
-                                {% if user.role != 'owner' %}
-                                    <a href="{{ url_for('users.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </a>
-                                    <form action="{{ url_for('users.delete_user', user_id=user.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure?');">
+
+        <!-- Current Team -->
+        <div class="ge-card">
+            <div class="ge-card-header">
+                <span>👥 Current Team</span>
+            </div>
+            <div class="ge-card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if user.role == 'owner' else 'info' if user.role == 'accountant' else 'secondary' }}">
+                                        {{ user.role|capitalize }}
+                                    </span>
+                                 </td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                                <td>
+                                    {% if user.role != 'owner' %}
+                                        <a href="{{ url_for('users.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <form action="{{ url_for('users.delete_user', user_id=user.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-muted">Owner</span>
+                                    {% endif %}
+                                 </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">No users found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Invites -->
+        {% if pending_invites %}
+        <div class="ge-card">
+            <div class="ge-card-header">
+                <span>📧 Pending Invites</span>
+            </div>
+            <div class="ge-card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead><tr><th>Email</th><th>Role</th><th>Expires</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {% for invite in pending_invites %}
+                            <tr>
+                                <td>{{ invite.email }}</td>
+                                <td>{{ invite.role|capitalize }}</td>
+                                <td>{{ invite.expires_at.strftime('%Y-%m-%d') if invite.expires_at else '—' }}</td>
+                                <td>
+                                    <form action="{{ url_for('users.revoke_invite', invite_id=invite.id) }}" method="POST" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
                                     </form>
-                                {% else %}
-                                    <span class="text-muted">Owner</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center text-muted">No users found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                 </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+        {% endif %}
     </div>
+</div>
 
-    <!-- Pending Invites Section (if any) -->
-    {% if pending_invites %}
-    <div class="card">
-        <div class="card-header">
-            <h5>📧 Pending Invites</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Expires</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for invite in pending_invites %}
-                        <tr>
-                            <td>{{ invite.email }}</td>
-                            <td>{{ invite.role|capitalize }}</td>
-                            <td>{{ invite.expires_at.strftime('%Y-%m-%d') if invite.expires_at else '—' }}</td>
-                            <td>
-                                <form action="{{ url_for('users.revoke_invite', invite_id=invite.id) }}" method="POST" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-danger">Revoke</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Invite Modal -->
-    <div class="modal fade" id="inviteModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="POST" action="{{ url_for('users.send_invite') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Invite Team Member</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Invite Modal -->
+<div class="modal fade" id="inviteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('users.send_invite') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Invite Team Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" required>
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Role</label>
-                            <select name="role" class="form-select">
-                                <option value="assistant">Assistant (can manage inventory, invoices, purchases)</option>
-                                <option value="accountant">Accountant (can view reports only)</option>
-                            </select>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select name="role" class="form-select">
+                            <option value="assistant">Assistant (manage inventory, invoices, purchases)</option>
+                            <option value="accountant">Accountant (view reports only)</option>
+                        </select>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Send Invite</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-hero-action" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-hero-action" style="background: var(--gold-dim); color: var(--gold);">Send Invite</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    const html = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    function applyTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('ge-theme', theme);
+        toggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    }
+    const saved = localStorage.getItem('ge-theme') || 'dark';
+    applyTheme(saved);
+    toggle.addEventListener('click', () => {
+        const cur = html.getAttribute('data-theme') || 'dark';
+        applyTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+});
+</script>
 {% endblock %}

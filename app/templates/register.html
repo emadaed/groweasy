@@ -1,98 +1,234 @@
 {% extends "base.html" %}
 
-{% block title %}Register - GrowEasy Invoice{% endblock %}
+{% block title %}Register - GrowEasy ERP{% endblock %}
+
+{% block extra_head %}
+<!-- same fonts + early theme + style block as login.html – copy the entire <style> from above -->
+<!-- I'll repeat it here for completeness, but you can reuse the exact same block -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+<style nonce="{{ nonce }}">
+/* ----- BASE OVERRIDES ----- */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ----- DESIGN TOKENS (dark + light) ----- */
+:root, [data-theme="dark"] {
+    --bg: #07100a; --surface: #0c1810; --surface-2: #111f14; --surface-3: #172b1a;
+    --border: #1b2e1e; --border-hi: #253d29; --gold: #c9a228; --gold-2: #e8c84a;
+    --gold-dim: rgba(201,162,40,.10); --gold-glow: rgba(201,162,40,.16);
+    --green-acc: #22c55e; --green-dim: rgba(34,197,94,.08);
+    --text: #dff0e2; --text-2: #a8c4ad; --muted: #7a9580; --faint: #3d5441;
+    --danger: #f87171; --warning: #fbbf24; --info: #38bdf8;
+    --card-shadow: 0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.30);
+    --hero-bg: linear-gradient(135deg, #0a1f10 0%, #071e18 100%);
+}
+[data-theme="light"] {
+    --bg: #f5f7f2; --surface: #ffffff; --surface-2: #f0f4ed; --surface-3: #e8efe4;
+    --border: #dde8d8; --border-hi: #c5d9bc; --gold: #9a7510; --gold-2: #b8920e;
+    --gold-dim: rgba(154,117,16,.09); --gold-glow: rgba(154,117,16,.16);
+    --green-acc: #16a34a; --green-dim: rgba(22,163,74,.08);
+    --text: #152318; --text-2: #3d5c42; --muted: #6b8a6f; --faint: #a8c4ad;
+    --danger: #dc2626; --warning: #d97706; --info: #0284c7;
+    --card-shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    --hero-bg: linear-gradient(135deg, #e8f0e4 0%, #ddecd5 100%);
+}
+
+/* Page layout */
+.register-page {
+    font-family: 'Figtree', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+.register-page .container-custom {
+    max-width: 500px;
+    width: 100%;
+}
+
+/* Card (no hero, just a centred card) */
+.ge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+.ge-card-header {
+    padding: 1.2rem 1.5rem;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    text-align: center;
+    color: var(--gold);
+}
+.ge-card-body {
+    padding: 2rem 1.5rem;
+}
+
+/* Form elements */
+.form-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+}
+.form-control {
+    background: var(--surface-3);
+    border: 1px solid var(--border-hi);
+    border-radius: 10px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    transition: all 0.2s;
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+}
+.btn-login {
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    border: none;
+    color: #07100a;
+    font-weight: 600;
+    padding: 0.6rem;
+    border-radius: 10px;
+    width: 100%;
+    transition: all 0.18s;
+}
+.btn-login:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+.theme-toggle-small {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--gold-dim);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.7rem;
+    color: var(--gold);
+    cursor: pointer;
+    z-index: 100;
+}
+.alert-danger {
+    background: var(--danger-dim);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 10px;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">🚀 Create Your Account</h4>
-                </div>
-                <div class="card-body">
-                    {% if error %}
-                    <div class="alert alert-danger">{{ error }}</div>
+<div class="register-page">
+    <button class="theme-toggle-small" id="themeToggleSmall">☀️ Light</button>
+    <div class="container-custom">
+        <div class="ge-card">
+            <div class="ge-card-header">
+                🚀 Create Your Account
+            </div>
+            <div class="ge-card-body">
+                {% if error %}
+                <div class="alert-danger mb-3">{{ error }}</div>
+                {% endif %}
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Company Name (Optional)</label>
+                        <input type="text" name="company_name" class="form-control" autocomplete="organization">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email Address *</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mobile Number (Optional)</label>
+                        <input type="tel" name="mobile_number" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password *</label>
+                        <input type="password" name="password" class="form-control" required minlength="6">
+                        <small class="text-muted">Minimum 6 characters</small>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="agree_terms" name="agree_terms" required>
+                        <label class="form-check-label" for="agree_terms">
+                            I agree to the <a href="{{ url_for('main.terms') }}" target="_blank" style="color:var(--gold);">Terms of Service</a>
+                        </label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Choose Plan</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="plan" id="planStarter" value="starter" checked>
+                            <label class="form-check-label" for="planStarter">Forever Free (100 invoices/month, 2000 items, 1 user)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="plan" id="planGrowth" value="growth">
+                            <label class="form-check-label" for="planGrowth">Growth ($12/mo – unlimited invoices/items, 3 users, POs)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="plan" id="planPro" value="pro">
+                            <label class="form-check-label" for="planPro">Pro ($29/mo – unlimited everything, AI insights)</label>
+                        </div>
+                    </div>
+
+                    {% if token %}
+                    <input type="hidden" name="token" value="{{ token }}">
                     {% endif %}
 
-                    <!-- Registration Form - NO TURNSTILE -->
-                    <form method="POST">
-                        <div class="mb-3">
-                            <label class="form-label">Company Name (Optional)</label>
-                            <input type="text" name="company_name" class="form-control"
-                                   autocomplete="organization"
-                                   placeholder="Your Company Name">
-                        </div>
+                    <button type="submit" class="btn-login mt-2">Create Account →</button>
+                </form>
 
-                        <div class="mb-3">
-                            <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" required
-                                   autocomplete="email"
-                                   placeholder="you@company.com">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Mobile Number (Optional)</label>
-                            <input type="tel" name="mobile_number" class="form-control"
-                                   placeholder="+923001234567"
-                                   autocomplete="tel">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Password <span class="text-danger">*</span></label>
-                            <input type="password" name="password" class="form-control" required
-                                   minlength="6"
-                                   autocomplete="new-password"
-                                   placeholder="Minimum 6 characters">
-                            <small class="text-muted">Must be at least 6 characters</small>
-                        </div>
-
-                        <!-- Terms Agreement Checkbox -->
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="agree_terms" name="agree_terms" required>
-                            <label class="form-check-label" for="agree_terms">
-                                I agree to the <a href="{{ url_for('main.terms') }}" target="_blank">Terms of Service</a>
-                                and <a href="{{ url_for('main.privacy') }}" target="_blank">Privacy Policy</a>
-                            </label>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Choose Plan</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="plan" id="planStarter" value="starter" checked>
-                                <label class="form-check-label" for="planStarter">Forever Free (100 invoices/month, 2000 items, 1 user)</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="plan" id="planGrowth" value="growth">
-                                <label class="form-check-label" for="planGrowth">Growth ($12/mo – unlimited invoices/items, 3 users, purchase orders)</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="plan" id="planPro" value="pro">
-                                <label class="form-check-label" for="planPro">Pro ($29/mo – unlimited everything, AI insights)</label>
-                            </div>
-                        </div>
-                        {% if token %}
-                        <input type="hidden" name="token" value="{{ token }}">
-                        {% endif %}
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <button type="submit" class="btn btn-success w-100">                        
-                            Create Account
-                        </button>
-                    </form>
-
-                    <div class="text-center mt-3">
-                        <p class="mb-0">Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></p>
-                    </div>
-
-                    <!-- Features -->
-                    <div class="mt-4 pt-3" style="border-top: 1px solid #dee2e6;">
-                        <small class="text-muted d-block text-center">
-                            ✔ Unified AI-Powered ERP• ✔ Global Taxation Engine• ✔ Free Access • No Credit Card Required
-                        </small>
-                    </div>
+                <div class="text-center mt-3">
+                    <small class="text-muted">Already have an account? <a href="{{ url_for('auth.login') }}" style="color: var(--gold);">Login here</a></small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script nonce="{{ nonce }}">
+// same theme toggle script as login.html
+document.addEventListener('DOMContentLoaded', function() {
+    const html = document.documentElement;
+    const toggle = document.getElementById('themeToggleSmall');
+    function applyTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('ge-theme', theme);
+        toggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    }
+    const saved = localStorage.getItem('ge-theme') || 'dark';
+    applyTheme(saved);
+    toggle.addEventListener('click', () => {
+        const cur = html.getAttribute('data-theme') || 'dark';
+        applyTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+});
+</script>
 {% endblock %}

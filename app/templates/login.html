@@ -1,81 +1,186 @@
 {% extends "base.html" %}
-{% block title %}Login - GrowEasy Invoice{% endblock %}
+
+{% block title %}Login - GrowEasy ERP{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+<style nonce="{{ nonce }}">
+/* ----- BASE OVERRIDES ----- */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ----- DESIGN TOKENS (dark + light) ----- */
+:root, [data-theme="dark"] {
+    --bg: #07100a; --surface: #0c1810; --surface-2: #111f14; --surface-3: #172b1a;
+    --border: #1b2e1e; --border-hi: #253d29; --gold: #c9a228; --gold-2: #e8c84a;
+    --gold-dim: rgba(201,162,40,.10); --gold-glow: rgba(201,162,40,.16);
+    --green-acc: #22c55e; --green-dim: rgba(34,197,94,.08);
+    --text: #dff0e2; --text-2: #a8c4ad; --muted: #7a9580; --faint: #3d5441;
+    --danger: #f87171; --warning: #fbbf24; --info: #38bdf8;
+    --card-shadow: 0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.30);
+    --hero-bg: linear-gradient(135deg, #0a1f10 0%, #071e18 100%);
+}
+[data-theme="light"] {
+    --bg: #f5f7f2; --surface: #ffffff; --surface-2: #f0f4ed; --surface-3: #e8efe4;
+    --border: #dde8d8; --border-hi: #c5d9bc; --gold: #9a7510; --gold-2: #b8920e;
+    --gold-dim: rgba(154,117,16,.09); --gold-glow: rgba(154,117,16,.16);
+    --green-acc: #16a34a; --green-dim: rgba(22,163,74,.08);
+    --text: #152318; --text-2: #3d5c42; --muted: #6b8a6f; --faint: #a8c4ad;
+    --danger: #dc2626; --warning: #d97706; --info: #0284c7;
+    --card-shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    --hero-bg: linear-gradient(135deg, #e8f0e4 0%, #ddecd5 100%);
+}
+
+/* Page layout */
+.login-page {
+    font-family: 'Figtree', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+.login-page .container-custom {
+    max-width: 500px;
+    width: 100%;
+}
+
+/* Card (no hero, just a centred card) */
+.ge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+.ge-card-header {
+    padding: 1.2rem 1.5rem;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    text-align: center;
+    color: var(--gold);
+}
+.ge-card-body {
+    padding: 2rem 1.5rem;
+}
+
+/* Form elements */
+.form-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+}
+.form-control {
+    background: var(--surface-3);
+    border: 1px solid var(--border-hi);
+    border-radius: 10px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    transition: all 0.2s;
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+}
+.btn-login {
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    border: none;
+    color: #07100a;
+    font-weight: 600;
+    padding: 0.6rem;
+    border-radius: 10px;
+    width: 100%;
+    transition: all 0.18s;
+}
+.btn-login:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+.theme-toggle-small {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--gold-dim);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.7rem;
+    color: var(--gold);
+    cursor: pointer;
+    z-index: 100;
+}
+.alert-danger {
+    background: var(--danger-dim);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 10px;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="min-vh-100 d-flex align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-5">
-                <div class="card shadow-lg border-0" style="border-radius: 15px;">
-                    <div class="card-body p-5">
-                        <!-- Logo & Title -->
-                        <div class="text-center mb-4">
-                            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 20px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 40px; color: white;">🔗</span>
-                            </div>
-                            <h3 class="fw-bold" style="color: #2c3e50;">GrowEasy Invoice</h3>
-                            <p class="text-muted small">The unified command center for global e-commerce.</p>
-                        </div>
-
-                        <!-- Greeting Message -->
-                        <div class="alert alert-info text-center mb-4" id="greeting"
-                            style="border-radius: 10px; font-size: 16px; font-weight: 500; padding: 15px;">
-                            <span style="font-size: 24px;">👋</span><br>
-                            <span id="greetingText">Welcome back!</span>
-                        </div>
-
-                        <!-- Error Message -->
-                        {% if error %}
-                        <div class="alert alert-danger" role="alert">{{ error }}</div>
-                        {% endif %}
-
-                        <!-- Login Form -->
-                        <form method="POST">
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Email Address</label>
-                                <input type="email" name="email" class="form-control form-control-lg"
-                                       placeholder="you@company.com" required autofocus
-                                       style="border-radius: 10px;">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Password</label>
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="password" name="password" class="form-control form-control-lg"
-                                       placeholder="••••••••" required
-                                       style="border-radius: 10px;">
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="remember">
-                                    <label class="form-check-label small" for="remember">Remember me</label>
-                                </div>
-                                <a href="{{ url_for('auth.forgot_password') }}" class="small text-decoration-none">Forgot Password?</a>
-                            </div>
-                            <button type="submit" class="btn btn-lg w-100 text-white fw-bold mb-3"
-                                    style="background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 10px;">
-                                Login
-                            </button>
-                        </form>
-
-                        <!-- Register Link -->
-                        <div class="text-center">
-                            <small class="text-muted">Don't have an account?
-                                <a href="{{ url_for('auth.register') }}" class="text-decoration-none fw-bold">Register Free</a>
-                            </small>
-                        </div>
-
-                        <!-- Features -->
-                        <div class="mt-4 pt-4" style="border-top: 1px solid #dee2e6;">
-                            <small class="text-muted d-block text-center mb-2"> ✓ One-Click Channel Sync • ✓ Universal Inventory Hub • ✓ 360° Data Intelligence</small>
-                        </div>
-                    </div>
+<div class="login-page">
+    <button class="theme-toggle-small" id="themeToggleSmall">☀️ Light</button>
+    <div class="container-custom">
+        <div class="ge-card">
+            <div class="ge-card-header">
+                🔗 GrowEasy ERP
+            </div>
+            <div class="ge-card-body">
+                <div class="text-center mb-4">
+                    <div style="font-size: 3rem;">🌿</div>
+                    <h4 style="color: var(--text); font-family: 'Bricolage Grotesque';">Welcome Back</h4>
+                    <p class="text-muted small">Your unified business command center</p>
                 </div>
 
+                {% if error %}
+                <div class="alert-danger mb-3">{{ error }}</div>
+                {% endif %}
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" name="email" class="form-control" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="remember">
+                            <label class="form-check-label small" for="remember">Remember me</label>
+                        </div>
+                        <a href="{{ url_for('auth.forgot_password') }}" class="small text-decoration-none" style="color: var(--gold);">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="btn-login">Login →</button>
+                </form>
+
                 <div class="text-center mt-3">
-                    <small class="text-white">
-                        🔒 Secure Login • GrowEasy is the single source of truth for fragmented e-commerce businesses
-                    </small>
+                    <small class="text-muted">Don’t have an account? <a href="{{ url_for('auth.register') }}" style="color: var(--gold);">Register free</a></small>
                 </div>
             </div>
         </div>
@@ -83,20 +188,20 @@
 </div>
 
 <script nonce="{{ nonce }}">
-// Timezone-based greeting
-function updateGreeting() {
-    const hour = new Date().getHours();
-    const greetingEl = document.getElementById('greetingText');
-
-    let message = '';
-    if (hour < 5) message = 'Its Late night! Something Urgent? 🌙<br>السلام علیکم';
-    else if (hour < 12) message = 'Good morning! ☀️<br>السلام علیکم';
-    else if (hour < 17) message = 'Good afternoon! 🌤️<br>السلام علیکم';
-    else if (hour < 21) message = 'Good evening! 🌆<br>السلام علیکم';
-    else message = 'Welcome! Working late again? 🌃<br>السلام علیکم';
-
-    greetingEl.innerHTML = message;
-}
-updateGreeting();
+document.addEventListener('DOMContentLoaded', function() {
+    const html = document.documentElement;
+    const toggle = document.getElementById('themeToggleSmall');
+    function applyTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('ge-theme', theme);
+        toggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    }
+    const saved = localStorage.getItem('ge-theme') || 'dark';
+    applyTheme(saved);
+    toggle.addEventListener('click', () => {
+        const cur = html.getAttribute('data-theme') || 'dark';
+        applyTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+});
 </script>
 {% endblock %}
