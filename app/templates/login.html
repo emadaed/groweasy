@@ -10,6 +10,11 @@
 <script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
 
 <style nonce="{{ nonce }}">
+/* Hide top user-info-bar buttons (login/register/about) – they are in sidebar already */
+.user-info-bar {
+    display: none !important;
+}
+
 /* ----- BASE OVERRIDES ----- */
 main.container-main {
     max-width: 100% !important;
@@ -57,7 +62,7 @@ main.container-main {
     width: 100%;
 }
 
-/* Card (no hero, just a centred card) */
+/* Card */
 .ge-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -137,6 +142,16 @@ main.container-main {
     padding: 0.75rem;
     font-size: 0.85rem;
 }
+/* Greeting box */
+.greeting-box {
+    background: var(--gold-dim);
+    border-radius: 10px;
+    padding: 0.75rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--gold);
+    font-size: 0.9rem;
+}
 </style>
 {% endblock %}
 
@@ -149,10 +164,16 @@ main.container-main {
                 🔗 GrowEasy ERP
             </div>
             <div class="ge-card-body">
-                <div class="text-center mb-4">
-                    <div style="font-size: 3rem;">🌿</div>
-                    <h4 style="color: var(--text); font-family: 'Bricolage Grotesque';">Welcome Back</h4>
-                    <p class="text-muted small">Your unified business command center</p>
+                <!-- Brand logo/title -->
+                <div class="text-center mb-3">
+                    <div style="font-size: 2.5rem;">🌿</div>
+                    <h4 style="color: var(--text); font-family: 'Bricolage Grotesque';">GrowEasy Invoice</h4>
+                    <p class="text-muted small">The unified command center for global e‑commerce.</p>
+                </div>
+
+                <!-- Time‑based greeting (restored) -->
+                <div class="greeting-box" id="greeting">
+                    <span id="greetingText">Welcome back!</span>
                 </div>
 
                 {% if error %}
@@ -182,6 +203,13 @@ main.container-main {
                 <div class="text-center mt-3">
                     <small class="text-muted">Don’t have an account? <a href="{{ url_for('auth.register') }}" style="color: var(--gold);">Register free</a></small>
                 </div>
+
+                <!-- Features (restored) -->
+                <div class="mt-4 pt-3 text-center" style="border-top: 1px solid var(--border);">
+                    <small class="text-muted">
+                        ✓ One‑Click Channel Sync • ✓ Universal Inventory Hub • ✓ 360° Data Intelligence
+                    </small>
+                </div>
             </div>
         </div>
     </div>
@@ -189,6 +217,7 @@ main.container-main {
 
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
+    // Theme toggle
     const html = document.documentElement;
     const toggle = document.getElementById('themeToggleSmall');
     function applyTheme(theme) {
@@ -202,6 +231,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const cur = html.getAttribute('data-theme') || 'dark';
         applyTheme(cur === 'dark' ? 'light' : 'dark');
     });
+
+    // Time‑based greeting
+    function updateGreeting() {
+        const hour = new Date().getHours();
+        const greetingEl = document.getElementById('greetingText');
+        let message = '';
+        if (hour < 5) message = 'It\'s late night! Something urgent? 🌙<br>السلام علیکم';
+        else if (hour < 12) message = 'Good morning! ☀️<br>السلام علیکم';
+        else if (hour < 17) message = 'Good afternoon! 🌤️<br>السلام علیکم';
+        else if (hour < 21) message = 'Good evening! 🌆<br>السلام علیکم';
+        else message = 'Welcome! Working late again? 🌃<br>السلام علیکم';
+        if (greetingEl) greetingEl.innerHTML = message;
+    }
+    updateGreeting();
 });
 </script>
 {% endblock %}
