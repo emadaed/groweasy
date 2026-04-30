@@ -1,73 +1,173 @@
 {% extends "base.html" %}
-{% block title %}About Us{% endblock %}
+
+{% block title %}About Us - GrowEasy ERP{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+<script nonce="{{ nonce }}">(function(){var t=localStorage.getItem('ge-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+<style nonce="{{ nonce }}">
+/* ========== BASE OVERRIDES ========== */
+main.container-main {
+    max-width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* ========== DESIGN TOKENS (same as dashboard) ========== */
+:root, [data-theme="dark"] {
+    --bg: #07100a; --surface: #0c1810; --surface-2: #111f14; --surface-3: #172b1a;
+    --border: #1b2e1e; --border-hi: #253d29; --gold: #c9a228; --gold-2: #e8c84a;
+    --gold-dim: rgba(201,162,40,.10); --gold-glow: rgba(201,162,40,.16);
+    --green-acc: #22c55e; --green-dim: rgba(34,197,94,.08);
+    --text: #dff0e2; --text-2: #a8c4ad; --muted: #7a9580; --faint: #3d5441;
+    --danger: #f87171; --warning: #fbbf24; --info: #38bdf8;
+    --card-shadow: 0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.30);
+    --hero-bg: linear-gradient(135deg, #0a1f10 0%, #071e18 100%);
+}
+[data-theme="light"] {
+    --bg: #f5f7f2; --surface: #ffffff; --surface-2: #f0f4ed; --surface-3: #e8efe4;
+    --border: #dde8d8; --border-hi: #c5d9bc; --gold: #9a7510; --gold-2: #b8920e;
+    --gold-dim: rgba(154,117,16,.09); --gold-glow: rgba(154,117,16,.16);
+    --green-acc: #16a34a; --green-dim: rgba(22,163,74,.08);
+    --text: #152318; --text-2: #3d5c42; --muted: #6b8a6f; --faint: #a8c4ad;
+    --danger: #dc2626; --warning: #d97706; --info: #0284c7;
+    --card-shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    --hero-bg: linear-gradient(135deg, #e8f0e4 0%, #ddecd5 100%);
+}
+
+/* Page layout */
+.about-page {
+    font-family: 'Figtree', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 1.4rem 1.5rem 2.5rem;
+    color: var(--text);
+    transition: background 0.25s, color 0.25s;
+}
+.about-page .container-custom {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Hero (identical to dashboard) */
+.db-hero { position: relative; background: var(--hero-bg); border: 1px solid var(--border-hi); border-radius: 18px; padding: 1.6rem 2rem 1.6rem 2.4rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; overflow: hidden; box-shadow: var(--card-shadow); }
+.db-hero::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c9a228' stroke-width='0.4' opacity='0.15'%3E%3Cpolygon points='40,4 76,22 76,58 40,76 4,58 4,22'/%3E%3Cpolygon points='40,14 66,27 66,53 40,66 14,53 14,27'/%3E%3Cline x1='40' y1='4' x2='40' y2='14'/%3E%3Cline x1='76' y1='22' x2='66' y2='27'/%3E%3Cline x1='76' y1='58' x2='66' y2='53'/%3E%3Cline x1='40' y1='76' x2='40' y2='66'/%3E%3Cline x1='4' y1='58' x2='14' y2='53'/%3E%3Cline x1='4' y1='22' x2='14' y2='27'/%3E%3C/g%3E%3C/svg%3E"); background-repeat: repeat; pointer-events: none; }
+.db-hero::after { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 60%, transparent 100%); border-radius: 0 2px 2px 0; }
+.db-hero-inner { position: relative; z-index: 1; }
+.db-hero-eyebrow { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.25rem; }
+.db-hero-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.55rem; font-weight: 800; color: var(--text); margin: 0; letter-spacing: -0.025em; line-height: 1.1; }
+.db-hero-sub { font-size: 0.8rem; color: var(--muted); margin: 0.3rem 0 0; font-style: italic; }
+.hero-actions { position: relative; z-index: 1; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.btn-theme-toggle { font-family: 'Figtree', sans-serif; font-size: 0.78rem; font-weight: 600; color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(201,162,40,.25); border-radius: 8px; padding: 0.45rem 0.9rem; cursor: pointer; transition: all 0.18s; }
+.btn-theme-toggle:hover { background: var(--gold-glow); border-color: rgba(201,162,40,.4); }
+.btn-hero-action { font-family: 'Figtree', sans-serif; font-size: 0.78rem; font-weight: 500; color: var(--muted); background: rgba(255,255,255,.03); border: 1px solid var(--border-hi); border-radius: 8px; padding: 0.45rem 0.9rem; text-decoration: none; transition: all 0.18s; display: inline-block; }
+.btn-hero-action:hover { color: var(--text); border-color: var(--border-hi); background: var(--surface-2); }
+
+/* Cards */
+.ge-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--card-shadow); overflow: hidden; margin-bottom: 1.5rem; }
+.ge-card-header { padding: 0.75rem 1.2rem; border-bottom: 1px solid var(--border); background: var(--surface-2); font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--text); }
+.ge-card-body { padding: 1.2rem; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .about-page { padding: 1rem; }
+    .db-hero { padding: 1.2rem; flex-direction: column; align-items: flex-start; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5" style="max-width: 900px;">
-    <h1 class="text-center mb-4">About GrowEasy Invoice</h1>
-
-    <div class="row mb-5">
-        <div class="col-md-6">
-            <h3>🇵🇰 Our Mission</h3>
-            <p>Empowering small businesses around the globe and specifically Pakistani small businesses and NGOs with <strong>free, tax and audit-compliant inventory, invoicing,CRM all in one</strong>.</p>
-            <p>We believe every business, shopkeeper, freelancer, and startup deserves professional tools without the high cost barrier to ease their operations. This app eliminates the fragmentation issue.</p>
+<div class="about-page">
+    <div class="container-custom">
+        <div class="db-hero">
+            <div class="db-hero-inner">
+                <div class="db-hero-eyebrow">✦ GrowEasy · About</div>
+                <h2 class="db-hero-title">Smarter Ops. Faster Growth.</h2>
+                <p class="db-hero-sub">Empowering small businesses in Pakistan and beyond with a free, tax‑compliant ERP.</p>
+            </div>
+            <div class="hero-actions">
+                <button class="btn-theme-toggle" id="themeToggle" type="button">☀️ Light</button>
+                <a href="{{ url_for('main.dashboard') }}" class="btn-hero-action">← Dashboard</a>
+            </div>
         </div>
-        <div class="col-md-6">
-            <h3>🎯 The Problem We Solve</h3>
-            <p><strong>82% of Pakistani SMBs</strong> struggle with:</p>
-            <ul>
-                <li>❌ Expensive accounting and inventory software (5,000-50,000/year)</li>
-                <li>❌ Complex Tax and Audit compliance requirements</li>
-                <li>❌ Manual inventory tracking through multiple platforms</li>
-                <li>❌ Inefficient financial visibility and product management</li>
-                <li>❌ Overselling, Stockouts, and Order Cancellations</li>
-                <li>❌ Lack of real-time analytics, Invite your team, Assistant, Accountant</li>                
-                <li>❌ No digital record-keeping for customer, supplier or expense records</li>
-            </ul>
-        </div>
-    </div>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <h4>✨ What Makes Us Different</h4>
-            <div class="row mt-3">
-                <div class="col-md-4 mb-3">
-                    <h5>🆓 Always Free</h5>
-                    <p class="small"> Core feature set is completely free and will always be free. No hidden charges. For advanced features a reasonable subscription fee applies.</p>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="ge-card">
+                    <div class="ge-card-header">🇵🇰 Our Mission</div>
+                    <div class="ge-card-body">
+                        <p>Empowering small businesses around the globe – especially Pakistani SMBs and NGOs – with <strong>free, tax & audit‑compliant inventory, invoicing, and CRM all in one</strong>.</p>
+                        <p class="mb-0">We believe every business, shopkeeper, freelancer, and startup deserves professional tools without high costs.</p>
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <h5>🛒️ TAX Compliant</h5>
-                    <p class="small">NTN/STRN and Tax fields Auto QR codes. Audit Compliant. Tax Certificate. Profit and loss Statements. Inventory Evaluation</p>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>📦 Multi Channel Inventory Management</h5>
-                    <p class="small">.Sell anywhere and record at one place. Amazon, Shopify, WooCommerce, Daraz integration. Low stock and Expiry alerts.</p>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>🔒 Privacy First</h5>
-                    <p class="small">Your data stays in Pakistan. No tracking and The UPC you generate via our app, are also your own forever.</p>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>📱 Progressive Web App</h5>
-                    <p class="small">Basic functionality works offline. Install like an app. Complete business visibility on the Go.</p>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>🚀 Always Improving</h5>
-                    <p class="small"> No need to check multiple sheets to check for updates. Community-driven features. Your feedback shapes our roadmap.</p>
+            </div>
+            <div class="col-md-6">
+                <div class="ge-card">
+                    <div class="ge-card-header">🎯 The Problem We Solve</div>
+                    <div class="ge-card-body">
+                        <p><strong>82% of Pakistani SMBs</strong> struggle with:</p>
+                        <ul class="mb-0">
+                            <li>❌ Expensive software (₨5k–50k/year)</li>
+                            <li>❌ Complex tax & audit requirements</li>
+                            <li>❌ Manual inventory across multiple platforms</li>
+                            <li>❌ Stockouts, overselling, no real‑time analytics</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <h4>🤝 Join Us</h4>
-            <p>Whether you're a shopkeeper in Karachi or Peshawar or An e-commerce seller. A freelancer in Lahore or Islamabad. An NGO operating in Pakistan or a developer, we welcome you to join our mission.</p>
-            <ul>
-                <li><strong>Use GrowEasy Invoice:</strong> Sign up and start managing your business for free.</li>
-                <li><strong>Contribute:</strong> We're open-source! Contribute and submit your ideas or code.</li>
-                <li><strong>Spread the Word:</strong> Share GrowEasy Invoice with your network. Help businesses control their operations.</li>
-                <li><strong>Feedback:</strong> Your feedback is invaluable. Let us know how we can improve GrowEasy (by patriotpk.com)</li>
-            </ul>
+        <div class="ge-card">
+            <div class="ge-card-header">✨ What Makes Us Different</div>
+            <div class="ge-card-body">
+                <div class="row g-3">
+                    <div class="col-md-4"><h5>🆓 Always Free</h5><p class="small">Core features are completely free. Advanced features optional subscription.</p></div>
+                    <div class="col-md-4"><h5>🛒 Tax Compliant</h5><p class="small">NTN/STRN, tax fields, QR codes, audit‑ready certificates.</p></div>
+                    <div class="col-md-4"><h5>📦 Multi‑Channel</h5><p class="small">Amazon, Shopify, Daraz – track everything in one place.</p></div>
+                    <div class="col-md-4"><h5>🔒 Privacy First</h5><p class="small">Your data stays in Pakistan. No tracking.</p></div>
+                    <div class="col-md-4"><h5>📱 PWA</h5><p class="small">Works offline. Install like an app.</p></div>
+                    <div class="col-md-4"><h5>🚀 Always Improving</h5><p class="small">Community‑driven features.</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ge-card">
+            <div class="ge-card-header">🤝 Join Us</div>
+            <div class="ge-card-body">
+                <p>Whether you're a shopkeeper in Karachi, a freelancer in Lahore, or an NGO – join our mission.</p>
+                <ul>
+                    <li><strong>Use GrowEasy:</strong> Sign up and start managing for free.</li>
+                    <li><strong>Contribute:</strong> Open‑source – submit ideas or code.</li>
+                    <li><strong>Spread the Word:</strong> Share with your network.</li>
+                    <li><strong>Feedback:</strong> Your input shapes our roadmap.</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
+
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    const html = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    function applyTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('ge-theme', theme);
+        toggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    }
+    const saved = localStorage.getItem('ge-theme') || 'dark';
+    applyTheme(saved);
+    toggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme') || 'dark';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+});
+</script>
 {% endblock %}
