@@ -238,7 +238,7 @@ def forgot_password():
         )
         return redirect(url_for('auth.login'))
 
-    return render_template('forgot_password.html', nonce=g.nonce)
+    return render_template('reset_password.html', nonce=g.nonce)
 
 
 # 5. Reset Password — validates the signed token and sets the new password
