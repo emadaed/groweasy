@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Landed Cost History — GrowEasy{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h5 class="fw-bold mb-0">Landed Cost Calculations</h5>
+    <a href="{{ url_for('supply_chain.landed_cost_calculate') }}" class="btn btn-warning text-dark">
+      <i class="bi bi-plus-lg me-1"></i>New Calculation
+    </a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      {% if records %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Ref / Description</th>
+              <th>Currency</th>
+              <th class="text-end">Product Cost</th>
+              <th class="text-end">Total Landed (PKR)</th>
+              <th class="text-end">Per Unit (PKR)</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in records %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ r.reference_no or "—" }}</div>
+                <small class="text-muted">{{ r.description or "" }}</small>
+              </td>
+              <td><span class="badge bg-secondary">{{ r.currency }}</span></td>
+              <td class="text-end">{{ "{:,.2f}".format(r.product_cost | float) }}</td>
+              <td class="text-end fw-semibold">
+                {{ "{:,.0f}".format(r.total_landed_cost | float) if r.total_landed_cost else "—" }}
+              </td>
+              <td class="text-end">
+                {{ "{:,.2f}".format(r.landed_cost_per_unit | float) if r.landed_cost_per_unit else "—" }}
+              </td>
+              <td><small class="text-muted">{{ r.created_at.strftime("%d %b %Y") }}</small></td>
+              <td class="text-end">
+                <a href="{{ url_for('supply_chain.landed_cost_calculate', lc_id=r.id) }}"
+                   class="btn btn-xs btn-outline-secondary me-1">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form action="{{ url_for('supply_chain.landed_cost_delete', lc_id=r.id) }}"
+                      method="POST" class="d-inline"
+                      onsubmit="return confirm('Delete this record?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-xs btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-truck fs-1 opacity-25 d-block mb-2"></i>
+        No calculations yet.
+        <a href="{{ url_for('supply_chain.landed_cost_calculate') }}">Create your first one.</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

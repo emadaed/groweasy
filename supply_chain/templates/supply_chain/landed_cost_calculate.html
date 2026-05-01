@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Landed Cost Calculator — GrowEasy{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <a href="{{ url_for('supply_chain.landed_cost_list') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="fw-bold mb-0">
+      {{ "Edit" if existing else "Landed Cost Calculator" }}
+    </h5>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="row g-4">
+
+    {# ── Form ── #}
+    <div class="col-lg-5">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-transparent fw-semibold">🚢 Shipment Details</div>
+          <div class="card-body">
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">{{ form.reference_no.label.text }}</label>
+                {{ form.reference_no(class="form-control form-control-sm") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">{{ form.currency.label.text }}</label>
+                {{ form.currency(class="form-select form-select-sm") }}
+              </div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">{{ form.product_cost.label.text }}</label>
+                {{ form.product_cost(class="form-control form-control-sm") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Exchange Rate (to PKR)</label>
+                {{ form.exchange_rate(class="form-control form-control-sm") }}
+              </div>
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">{{ form.quantity.label.text }}</label>
+                {{ form.quantity(class="form-control form-control-sm") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">{{ form.freight_cost.label.text }}</label>
+                {{ form.freight_cost(class="form-control form-control-sm") }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-transparent fw-semibold">🏛️ Customs & Duties (Pakistan)</div>
+          <div class="card-body">
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Customs Duty %</label>
+                {{ form.customs_duty_pct(class="form-control form-control-sm") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Additional Duty % (CESS/RD)</label>
+                {{ form.additional_duty_pct(class="form-control form-control-sm") }}
+              </div>
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Sales Tax / GST %</label>
+                {{ form.sales_tax_pct(class="form-control form-control-sm") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Withholding Tax %</label>
+                {{ form.withholding_tax_pct(class="form-control form-control-sm") }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-transparent fw-semibold">🏗️ Clearing & Local Charges</div>
+          <div class="card-body">
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Clearing Charges</label>
+                {{ form.clearing_charges(class="form-control form-control-sm") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Port Handling</label>
+                {{ form.port_handling(class="form-control form-control-sm") }}
+              </div>
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Inland Freight</label>
+                {{ form.inland_freight(class="form-control form-control-sm") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Other Charges</label>
+                {{ form.other_charges(class="form-control form-control-sm") }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-warning w-100 fw-semibold text-dark">
+          <i class="bi bi-calculator me-1"></i>
+          {{ "Update Calculation" if existing else "Calculate Landed Cost" }}
+        </button>
+      </form>
+    </div>
+
+    {# ── Results ── #}
+    <div class="col-lg-7">
+      {% if result %}
+
+      <div class="row g-3 mb-3">
+        <div class="col-6">
+          <div class="card border-0 bg-warning bg-opacity-10 text-center p-3">
+            <div class="fs-3 fw-bold text-warning">PKR {{ "{:,.0f}".format(result.total_landed_cost) }}</div>
+            <div class="small text-muted">Total Landed Cost</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card border-0 bg-success bg-opacity-10 text-center p-3">
+            <div class="fs-3 fw-bold text-success">PKR {{ "{:,.2f}".format(result.landed_cost_per_unit) }}</div>
+            <div class="small text-muted">Per Unit</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-semibold">Cost Breakdown</div>
+        <div class="card-body">
+          <canvas id="costPie" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <tbody>
+              {% for label, val in result.cost_breakdown.items() %}
+              <tr>
+                <td class="text-muted ps-3">{{ label }}</td>
+                <td class="fw-semibold text-end pe-3">PKR {{ "{:,.2f}".format(val) }}</td>
+              </tr>
+              {% endfor %}
+              <tr class="table-active">
+                <td class="fw-bold ps-3">Effective Duty+Tax Rate</td>
+                <td class="fw-bold text-end pe-3">{{ result.effective_duty_pct }}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% else %}
+      <div class="card border-0 shadow-sm h-100 d-flex align-items-center justify-content-center">
+        <div class="text-center text-muted p-5">
+          <i class="bi bi-truck fs-1 mb-3 d-block opacity-25"></i>
+          <p>Enter shipment details and click <strong>Calculate</strong>.</p>
+          <p class="small">GST defaults to 17% (Pakistan standard). Adjust as needed per FBR tariff.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if result %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const breakdown = {{ result.cost_breakdown | tojson }};
+  const colors = [
+    '#0d6efd','#198754','#dc3545','#ffc107',
+    '#0dcaf0','#6c757d','#fd7e14'
+  ];
+  new Chart(document.getElementById('costPie'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(breakdown),
+      datasets: [{
+        data: Object.values(breakdown),
+        backgroundColor: colors,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'right' },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` PKR ${ctx.raw.toLocaleString()}`
+          }
+        }
+      },
+      cutout: '55%',
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

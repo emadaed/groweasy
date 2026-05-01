@@ -184,6 +184,82 @@ def create_all_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         '''))
+        conn.execute(text('''
+            CREATE TABLE IF NOT EXISTS scm_inventory_items (
+                id               SERIAL PRIMARY KEY,
+                user_id          INTEGER NOT NULL,
+                name             TEXT NOT NULL,
+                sku              TEXT,
+                unit             TEXT DEFAULT 'pcs',
+                annual_demand    NUMERIC(14,4) NOT NULL,
+                daily_demand_avg NUMERIC(14,4),
+                daily_demand_std NUMERIC(14,4) DEFAULT 0,
+                ordering_cost    NUMERIC(14,2) NOT NULL,
+                holding_cost_pct NUMERIC(6,4)  NOT NULL,
+                unit_cost        NUMERIC(14,2) NOT NULL,
+                lead_time_days_avg  NUMERIC(10,2) NOT NULL,
+                lead_time_days_std  NUMERIC(10,2) DEFAULT 0,
+                service_level_z  NUMERIC(6,4)  DEFAULT 1.645,
+                eoq              NUMERIC(14,4),
+                rop              NUMERIC(14,4),
+                safety_stock     NUMERIC(14,4),
+                annual_order_cost NUMERIC(14,2),
+                annual_hold_cost  NUMERIC(14,2),
+                total_cost        NUMERIC(14,2),
+                created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        '''))
+
+        conn.execute(text('''
+            CREATE TABLE IF NOT EXISTS supplier_kpis (
+                id              SERIAL PRIMARY KEY,
+                user_id         INTEGER NOT NULL,
+                supplier_name   TEXT NOT NULL,
+                supplier_code   TEXT,
+                category        TEXT,
+                period          TEXT NOT NULL,
+                on_time_delivery_pct    NUMERIC(6,2),
+                quality_acceptance_pct  NUMERIC(6,2),
+                invoice_accuracy_pct    NUMERIC(6,2),
+                lead_time_adherence_pct NUMERIC(6,2),
+                responsiveness_score    NUMERIC(4,2),
+                compliance_score        NUMERIC(4,2),
+                composite_score         NUMERIC(6,2),
+                notes           TEXT,
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        '''))
+
+        conn.execute(text('''
+            CREATE TABLE IF NOT EXISTS landed_costs (
+                id              SERIAL PRIMARY KEY,
+                user_id         INTEGER NOT NULL,
+                reference_no    TEXT,
+                description     TEXT,
+                currency        TEXT DEFAULT 'PKR',
+                exchange_rate   NUMERIC(12,4) DEFAULT 1.0,
+                product_cost    NUMERIC(16,2) NOT NULL,
+                quantity        NUMERIC(14,4) NOT NULL,
+                freight_cost    NUMERIC(14,2) DEFAULT 0,
+                insurance_cost  NUMERIC(14,2) DEFAULT 0,
+                customs_duty_pct    NUMERIC(6,4) DEFAULT 0,
+                additional_duty_pct NUMERIC(6,4) DEFAULT 0,
+                sales_tax_pct       NUMERIC(6,4) DEFAULT 0.17,
+                withholding_tax_pct NUMERIC(6,4) DEFAULT 0,
+                clearing_charges    NUMERIC(14,2) DEFAULT 0,
+                port_handling       NUMERIC(14,2) DEFAULT 0,
+                inland_freight      NUMERIC(14,2) DEFAULT 0,
+                other_charges       NUMERIC(14,2) DEFAULT 0,
+                total_landed_cost    NUMERIC(16,2),
+                landed_cost_per_unit NUMERIC(14,4),
+                duty_amount          NUMERIC(14,2),
+                tax_amount           NUMERIC(14,2),
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        '''))
 
         logger.info("All tables created/verified successfully")
 

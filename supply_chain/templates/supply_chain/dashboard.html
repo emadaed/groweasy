@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Supply Chain — GrowEasy{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# ── Header ── #}
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="fw-bold mb-0">Supply Chain Management</h4>
+      <small class="text-muted">Inventory · Suppliers · Landed Cost</small>
+    </div>
+  </div>
+
+  {# ── Summary Cards ── #}
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="rounded-circle bg-success bg-opacity-10 p-3">
+            <i class="bi bi-boxes fs-4 text-success"></i>
+          </div>
+          <div>
+            <div class="fs-3 fw-bold">{{ inv_count }}</div>
+            <div class="text-muted small">Tracked Items</div>
+          </div>
+          <a href="{{ url_for('supply_chain.inventory_list') }}"
+             class="btn btn-sm btn-outline-success ms-auto">View</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+            <i class="bi bi-people fs-4 text-primary"></i>
+          </div>
+          <div>
+            <div class="fs-3 fw-bold">{{ supplier_count }}</div>
+            <div class="text-muted small">Supplier KPI Records</div>
+          </div>
+          <a href="{{ url_for('supply_chain.supplier_list') }}"
+             class="btn btn-sm btn-outline-primary ms-auto">View</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+            <i class="bi bi-calculator fs-4 text-warning"></i>
+          </div>
+          <div>
+            <div class="fs-3 fw-bold">{{ lc_count }}</div>
+            <div class="text-muted small">Landed Cost Calculations</div>
+          </div>
+          <a href="{{ url_for('supply_chain.landed_cost_list') }}"
+             class="btn btn-sm btn-outline-warning ms-auto">View</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+
+    {# ── Top Suppliers Widget ── #}
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent fw-semibold">
+          🏆 Top Suppliers by KPI Score
+        </div>
+        <div class="card-body p-0">
+          {% if top_suppliers %}
+          <ul class="list-group list-group-flush">
+            {% for s in top_suppliers %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+              <div>
+                <div class="fw-semibold">{{ s.supplier_name }}</div>
+                <small class="text-muted">{{ s.period }}</small>
+              </div>
+              {% set score = s.composite_score | float %}
+              <span class="badge rounded-pill
+                {% if score >= 90 %}bg-success
+                {% elif score >= 75 %}bg-primary
+                {% elif score >= 60 %}bg-warning text-dark
+                {% else %}bg-danger{% endif %}">
+                {{ "%.1f"|format(score) }}
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="p-3 text-muted text-center">No supplier records yet.</div>
+          {% endif %}
+        </div>
+        <div class="card-footer bg-transparent text-end">
+          <a href="{{ url_for('supply_chain.supplier_save') }}" class="btn btn-sm btn-primary">
+            + Add Supplier KPI
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {# ── Quick Actions ── #}
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent fw-semibold">
+          ⚡ Quick Actions
+        </div>
+        <div class="card-body d-flex flex-column gap-2">
+          <a href="{{ url_for('supply_chain.inventory_calculate') }}"
+             class="btn btn-outline-success text-start">
+            <i class="bi bi-calculator me-2"></i>Calculate EOQ / ROP / Safety Stock
+          </a>
+          <a href="{{ url_for('supply_chain.supplier_save') }}"
+             class="btn btn-outline-primary text-start">
+            <i class="bi bi-person-badge me-2"></i>Score a Supplier
+          </a>
+          <a href="{{ url_for('supply_chain.landed_cost_calculate') }}"
+             class="btn btn-outline-warning text-start">
+            <i class="bi bi-truck me-2"></i>Calculate Landed Cost
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}EOQ / ROP / Safety Stock — GrowEasy{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <a href="{{ url_for('supply_chain.inventory_list') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="fw-bold mb-0">
+      {{ "Edit" if existing else "Calculate" }} — EOQ / ROP / Safety Stock
+    </h5>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="row g-4">
+
+    {# ── Input Form ── #}
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent fw-semibold">📦 Item Parameters</div>
+        <div class="card-body">
+          <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="row g-2 mb-3">
+              <div class="col-8">
+                <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-4">
+                <label class="form-label fw-semibold">{{ form.sku.label.text }}</label>
+                {{ form.sku(class="form-control") }}
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.annual_demand.label.text }}</label>
+                {{ form.annual_demand(class="form-control" + (" is-invalid" if form.annual_demand.errors else "")) }}
+                {% for e in form.annual_demand.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.daily_demand_avg.label.text }}</label>
+                {{ form.daily_demand_avg(class="form-control") }}
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.ordering_cost.label.text }}</label>
+                {{ form.ordering_cost(class="form-control") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.unit_cost.label.text }}</label>
+                {{ form.unit_cost(class="form-control") }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">{{ form.holding_cost_pct.label.text }}</label>
+              {{ form.holding_cost_pct(class="form-control", placeholder="e.g. 20") }}
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.lead_time_days_avg.label.text }}</label>
+                {{ form.lead_time_days_avg(class="form-control") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.service_level_z.label.text }}</label>
+                {{ form.service_level_z(class="form-select") }}
+              </div>
+            </div>
+
+            <details class="mb-3">
+              <summary class="text-muted small cursor-pointer">Advanced (std deviations)</summary>
+              <div class="row g-2 mt-2">
+                <div class="col-6">
+                  <label class="form-label small">Daily Demand Std Dev</label>
+                  {{ form.daily_demand_std(class="form-control form-control-sm") }}
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Lead Time Std Dev (days)</label>
+                  {{ form.lead_time_days_std(class="form-control form-control-sm") }}
+                </div>
+              </div>
+            </details>
+
+            <button type="submit" class="btn btn-success w-100 fw-semibold">
+              <i class="bi bi-calculator me-1"></i>
+              {{ "Update & Recalculate" if existing else "Calculate" }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {# ── Results ── #}
+    <div class="col-lg-7">
+      {% if result %}
+      <div class="row g-3 mb-3">
+        <div class="col-4">
+          <div class="card border-0 bg-success bg-opacity-10 text-center p-3">
+            <div class="fs-2 fw-bold text-success">{{ "{:,.0f}".format(result.eoq) }}</div>
+            <div class="small text-muted">EOQ (units)</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="card border-0 bg-primary bg-opacity-10 text-center p-3">
+            <div class="fs-2 fw-bold text-primary">{{ "{:,.0f}".format(result.rop) }}</div>
+            <div class="small text-muted">Reorder Point</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="card border-0 bg-warning bg-opacity-10 text-center p-3">
+            <div class="fs-2 fw-bold text-warning">{{ "{:,.0f}".format(result.safety_stock) }}</div>
+            <div class="small text-muted">Safety Stock</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-semibold">Annual Cost Breakdown</div>
+        <div class="card-body">
+          <canvas id="costChart" height="100"></canvas>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <table class="table table-sm mb-0">
+            <tbody>
+              <tr><td class="text-muted">Orders / Year</td>
+                  <td class="fw-semibold text-end">{{ result.orders_per_year }}</td></tr>
+              <tr><td class="text-muted">Cycle Time</td>
+                  <td class="fw-semibold text-end">{{ result.cycle_time_days }} days</td></tr>
+              <tr><td class="text-muted">Max Inventory</td>
+                  <td class="fw-semibold text-end">{{ "{:,.0f}".format(result.max_inventory) }} units</td></tr>
+              <tr><td class="text-muted">Annual Ordering Cost</td>
+                  <td class="fw-semibold text-end">PKR {{ "{:,.0f}".format(result.annual_order_cost) }}</td></tr>
+              <tr><td class="text-muted">Annual Holding Cost</td>
+                  <td class="fw-semibold text-end">PKR {{ "{:,.0f}".format(result.annual_hold_cost) }}</td></tr>
+              <tr class="table-active">
+                <td class="fw-bold">Total Annual Cost</td>
+                <td class="fw-bold text-end">PKR {{ "{:,.0f}".format(result.total_cost) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% else %}
+      <div class="card border-0 shadow-sm h-100 d-flex align-items-center justify-content-center">
+        <div class="text-center text-muted p-5">
+          <i class="bi bi-graph-up fs-1 mb-3 d-block opacity-25"></i>
+          <p>Fill in the parameters and click <strong>Calculate</strong> to see results.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if result %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  new Chart(document.getElementById('costChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Annual Ordering Cost', 'Annual Holding Cost'],
+      datasets: [{
+        data: [{{ result.annual_order_cost }}, {{ result.annual_hold_cost }}],
+        backgroundColor: ['rgba(25, 135, 84, 0.7)', 'rgba(13, 110, 253, 0.7)'],
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => 'PKR ' + v.toLocaleString() } } }
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

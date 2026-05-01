@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if existing else "Add" }} Supplier KPI — GrowEasy{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <a href="{{ url_for('supply_chain.supplier_list') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="fw-bold mb-0">
+      {{ "Edit Supplier KPI" if existing else "Score a Supplier" }}
+    </h5>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="row g-3 mb-3">
+              <div class="col-8">
+                <label class="form-label fw-semibold">{{ form.supplier_name.label.text }}</label>
+                {{ form.supplier_name(class="form-control" + (" is-invalid" if form.supplier_name.errors else "")) }}
+                {% for e in form.supplier_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-4">
+                <label class="form-label fw-semibold">{{ form.supplier_code.label.text }}</label>
+                {{ form.supplier_code(class="form-control") }}
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.category.label.text }}</label>
+                {{ form.category(class="form-control") }}
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">{{ form.period.label.text }}</label>
+                {{ form.period(class="form-control", placeholder="e.g. 2025-Q2") }}
+                {% for e in form.period.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+
+            <hr>
+            <h6 class="fw-semibold mb-3 text-muted">KPI Scores</h6>
+            <div class="alert alert-info alert-sm py-2 small">
+              Delivery / Quality / Invoice / Lead Time → enter as percentage (0–100).<br>
+              Responsiveness & Compliance → rate 1 to 10.
+            </div>
+
+            <div class="row g-3">
+              {% for field in [form.on_time_delivery_pct, form.quality_acceptance_pct,
+                               form.invoice_accuracy_pct, form.lead_time_adherence_pct,
+                               form.responsiveness_score, form.compliance_score] %}
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">{{ field.label.text }}</label>
+                {{ field(class="form-control" + (" is-invalid" if field.errors else "")) }}
+                {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="mt-3">
+              <label class="form-label small fw-semibold">{{ form.notes.label.text }}</label>
+              {{ form.notes(class="form-control", rows=3) }}
+            </div>
+
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-primary fw-semibold">
+                <i class="bi bi-save me-1"></i>
+                {{ "Update" if existing else "Save & Score" }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

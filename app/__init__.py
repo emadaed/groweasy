@@ -94,6 +94,8 @@ def create_app():
     app.register_blueprint(reports_bp)
     from app.routes.api_v1 import api_v1_bp
     app.register_blueprint(api_v1_bp)
+    from supply_chain import supply_chain_bp
+    app.register_blueprint(supply_chain_bp)
 
     # --- Logging Noise Reduction ---
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
