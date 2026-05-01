@@ -316,11 +316,9 @@
                 </li>
                 {% if session.get('role') == 'owner' %}
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('users.list_users') }}">
-                        <i class="bi bi-people-fill"></i> Team
+                    <a class="nav-link" href="{{ url_for('users.list_users') }}"><i class="bi bi-people-fill"></i> Team
                     </a>
-                    <a href="{{ url_for('settings.settings') }}" class="quick-action">
-                        <i class="qa-icon">⚙️</i> Settings
+                    <a class="nav-link" href="{{ url_for('settings.settings') }}"><i class="fa fa-gear"></i> Settings
                     </a>                    
                 </li>
                 {% endif %}                
