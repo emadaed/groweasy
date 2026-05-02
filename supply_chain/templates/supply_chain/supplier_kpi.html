@@ -150,14 +150,16 @@
     </div>
   </div>
 </div>
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
 
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<!-- ✅ static load of Chart.js (same as main dashboard) -->
-<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
 
+
+{% block scripts %}
+{{ super() }}
 <script>
 (function () {
   'use strict';
@@ -165,24 +167,19 @@
   var gradeData  = {{ grade_dist | tojson }};
   var radarChart = null;
 
-  /* ─── Chart.js loader — now Chart is already loaded statically, so this is just a safety wrapper ─── */
   function ensureChart(cb) {
     if (typeof Chart !== 'undefined') {
       cb();
       return;
     }
-    // fallback – should never be needed now
+    // fallback (should never be needed now)
     var s    = document.createElement('script');
     s.src    = '{{ url_for("static", filename="js/chart.umd.js") }}';
     s.nonce  = '{{ nonce }}';
     s.onload = cb;
-    s.onerror = function () {
-      console.error('Could not load chart.umd.js from static/js/');
-    };
     document.head.appendChild(s);
   }
 
-  /* ─── Grade doughnut ─── */
   function initGradeChart() {
     var el = document.getElementById('gradeChart');
     if (!el) return;
