@@ -89,7 +89,6 @@
                     </span>
                   </td>
                   <td class="text-end">
-                    {# data-* attributes only — zero inline JS #}
                     <button type="button"
                             class="btn btn-xs btn-outline-info me-1 btn-radar"
                             data-kpi-id="{{ k.id }}"
@@ -133,7 +132,7 @@
 
 </div>
 
-{# Radar modal — purely driven by JS event listeners, no inline handlers #}
+{# Radar modal #}
 <div class="modal fade" id="radarModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
@@ -150,13 +149,11 @@
     </div>
   </div>
 </div>
+
+{# ✅ Static Chart.js load (works, nonce ensures CSP compliance) #}
 <script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
 
 {% endblock %}
-
-{% block scripts %}
-{{ super() }}
-
 
 {% block scripts %}
 {{ super() }}
@@ -200,11 +197,10 @@
     });
   }
 
-  /* ─── Radar chart (same as before) ─── */
   function showRadar(kpiId, name) {
-    document.getElementById('radarTitle').textContent  = name + ' — KPI Breakdown';
+    document.getElementById('radarTitle').textContent = name + ' — KPI Breakdown';
     document.getElementById('radarLoading').style.display = 'block';
-    document.getElementById('radarChart').style.display   = 'none';
+    document.getElementById('radarChart').style.display = 'none';
 
     var modal = new bootstrap.Modal(document.getElementById('radarModal'));
     modal.show();
@@ -268,5 +264,5 @@
   });
 
 }());
-</script>       
+</script>
 {% endblock %}
