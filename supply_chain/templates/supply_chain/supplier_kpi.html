@@ -23,6 +23,7 @@
   {% endwith %}
 
   <div class="row g-3 mb-4">
+
     {# Grade distribution chart #}
     <div class="col-md-4">
       <div class="card border-0 shadow-sm h-100">
@@ -88,20 +89,27 @@
                     </span>
                   </td>
                   <td class="text-end">
-                    <button class="btn btn-xs btn-outline-info me-1"
-                            onclick="showRadar({{ k.id }}, '{{ k.supplier_name }}')"
-                            title="View breakdown">
+                    {# data-* attributes only — zero inline JS #}
+                    <button type="button"
+                            class="btn btn-xs btn-outline-info me-1 btn-radar"
+                            data-kpi-id="{{ k.id }}"
+                            data-kpi-name="{{ k.supplier_name | e }}"
+                            title="View KPI breakdown">
                       <i class="bi bi-radar"></i>
                     </button>
+
                     <a href="{{ url_for('supply_chain.supplier_save', kpi_id=k.id) }}"
-                       class="btn btn-xs btn-outline-secondary me-1">
+                       class="btn btn-xs btn-outline-secondary me-1"
+                       title="Edit">
                       <i class="bi bi-pencil"></i>
                     </a>
+
                     <form action="{{ url_for('supply_chain.supplier_delete', kpi_id=k.id) }}"
-                          method="POST" class="d-inline"
-                          onsubmit="return confirm('Delete this record?')">
+                          method="POST"
+                          class="d-inline delete-form"
+                          data-confirm="Delete {{ k.supplier_name | e }}? This cannot be undone.">
                       {{ form.hidden_tag() }}
-                      <button class="btn btn-xs btn-outline-danger">
+                      <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
                     </form>
@@ -125,16 +133,19 @@
 
 </div>
 
-{# Radar modal #}
-<div class="modal fade" id="radarModal" tabindex="-1">
+{# Radar modal — purely driven by JS event listeners, no inline handlers #}
+<div class="modal fade" id="radarModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <div class="modal-header">
         <h6 class="modal-title fw-bold" id="radarTitle">KPI Breakdown</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <canvas id="radarChart"></canvas>
+        <div id="radarLoading" class="text-center py-3 text-muted">
+          <div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading...
+        </div>
+        <canvas id="radarChart" style="display:none;"></canvas>
       </div>
     </div>
   </div>
@@ -145,55 +156,71 @@
 {% block scripts %}
 {{ super() }}
 <script>
-  var gradeData = {{ grade_dist | tojson }};
+(function () {
+  'use strict';
+
+  var gradeData  = {{ grade_dist | tojson }};
   var radarChart = null;
 
+  /* ─── Chart.js loader — uses YOUR local static file ─── */
+  function ensureChart(cb) {
+    if (typeof Chart !== 'undefined') {
+      cb();
+      return;
+    }
+    var s    = document.createElement('script');
+    s.src    = '{{ url_for("static", filename="js/chart.umd.js") }}';
+    s.onload = cb;
+    s.onerror = function () {
+      console.error('Could not load chart.umd.js from static/js/');
+    };
+    document.head.appendChild(s);
+  }
+
+  /* ─── Grade doughnut ─── */
   function initGradeChart() {
-    var ctx = document.getElementById('gradeChart');
-    if (!ctx || typeof Chart === 'undefined') return;
-    new Chart(ctx, {
+    var el = document.getElementById('gradeChart');
+    if (!el) return;
+    new Chart(el, {
       type: 'doughnut',
       data: {
         labels: Object.keys(gradeData),
         datasets: [{
           data: Object.values(gradeData),
-          backgroundColor: ['#198754','#0d6efd','#ffc107','#6c757d','#dc3545'],
-          borderWidth: 2,
+          backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#6c757d', '#dc3545'],
+          borderWidth: 2
         }]
       },
-      options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+      options: {
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '60%'
+      }
     });
   }
 
-  function ensureChartJs(callback) {
-    if (typeof Chart !== 'undefined') {
-      callback();
-      return;
-    }
-    // Chart.js not globally available — load from static
-    var s = document.createElement('script');
-    s.src = '{{ url_for("static", filename="js/chart.min.js") }}';
-    s.onload = callback;
-    s.onerror = function() { console.warn('Chart.js failed to load'); };
-    document.head.appendChild(s);
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    ensureChartJs(initGradeChart);
-  });
-
+  /* ─── Radar chart ─── */
   function showRadar(kpiId, name) {
-    document.getElementById('radarTitle').textContent = name + ' — KPI Breakdown';
+    document.getElementById('radarTitle').textContent  = name + ' — KPI Breakdown';
+    document.getElementById('radarLoading').style.display = 'block';
+    document.getElementById('radarChart').style.display   = 'none';
+
     var modal = new bootstrap.Modal(document.getElementById('radarModal'));
     modal.show();
 
     fetch('/supply-chain/suppliers/' + kpiId + '/breakdown.json')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        ensureChartJs(function() {
-          var ctx = document.getElementById('radarChart');
-          if (radarChart) radarChart.destroy();
-          radarChart = new Chart(ctx, {
+      .then(function (r) {
+        if (!r.ok) throw new Error('Server returned ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        ensureChart(function () {
+          document.getElementById('radarLoading').style.display = 'none';
+          var canvas = document.getElementById('radarChart');
+          canvas.style.display = 'block';
+
+          if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+          radarChart = new Chart(canvas, {
             type: 'radar',
             data: {
               labels: Object.keys(data.raw),
@@ -202,7 +229,7 @@
                 data: Object.values(data.raw),
                 backgroundColor: 'rgba(13,110,253,0.15)',
                 borderColor: '#0d6efd',
-                pointBackgroundColor: '#0d6efd',
+                pointBackgroundColor: '#0d6efd'
               }]
             },
             options: {
@@ -212,7 +239,37 @@
           });
         });
       })
-      .catch(function(e) { console.error('Radar fetch failed:', e); });
+      .catch(function (e) {
+        document.getElementById('radarLoading').innerHTML =
+          '<span class="text-danger">Failed to load breakdown data.</span>';
+        console.error('Radar error:', e);
+      });
   }
+
+  /* ─── Wire everything up — event delegation, NO inline handlers ─── */
+  document.addEventListener('DOMContentLoaded', function () {
+
+    ensureChart(initGradeChart);
+
+    /* Radar button clicks */
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.btn-radar');
+      if (!btn) return;
+      showRadar(btn.dataset.kpiId, btn.dataset.kpiName);
+    });
+
+    /* Delete confirmation — replaces onsubmit="confirm(...)" */
+    document.addEventListener('submit', function (e) {
+      var form = e.target.closest('.delete-form');
+      if (!form) return;
+      if (!window.confirm(form.dataset.confirm || 'Are you sure?')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
+  });
+
+}());
 </script>
 {% endblock %}
