@@ -186,22 +186,13 @@
 {% block scripts %}
 {{ super() }}
 {% if result %}
-<script>
+{# Static Chart.js load (nonce‑aware) #}
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function () {
   var lcBreakdown = {{ result.cost_breakdown | tojson }};
-
-  function loadChart(callback) {
-    if (typeof Chart !== 'undefined') { callback(); return; }
-    var s = document.createElement('script');
-    s.src = '{{ url_for("static", filename="js/chart.umd.js") }}';
-    s.nonce = '{{ nonce }}';
-    s.onload = callback;
-    s.onerror = function() { console.error('Chart.js load failed'); };
-    document.head.appendChild(s);
-  }
-
-  function buildPieChart() {
-    var ctx = document.getElementById('costPie');
-    if (!ctx) return;
+  var ctx = document.getElementById('costPie');
+  if (ctx) {
     new Chart(ctx, {
       type: 'doughnut',
       data: {
@@ -213,15 +204,15 @@
         }]
       },
       options: {
-        plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(ctx) { return ' PKR ' + ctx.raw.toLocaleString(); } } } },
+        plugins: {
+          legend: { position: 'right' },
+          tooltip: { callbacks: { label: function(ctx) { return ' PKR ' + ctx.raw.toLocaleString(); } } }
+        },
         cutout: '55%'
       }
     });
   }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    loadChart(buildPieChart);
-  });
+});
 </script>
 {% endif %}
 {% endblock %}

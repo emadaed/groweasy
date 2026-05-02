@@ -54,7 +54,7 @@
               <tbody>
                 {% for k in kpis %}
                 {% set score = k.composite_score | float %}
-                <tr>
+                </table>
                   <td>
                     <div class="fw-semibold">{{ k.supplier_name }}</div>
                     {% if k.supplier_code %}
@@ -96,13 +96,11 @@
                             title="View KPI breakdown">
                       <i class="bi bi-radar"></i>
                     </button>
-
                     <a href="{{ url_for('supply_chain.supplier_save', kpi_id=k.id) }}"
                        class="btn btn-xs btn-outline-secondary me-1"
                        title="Edit">
                       <i class="bi bi-pencil"></i>
                     </a>
-
                     <form action="{{ url_for('supply_chain.supplier_delete', kpi_id=k.id) }}"
                           method="POST"
                           class="d-inline delete-form"
@@ -129,7 +127,6 @@
       </div>
     </div>
   </div>
-  
 </div>
 
 {# Radar modal #}
@@ -149,45 +146,22 @@
     </div>
   </div>
 </div>
-
-
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script>
-(function() {
-  'use strict';
+{# static Chart.js load (exactly as dashboard) #}
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
 
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function () {
   var gradeData = {{ grade_dist | tojson }};
   var radarChart = null;
 
-  // Load Chart.js dynamically with nonce (works reliably)
-  function loadChart(callback) {
-    if (typeof Chart !== 'undefined') {
-      callback();
-      return;
-    }
-    var script = document.createElement('script');
-    script.src = '{{ url_for("static", filename="js/chart.umd.js") }}';
-    script.nonce = '{{ nonce }}';
-    script.onload = function() {
-      if (typeof Chart !== 'undefined') {
-        callback();
-      } else {
-        console.error('Chart.js loaded but Chart is not defined');
-      }
-    };
-    script.onerror = function() {
-      console.error('Failed to load Chart.js');
-    };
-    document.head.appendChild(script);
-  }
-
-  function initGradeChart() {
-    var canvas = document.getElementById('gradeChart');
-    if (!canvas || Object.keys(gradeData).length === 0) return;
-    new Chart(canvas, {
+  // Grade doughnut chart
+  var gradeEl = document.getElementById('gradeChart');
+  if (gradeEl && Object.keys(gradeData).length) {
+    new Chart(gradeEl, {
       type: 'doughnut',
       data: {
         labels: Object.keys(gradeData),
@@ -204,43 +178,39 @@
     });
   }
 
+  // Radar modal
   function showRadar(kpiId, name) {
     var titleEl = document.getElementById('radarTitle');
     var loadingDiv = document.getElementById('radarLoading');
     var canvas = document.getElementById('radarChart');
     if (!titleEl || !loadingDiv || !canvas) return;
-
     titleEl.textContent = name + ' — KPI Breakdown';
     loadingDiv.style.display = 'block';
     canvas.style.display = 'none';
-
     var modal = new bootstrap.Modal(document.getElementById('radarModal'));
     modal.show();
-
     fetch('/supply-chain/suppliers/' + kpiId + '/breakdown.json')
       .then(function(r) { return r.ok ? r.json() : Promise.reject('Status ' + r.status); })
       .then(function(data) {
-        loadChart(function() {
-          loadingDiv.style.display = 'none';
-          canvas.style.display = 'block';
-          if (radarChart) radarChart.destroy();
-          radarChart = new Chart(canvas, {
-            type: 'radar',
-            data: {
-              labels: Object.keys(data.raw),
-              datasets: [{
-                label: 'Score: ' + data.composite + ' (' + data.grade + ')',
-                data: Object.values(data.raw),
-                backgroundColor: 'rgba(13,110,253,0.15)',
-                borderColor: '#0d6efd',
-                pointBackgroundColor: '#0d6efd'
-              }]
-            },
-            options: {
-              scales: { r: { min: 0, max: 100 } },
-              plugins: { legend: { position: 'bottom' } }
-            }
-          });
+        loadingDiv.style.display = 'none';
+        canvas.style.display = 'block';
+        if (radarChart) radarChart.destroy();
+        radarChart = new Chart(canvas, {
+          type: 'radar',
+          data: {
+            labels: Object.keys(data.raw),
+            datasets: [{
+              label: 'Score: ' + data.composite + ' (' + data.grade + ')',
+              data: Object.values(data.raw),
+              backgroundColor: 'rgba(13,110,253,0.15)',
+              borderColor: '#0d6efd',
+              pointBackgroundColor: '#0d6efd'
+            }]
+          },
+          options: {
+            scales: { r: { min: 0, max: 100 } },
+            plugins: { legend: { position: 'bottom' } }
+          }
         });
       })
       .catch(function(e) {
@@ -249,22 +219,17 @@
       });
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    loadChart(initGradeChart);
-
-    document.addEventListener('click', function(e) {
-      var btn = e.target.closest('.btn-radar');
-      if (btn) showRadar(btn.dataset.kpiId, btn.dataset.kpiName);
-    });
-
-    document.addEventListener('submit', function(e) {
-      var form = e.target.closest('.delete-form');
-      if (form && !confirm(form.dataset.confirm || 'Are you sure?')) {
-        e.preventDefault();
-      }
-    });
+  // Event delegation
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-radar');
+    if (btn) showRadar(btn.dataset.kpiId, btn.dataset.kpiName);
   });
-
-})();
+  document.addEventListener('submit', function(e) {
+    var form = e.target.closest('.delete-form');
+    if (form && !confirm(form.dataset.confirm || 'Are you sure?')) {
+      e.preventDefault();
+    }
+  });
+});
 </script>
 {% endblock %}

@@ -140,20 +140,12 @@
         <div class="card-body">
           <table class="table table-sm mb-0">
             <tbody>
-              <tr><td class="text-muted">Orders / Year</td>
-                  <td class="fw-semibold text-end">{{ result.orders_per_year }}</td></tr>
-              <tr><td class="text-muted">Cycle Time</td>
-                  <td class="fw-semibold text-end">{{ result.cycle_time_days }} days</td></tr>
-              <tr><td class="text-muted">Max Inventory</td>
-                  <td class="fw-semibold text-end">{{ "{:,.0f}".format(result.max_inventory) }} units</td></tr>
-              <tr><td class="text-muted">Annual Ordering Cost</td>
-                  <td class="fw-semibold text-end">PKR {{ "{:,.0f}".format(result.annual_order_cost) }}</td></tr>
-              <tr><td class="text-muted">Annual Holding Cost</td>
-                  <td class="fw-semibold text-end">PKR {{ "{:,.0f}".format(result.annual_hold_cost) }}</td></tr>
-              <tr class="table-active">
-                <td class="fw-bold">Total Annual Cost</td>
-                <td class="fw-bold text-end">PKR {{ "{:,.0f}".format(result.total_cost) }}</td>
-              </tr>
+              <tr><td class="text-muted">Orders / Year</td><td class="fw-semibold text-end">{{ result.orders_per_year }}</td></tr>
+              <tr><td class="text-muted">Cycle Time</td><td class="fw-semibold text-end">{{ result.cycle_time_days }} days</td></tr>
+              <tr><td class="text-muted">Max Inventory</td><td class="fw-semibold text-end">{{ "{:,.0f}".format(result.max_inventory) }} units</td></tr>
+              <tr><td class="text-muted">Annual Ordering Cost</td><td class="fw-semibold text-end">PKR {{ "{:,.0f}".format(result.annual_order_cost) }}</td></tr>
+              <tr><td class="text-muted">Annual Holding Cost</td><td class="fw-semibold text-end">PKR {{ "{:,.0f}".format(result.annual_hold_cost) }}</td></tr>
+              <tr class="table-active"><td class="fw-bold">Total Annual Cost</td><td class="fw-bold text-end">PKR {{ "{:,.0f}".format(result.total_cost) }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -176,20 +168,12 @@
 {% block scripts %}
 {{ super() }}
 {% if result %}
-<script>
-  function loadChart(callback) {
-    if (typeof Chart !== 'undefined') { callback(); return; }
-    var s = document.createElement('script');
-    s.src = '{{ url_for("static", filename="js/chart.umd.js") }}';
-    s.nonce = '{{ nonce }}';
-    s.onload = callback;
-    s.onerror = function() { console.error('Chart.js load failed'); };
-    document.head.appendChild(s);
-  }
-
-  function buildCostChart() {
-    var ctx = document.getElementById('costChart');
-    if (!ctx) return;
+{# Static Chart.js load (nonce‑aware) #}
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
+<script nonce="{{ nonce }}">
+document.addEventListener('DOMContentLoaded', function () {
+  var ctx = document.getElementById('costChart');
+  if (ctx) {
     new Chart(ctx, {
       type: 'bar',
       data: {
@@ -206,10 +190,7 @@
       }
     });
   }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    loadChart(buildCostChart);
-  });
+});
 </script>
 {% endif %}
 {% endblock %}
