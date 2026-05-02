@@ -184,34 +184,46 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 {% if result %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const breakdown = {{ result.cost_breakdown | tojson }};
-  const colors = [
-    '#0d6efd','#198754','#dc3545','#ffc107',
-    '#0dcaf0','#6c757d','#fd7e14'
-  ];
-  new Chart(document.getElementById('costPie'), {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(breakdown),
-      datasets: [{
-        data: Object.values(breakdown),
-        backgroundColor: colors,
-        borderWidth: 2,
-      }]
-    },
-    options: {
-      plugins: {
-        legend: { position: 'right' },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` PKR ${ctx.raw.toLocaleString()}`
-          }
-        }
+  var lcBreakdown = {{ result.cost_breakdown | tojson }};
+
+  function buildPieChart() {
+    var ctx = document.getElementById('costPie');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(lcBreakdown),
+        datasets: [{
+          data: Object.values(lcBreakdown),
+          backgroundColor: ['#0d6efd','#198754','#dc3545','#ffc107','#0dcaf0','#6c757d','#fd7e14'],
+          borderWidth: 2,
+        }]
       },
-      cutout: '55%',
+      options: {
+        plugins: {
+          legend: { position: 'right' },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) { return ' PKR ' + ctx.raw.toLocaleString(); }
+            }
+          }
+        },
+        cutout: '55%',
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart !== 'undefined') {
+      buildPieChart();
+    } else {
+      var s = document.createElement('script');
+      s.src = '{{ url_for("static", filename="js/chart.min.js") }}';
+      s.onload = buildPieChart;
+      document.head.appendChild(s);
     }
   });
 </script>

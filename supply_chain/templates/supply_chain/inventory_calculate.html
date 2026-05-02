@@ -174,24 +174,45 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 {% if result %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  new Chart(document.getElementById('costChart'), {
-    type: 'bar',
-    data: {
-      labels: ['Annual Ordering Cost', 'Annual Holding Cost'],
-      datasets: [{
-        data: [{{ result.annual_order_cost }}, {{ result.annual_hold_cost }}],
-        backgroundColor: ['rgba(25, 135, 84, 0.7)', 'rgba(13, 110, 253, 0.7)'],
-        borderRadius: 6,
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: v => 'PKR ' + v.toLocaleString() } } }
+  function renderCostChart() {
+    var ctx = document.getElementById('costChart');
+    if (!ctx) return;
+    if (typeof Chart === 'undefined') {
+      // Chart.js not loaded globally — load it then retry
+      var s = document.createElement('script');
+      s.src = '{{ url_for("static", filename="js/chart.min.js") }}';
+      s.onload = function() { buildCostChart(); };
+      s.onerror = function() {
+        ctx.parentElement.innerHTML = '<div class="alert alert-warning">Charts unavailable. Raw numbers shown in table below.</div>';
+      };
+      document.head.appendChild(s);
+    } else {
+      buildCostChart();
     }
-  });
+  }
+
+  function buildCostChart() {
+    new Chart(document.getElementById('costChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Annual Ordering Cost', 'Annual Holding Cost'],
+        datasets: [{
+          data: [{{ result.annual_order_cost }}, {{ result.annual_hold_cost }}],
+          backgroundColor: ['rgba(25, 135, 84, 0.7)', 'rgba(13, 110, 253, 0.7)'],
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { ticks: { callback: function(v) { return 'PKR ' + v.toLocaleString(); } } } }
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', renderCostChart);
 </script>
 {% endif %}
 {% endblock %}

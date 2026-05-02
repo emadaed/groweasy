@@ -143,53 +143,76 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ super() }}
 <script>
-  // Grade distribution doughnut
-  const gd = {{ grade_dist | tojson }};
-  new Chart(document.getElementById('gradeChart'), {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(gd),
-      datasets: [{
-        data: Object.values(gd),
-        backgroundColor: ['#198754','#0d6efd','#ffc107','#6c757d','#dc3545'],
-        borderWidth: 2,
-      }]
-    },
-    options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
-  });
+  var gradeData = {{ grade_dist | tojson }};
+  var radarChart = null;
 
-  // Radar chart (lazy-loaded on modal open)
-  let radarChart = null;
-
-  async function showRadar(kpiId, name) {
-    document.getElementById('radarTitle').textContent = name + ' — KPI Breakdown';
-    const modal = new bootstrap.Modal(document.getElementById('radarModal'));
-    modal.show();
-
-    const res  = await fetch(`/supply-chain/suppliers/${kpiId}/breakdown.json`);
-    const data = await res.json();
-
-    const ctx = document.getElementById('radarChart');
-    if (radarChart) radarChart.destroy();
-    radarChart = new Chart(ctx, {
-      type: 'radar',
+  function initGradeChart() {
+    var ctx = document.getElementById('gradeChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    new Chart(ctx, {
+      type: 'doughnut',
       data: {
-        labels: Object.keys(data.raw),
+        labels: Object.keys(gradeData),
         datasets: [{
-          label: `Score: ${data.composite} (${data.grade})`,
-          data: Object.values(data.raw),
-          backgroundColor: 'rgba(13,110,253,0.15)',
-          borderColor: '#0d6efd',
-          pointBackgroundColor: '#0d6efd',
+          data: Object.values(gradeData),
+          backgroundColor: ['#198754','#0d6efd','#ffc107','#6c757d','#dc3545'],
+          borderWidth: 2,
         }]
       },
-      options: {
-        scales: { r: { min: 0, max: 100 } },
-        plugins: { legend: { position: 'bottom' } }
-      }
+      options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
     });
+  }
+
+  function ensureChartJs(callback) {
+    if (typeof Chart !== 'undefined') {
+      callback();
+      return;
+    }
+    // Chart.js not globally available — load from static
+    var s = document.createElement('script');
+    s.src = '{{ url_for("static", filename="js/chart.min.js") }}';
+    s.onload = callback;
+    s.onerror = function() { console.warn('Chart.js failed to load'); };
+    document.head.appendChild(s);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    ensureChartJs(initGradeChart);
+  });
+
+  function showRadar(kpiId, name) {
+    document.getElementById('radarTitle').textContent = name + ' — KPI Breakdown';
+    var modal = new bootstrap.Modal(document.getElementById('radarModal'));
+    modal.show();
+
+    fetch('/supply-chain/suppliers/' + kpiId + '/breakdown.json')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        ensureChartJs(function() {
+          var ctx = document.getElementById('radarChart');
+          if (radarChart) radarChart.destroy();
+          radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+              labels: Object.keys(data.raw),
+              datasets: [{
+                label: 'Score: ' + data.composite + ' (' + data.grade + ')',
+                data: Object.values(data.raw),
+                backgroundColor: 'rgba(13,110,253,0.15)',
+                borderColor: '#0d6efd',
+                pointBackgroundColor: '#0d6efd',
+              }]
+            },
+            options: {
+              scales: { r: { min: 0, max: 100 } },
+              plugins: { legend: { position: 'bottom' } }
+            }
+          });
+        });
+      })
+      .catch(function(e) { console.error('Radar fetch failed:', e); });
   }
 </script>
 {% endblock %}
