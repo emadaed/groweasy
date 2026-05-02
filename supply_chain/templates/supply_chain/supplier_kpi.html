@@ -155,6 +155,9 @@
 
 {% block scripts %}
 {{ super() }}
+<!-- ✅ static load of Chart.js (same as main dashboard) -->
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
+
 <script>
 (function () {
   'use strict';
@@ -162,18 +165,16 @@
   var gradeData  = {{ grade_dist | tojson }};
   var radarChart = null;
 
-  // --- CSP nonce from the server ---
-  var scriptNonce = '{{ nonce }}';
-
-  /* ─── Chart.js loader — uses YOUR local static file, with nonce ─── */
+  /* ─── Chart.js loader — now Chart is already loaded statically, so this is just a safety wrapper ─── */
   function ensureChart(cb) {
     if (typeof Chart !== 'undefined') {
       cb();
       return;
     }
+    // fallback – should never be needed now
     var s    = document.createElement('script');
     s.src    = '{{ url_for("static", filename="js/chart.umd.js") }}';
-    s.nonce  = scriptNonce;        // <-- critical fix for CSP
+    s.nonce  = '{{ nonce }}';
     s.onload = cb;
     s.onerror = function () {
       console.error('Could not load chart.umd.js from static/js/');
@@ -202,7 +203,7 @@
     });
   }
 
-  /* ─── Radar chart ─── */
+  /* ─── Radar chart (same as before) ─── */
   function showRadar(kpiId, name) {
     document.getElementById('radarTitle').textContent  = name + ' — KPI Breakdown';
     document.getElementById('radarLoading').style.display = 'block';
@@ -250,19 +251,15 @@
       });
   }
 
-  /* ─── Wire everything up — event delegation, NO inline handlers ─── */
   document.addEventListener('DOMContentLoaded', function () {
-
     ensureChart(initGradeChart);
 
-    /* Radar button clicks */
     document.addEventListener('click', function (e) {
       var btn = e.target.closest('.btn-radar');
       if (!btn) return;
       showRadar(btn.dataset.kpiId, btn.dataset.kpiName);
     });
 
-    /* Delete confirmation — replaces onsubmit="confirm(...)" */
     document.addEventListener('submit', function (e) {
       var form = e.target.closest('.delete-form');
       if (!form) return;
@@ -271,7 +268,6 @@
         e.stopPropagation();
       }
     });
-
   });
 
 }());
