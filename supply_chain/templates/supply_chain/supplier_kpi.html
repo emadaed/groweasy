@@ -129,7 +129,7 @@
       </div>
     </div>
   </div>
-
+  
 </div>
 
 {# Radar modal #}
@@ -150,37 +150,44 @@
   </div>
 </div>
 
-{# ✅ Static Chart.js load (works, nonce ensures CSP compliance) #}
-<script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
 
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-(function () {
+(function() {
   'use strict';
 
-  var gradeData  = {{ grade_dist | tojson }};
+  var gradeData = {{ grade_dist | tojson }};
   var radarChart = null;
 
-  function ensureChart(cb) {
+  // Load Chart.js dynamically with nonce (works reliably)
+  function loadChart(callback) {
     if (typeof Chart !== 'undefined') {
-      cb();
+      callback();
       return;
     }
-    // fallback (should never be needed now)
-    var s    = document.createElement('script');
-    s.src    = '{{ url_for("static", filename="js/chart.umd.js") }}';
-    s.nonce  = '{{ nonce }}';
-    s.onload = cb;
-    document.head.appendChild(s);
+    var script = document.createElement('script');
+    script.src = '{{ url_for("static", filename="js/chart.umd.js") }}';
+    script.nonce = '{{ nonce }}';
+    script.onload = function() {
+      if (typeof Chart !== 'undefined') {
+        callback();
+      } else {
+        console.error('Chart.js loaded but Chart is not defined');
+      }
+    };
+    script.onerror = function() {
+      console.error('Failed to load Chart.js');
+    };
+    document.head.appendChild(script);
   }
 
   function initGradeChart() {
-    var el = document.getElementById('gradeChart');
-    if (!el) return;
-    new Chart(el, {
+    var canvas = document.getElementById('gradeChart');
+    if (!canvas || Object.keys(gradeData).length === 0) return;
+    new Chart(canvas, {
       type: 'doughnut',
       data: {
         labels: Object.keys(gradeData),
@@ -198,26 +205,25 @@
   }
 
   function showRadar(kpiId, name) {
-    document.getElementById('radarTitle').textContent = name + ' — KPI Breakdown';
-    document.getElementById('radarLoading').style.display = 'block';
-    document.getElementById('radarChart').style.display = 'none';
+    var titleEl = document.getElementById('radarTitle');
+    var loadingDiv = document.getElementById('radarLoading');
+    var canvas = document.getElementById('radarChart');
+    if (!titleEl || !loadingDiv || !canvas) return;
+
+    titleEl.textContent = name + ' — KPI Breakdown';
+    loadingDiv.style.display = 'block';
+    canvas.style.display = 'none';
 
     var modal = new bootstrap.Modal(document.getElementById('radarModal'));
     modal.show();
 
     fetch('/supply-chain/suppliers/' + kpiId + '/breakdown.json')
-      .then(function (r) {
-        if (!r.ok) throw new Error('Server returned ' + r.status);
-        return r.json();
-      })
-      .then(function (data) {
-        ensureChart(function () {
-          document.getElementById('radarLoading').style.display = 'none';
-          var canvas = document.getElementById('radarChart');
+      .then(function(r) { return r.ok ? r.json() : Promise.reject('Status ' + r.status); })
+      .then(function(data) {
+        loadChart(function() {
+          loadingDiv.style.display = 'none';
           canvas.style.display = 'block';
-
-          if (radarChart) { radarChart.destroy(); radarChart = null; }
-
+          if (radarChart) radarChart.destroy();
           radarChart = new Chart(canvas, {
             type: 'radar',
             data: {
@@ -237,32 +243,28 @@
           });
         });
       })
-      .catch(function (e) {
-        document.getElementById('radarLoading').innerHTML =
-          '<span class="text-danger">Failed to load breakdown data.</span>';
+      .catch(function(e) {
+        loadingDiv.innerHTML = '<span class="text-danger">Failed to load breakdown data.</span>';
         console.error('Radar error:', e);
       });
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    ensureChart(initGradeChart);
+  document.addEventListener('DOMContentLoaded', function() {
+    loadChart(initGradeChart);
 
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', function(e) {
       var btn = e.target.closest('.btn-radar');
-      if (!btn) return;
-      showRadar(btn.dataset.kpiId, btn.dataset.kpiName);
+      if (btn) showRadar(btn.dataset.kpiId, btn.dataset.kpiName);
     });
 
-    document.addEventListener('submit', function (e) {
+    document.addEventListener('submit', function(e) {
       var form = e.target.closest('.delete-form');
-      if (!form) return;
-      if (!window.confirm(form.dataset.confirm || 'Are you sure?')) {
+      if (form && !confirm(form.dataset.confirm || 'Are you sure?')) {
         e.preventDefault();
-        e.stopPropagation();
       }
     });
   });
 
-}());
+})();
 </script>
 {% endblock %}
