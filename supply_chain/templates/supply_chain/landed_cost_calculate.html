@@ -181,18 +181,15 @@
 
   </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-{{ super() }}
+{# ========== CHARTS (only when result exists) ========== #}
 {% if result %}
-{# Static Chart.js load (nonce‑aware) #}
 <script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function () {
   var lcBreakdown = {{ result.cost_breakdown | tojson }};
   var ctx = document.getElementById('costPie');
-  if (ctx) {
+  if (ctx && Object.keys(lcBreakdown).length) {
     new Chart(ctx, {
       type: 'doughnut',
       data: {

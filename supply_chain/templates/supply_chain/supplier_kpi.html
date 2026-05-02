@@ -54,7 +54,7 @@
               <tbody>
                 {% for k in kpis %}
                 {% set score = k.composite_score | float %}
-                </table>
+                <tr>
                   <td>
                     <div class="fw-semibold">{{ k.supplier_name }}</div>
                     {% if k.supplier_code %}
@@ -127,6 +127,7 @@
       </div>
     </div>
   </div>
+
 </div>
 
 {# Radar modal #}
@@ -146,22 +147,16 @@
     </div>
   </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-{{ super() }}
-{# static Chart.js load (exactly as dashboard) #}
+{# ========== CHART LOADER & SCRIPTS (inside content, like dashboard) ========== #}
 <script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
-
 <script nonce="{{ nonce }}">
 document.addEventListener('DOMContentLoaded', function () {
-  var gradeData = {{ grade_dist | tojson }};
-  var radarChart = null;
-
   // Grade doughnut chart
-  var gradeEl = document.getElementById('gradeChart');
-  if (gradeEl && Object.keys(gradeData).length) {
-    new Chart(gradeEl, {
+  var gradeData = {{ grade_dist | tojson }};
+  var gradeCanvas = document.getElementById('gradeChart');
+  if (gradeCanvas && Object.keys(gradeData).length) {
+    new Chart(gradeCanvas, {
       type: 'doughnut',
       data: {
         labels: Object.keys(gradeData),
@@ -178,19 +173,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Radar modal
+  // Radar chart handling
+  var radarChart = null;
   function showRadar(kpiId, name) {
     var titleEl = document.getElementById('radarTitle');
     var loadingDiv = document.getElementById('radarLoading');
     var canvas = document.getElementById('radarChart');
-    if (!titleEl || !loadingDiv || !canvas) return;
+    var modalEl = document.getElementById('radarModal');
+    if (!titleEl || !loadingDiv || !canvas || !modalEl) return;
     titleEl.textContent = name + ' — KPI Breakdown';
     loadingDiv.style.display = 'block';
     canvas.style.display = 'none';
-    var modal = new bootstrap.Modal(document.getElementById('radarModal'));
+    var modal = new bootstrap.Modal(modalEl);
     modal.show();
     fetch('/supply-chain/suppliers/' + kpiId + '/breakdown.json')
-      .then(function(r) { return r.ok ? r.json() : Promise.reject('Status ' + r.status); })
+      .then(function(res) { return res.ok ? res.json() : Promise.reject('Status ' + res.status); })
       .then(function(data) {
         loadingDiv.style.display = 'none';
         canvas.style.display = 'block';
@@ -213,17 +210,19 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         });
       })
-      .catch(function(e) {
+      .catch(function(err) {
         loadingDiv.innerHTML = '<span class="text-danger">Failed to load breakdown data.</span>';
-        console.error('Radar error:', e);
+        console.error('Radar error:', err);
       });
   }
 
-  // Event delegation
+  // Event delegation for radar buttons
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.btn-radar');
     if (btn) showRadar(btn.dataset.kpiId, btn.dataset.kpiName);
   });
+
+  // Delete confirmation
   document.addEventListener('submit', function(e) {
     var form = e.target.closest('.delete-form');
     if (form && !confirm(form.dataset.confirm || 'Are you sure?')) {
