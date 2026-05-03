@@ -125,7 +125,12 @@
 
     {# ── Results ── #}
     <div class="col-lg-7">
-      {% if result %}      
+      {% if result %}
+      <div class="d-flex justify-content-end mb-3">
+        <a href="{{ url_for('supply_chain.landed_cost_pdf', lc_id=result.id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+            <i class="bi bi-file-pdf"></i> Download PDF
+        </a>
+      </div>      
       <div class="row g-3 mb-3">
         <div class="col-6">
           <div class="card border-0 bg-warning bg-opacity-10 text-center p-3">
