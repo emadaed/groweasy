@@ -657,7 +657,7 @@ def landed_cost_breakdown_json(lc_id):
     })
 
 
-@supply_chain.route('/landed-cost/<int:lc_id>/pdf')
+@supply_chain_bp.route('/landed-cost/<int:lc_id>/pdf')
 @login_required
 def landed_cost_pdf(lc_id):
     """Generate PDF for a landed cost calculation."""
