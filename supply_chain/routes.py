@@ -8,8 +8,10 @@ user_id comes from session['user_id'] — same as other GrowEasy routes.
 
 from flask import (
     render_template, redirect, url_for, request,
-    flash, jsonify, session
+    flash, jsonify, session, make_response
 )
+import json
+from weasyprint import HTML
 from functools import wraps
 from sqlalchemy import text
 
@@ -653,3 +655,33 @@ def landed_cost_breakdown_json(lc_id):
         "per_unit": result.landed_cost_per_unit,
         "effective_duty_pct": result.effective_duty_pct,
     })
+
+
+@supply_chain.route('/landed-cost/<int:lc_id>/pdf')
+@login_required
+def landed_cost_pdf(lc_id):
+    """Generate PDF for a landed cost calculation."""
+    from app.models import LandedCost  # adjust import
+    lc = LandedCost.query.get_or_404(lc_id)
+    
+    # If cost_breakdown is stored as JSON string, parse it
+    if isinstance(lc.cost_breakdown, str):
+        cost_breakdown = json.loads(lc.cost_breakdown)
+    else:
+        cost_breakdown = lc.cost_breakdown or {}
+    
+    # Render HTML template
+    rendered = render_template(
+        'supply_chain/landed_cost_pdf.html',
+        lc=lc,
+        cost_breakdown=cost_breakdown,
+        company=get_company_details()  # you likely have a function for company info
+    )
+    
+    # Generate PDF
+    pdf = HTML(string=rendered).write_pdf()
+    
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename=landed_cost_{lc.reference_no or lc.id}.pdf'
+    return response

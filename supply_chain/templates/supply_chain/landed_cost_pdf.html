@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Landed Cost Calculation</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: 'Figtree', 'Segoe UI', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #1e2a3a;
+        }
+        .company-logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c7a4d;
+        }
+        .company-details {
+            text-align: right;
+            font-size: 9pt;
+            color: #4a5568;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0 10px;
+            color: #2c7a4d;
+            border-bottom: 2px solid #2c7a4d;
+            display: inline-block;
+            width: auto;
+            padding-bottom: 5px;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        .section-title {
+            background: #e9ecef;
+            padding: 6px 10px;
+            font-weight: bold;
+            font-size: 12pt;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #2c7a4d;
+        }
+        table.details {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.details td, table.details th {
+            border: 1px solid #dee2e6;
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+        table.details th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .total-cost {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #2c7a4d;
+            text-align: right;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 2px solid #2c7a4d;
+        }
+        .footer {
+            font-size: 8pt;
+            text-align: center;
+            color: #6c757d;
+            margin-top: 40px;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-table">
+    <table width="100%">
+        <tr>
+            <td width="50%">
+                <div class="company-logo">GrowEasy</div>
+                <div style="font-size: 9pt; color: #4a5568;">
+                    {{ company.name }}<br>
+                    {{ company.address|default('') }}<br>
+                    {{ company.tax_id|default('') }}
+                </div>
+            </td>
+            <td width="50%" class="company-details">
+                <strong>Landed Cost Calculation</strong><br>
+                Reference: {{ lc.reference_no or 'N/A' }}<br>
+                Date: {{ lc.created_at.strftime('%d-%b-%Y') if lc.created_at else '' }}
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div style="text-align: center;">
+    <div class="title">Landed Cost Statement</div>
+</div>
+
+<div class="section">
+    <div class="section-title">Shipment Details</div>
+    <table class="details">
+        <tr><th style="width:40%">Description</th><th>Value</th></tr>
+        <tr><td>Product Cost (per unit)</td><td>{{ lc.currency }} {{ "%.2f"|format(lc.product_cost) }}</td></tr>
+        <tr><td>Quantity</td><td>{{ lc.quantity }} units</td></tr>
+        <tr><td>Freight Cost</td><td>{{ lc.currency }} {{ "%.2f"|format(lc.freight_cost) }}</td></tr>
+        <tr><td>Exchange Rate (to PKR)</td><td>{{ "%.2f"|format(lc.exchange_rate) }}</td></tr>
+        <tr><td>Customs Duty (%)</td><td>{{ lc.customs_duty_pct }}%</td></tr>
+        <tr><td>Additional Duty (%)</td><td>{{ lc.additional_duty_pct }}%</td></tr>
+        <tr><td>Sales Tax / GST (%)</td><td>{{ lc.sales_tax_pct }}%</td></tr>
+        <tr><td>Withholding Tax (%)</td><td>{{ lc.withholding_tax_pct }}%</td></tr>
+        <tr><td>Clearing Charges (PKR)</td><td>PKR {{ "%.2f"|format(lc.clearing_charges or 0) }}</td></tr>
+        <tr><td>Port Handling (PKR)</td><td>PKR {{ "%.2f"|format(lc.port_handling or 0) }}</td></tr>
+        <tr><td>Inland Freight (PKR)</td><td>PKR {{ "%.2f"|format(lc.inland_freight or 0) }}</td></tr>
+        <tr><td>Other Charges (PKR)</td><td>PKR {{ "%.2f"|format(lc.other_charges or 0) }}</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <div class="section-title">Cost Breakdown</div>
+    <table class="details">
+        <tr><th style="width:60%">Component</th><th>Amount (PKR)</th></tr>
+        {% for label, amount in cost_breakdown.items() %}
+        <tr>
+            <td>{{ label }}</td>
+            <td>PKR {{ "%.2f"|format(amount) }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="total-cost">
+    Total Landed Cost: PKR {{ "%.0f"|format(lc.total_landed_cost) }}<br>
+    Landed Cost per Unit: PKR {{ "%.2f"|format(lc.landed_cost_per_unit) }}<br>
+    Effective Duty+Tax Rate: {{ lc.effective_duty_pct }}%
+</div>
+
+<div class="footer">
+    Generated by GrowEasy ERP — Smarter Ops. Faster Growth.<br>
+    This is a system generated document and does not require a signature.
+</div>
+
+</body>
+</html>
