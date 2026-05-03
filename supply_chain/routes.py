@@ -309,6 +309,54 @@ def supplier_list():
         form=SupplierKPIForm(),
     )
 
+import csv
+from io import StringIO
+from flask import Response
+
+@supply_chain_bp.route('/suppliers/export/csv')
+@login_required
+def supplier_export_csv():
+    """Export all supplier KPI records to CSV."""
+    from .models import SupplierKPI  # adjust import to your actual model
+    kpis = SupplierKPI.query.order_by(SupplierKPI.supplier_name).all()
+    
+    # Create CSV in memory
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Supplier Name', 'Supplier Code', 'Period', 'Category', 'Composite Score', 'Grade'])
+    
+    for k in kpis:
+        score = float(k.composite_score) if k.composite_score else 0
+        # Determine grade (same logic as in template)
+        if score >= 90:
+            grade = 'A+'
+        elif score >= 80:
+            grade = 'A'
+        elif score >= 70:
+            grade = 'B'
+        elif score >= 60:
+            grade = 'C'
+        else:
+            grade = 'D'
+        
+        writer.writerow([
+            k.supplier_name,
+            k.supplier_code or '',
+            k.period,
+            k.category or '',
+            f"{score:.1f}",
+            grade
+        ])
+    
+    # Return as downloadable file
+    csv_output = output.getvalue()
+    output.close()
+    
+    return Response(
+        csv_output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=supplier_kpis.csv'}
+    )
 
 @supply_chain_bp.route("/suppliers/add", methods=["GET", "POST"])
 @supply_chain_bp.route("/suppliers/<int:kpi_id>/edit", methods=["GET", "POST"])
