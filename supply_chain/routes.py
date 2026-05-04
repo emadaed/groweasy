@@ -783,7 +783,7 @@ def run_abc():
     classify_abc_items(uid)
     assign_default_policies(uid, override_existing=False)
     flash("ABC classification and policies updated.", "success")
-    return redirect(url_for("supply_chain_bp.decision_dashboard"))
+    return redirect(url_for("supply_chain.decision_dashboard"))
 
 
 @supply_chain_bp.route("/decision/run", methods=["POST"])
@@ -793,7 +793,7 @@ def run_decision():
     uid = get_uid()
     results = run_decision_engine(uid)
     flash(f"Decision engine finished. {len(results)} suggested orders created.", "info")
-    return redirect(url_for("supply_chain_bp.decision_dashboard"))
+    return redirect(url_for("supply_chain.decision_dashboard"))
 
 
 @supply_chain_bp.route("/decision/dashboard")

@@ -7,9 +7,11 @@
     <h4>🧠 Inventory Intelligence Hub</h4>
     <div>
       <form method="POST" action="{{ url_for('supply_chain.run_abc') }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-outline-primary me-2">1. Run ABC Classification</button>
       </form>
       <form method="POST" action="{{ url_for('supply_chain.run_decision') }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-primary">2. Run Decision Engine</button>
       </form>
     </div>
@@ -34,9 +36,11 @@
               <td>{{ s.reason }}</td>
               <td>
                 <form method="POST" action="{{ url_for('supply_chain.approve_suggestion', sug_id=s.id) }}" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Approve</button>
                 </form>
                 <form method="POST" action="{{ url_for('supply_chain.reject_suggestion', sug_id=s.id) }}" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-sm btn-danger"><i class="bi bi-x-lg"></i> Reject</button>
                 </form>
               </td>
