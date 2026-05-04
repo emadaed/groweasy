@@ -781,7 +781,7 @@ def run_abc():
     """Manually trigger ABC classification and policy assignment."""
     uid = get_uid()
     classify_abc_items(uid)
-    assign_default_policies(uid, override_existing=False)
+    assign_default_policies(uid, override_existing=True)
     flash("ABC classification and policies updated.", "success")
     return redirect(url_for("supply_chain.decision_dashboard"))
 
