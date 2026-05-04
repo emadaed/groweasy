@@ -28,7 +28,7 @@ def classify_abc_items(user_id: int, alpha: float = 1.0, beta: float = 0.0):
         total = sum(r["revenue"] for r in rows)
         rows.sort(key=lambda x: x["revenue"], reverse=True)
 
-        cum = 0.0
+        cum = Decimal('0')
         for row in rows:
             cum += row["revenue"] / total * 100
             abc = 'A' if cum <= 70 else ('B' if cum <= 90 else 'C')
