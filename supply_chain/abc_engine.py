@@ -1,7 +1,6 @@
 #groweasy.supply_chain.abc_engine.py
 from sqlalchemy import text
 from app.services.db import DB_ENGINE
-from datetime import datetime
 from decimal import Decimal
 from statistics import stdev
 import logging
@@ -10,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def classify_abc_items(user_id: int, alpha: float = 1.0, beta: float = 0.0):
     """Classify using revenue from invoice_items (linked via inventory_items.id)."""
-    with DB_ENGINE.connect() as conn:
+    with DB_ENGINE.begin() as conn:
         rows = conn.execute(text("""
             SELECT i.id AS item_id,
                    SUM(ii.quantity * ii.unit_price) AS revenue
@@ -111,8 +110,8 @@ def get_demand_stats(item_id: int, user_id: int, days: int = 90):
             return 0.0, 0.0, lead_time
 
         total_qty = sum(r["quantity"] for r in demand_rows)
-        avg_daily = total_qty / days
-        quantities = [r["quantity"] for r in demand_rows]
+        avg_daily = float(total_qty) / days
+        quantities = [float(r["quantity"]) for r in demand_rows]
         std_daily = stdev(quantities) if len(quantities) > 1 else 0.0
         return avg_daily, std_daily, lead_time
 
@@ -137,10 +136,13 @@ def compute_reorder_params(item_id: int, user_id: int):
     if avg_demand == 0:
         return eoq, None, None
 
+    if s["policy_service_level"] is None or s["policy_safety_stock_multiplier"] is None:
+        return eoq, None, None
+
     z_map = {0.85:1.036, 0.90:1.282, 0.95:1.645, 0.98:2.054}
-    z = z_map.get(s["policy_service_level"], 1.645)
+    z = z_map.get(float(s["policy_service_level"]), 1.645)
     ss = z * (lead_time ** 0.5) * std_demand * float(s["policy_safety_stock_multiplier"])
-    rop = int(avg_demand * lead_time + ss)
+    rop = int(float(avg_demand) * lead_time + ss)
     safety_stock = int(ss)
     return eoq, rop, safety_stock
 
