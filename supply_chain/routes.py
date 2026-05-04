@@ -16,6 +16,7 @@ from functools import wraps
 from sqlalchemy import text
 
 from app.services.db import DB_ENGINE
+from .abc_engine import classify_abc_items, assign_default_policies, run_decision_engine, get_current_stock, evaluate_item
 from . import supply_chain_bp
 from .forms import InventoryItemForm, SupplierKPIForm, LandedCostForm
 from .utils import (
@@ -769,3 +770,124 @@ def landed_cost_pdf(lc_id):
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = f'inline; filename=landed_cost_{row["reference_no"] or lc_id}.pdf'
     return response
+
+# ─────────────────────────────────────────────────────
+# ABC Analysis & Decision Engine Endpoints
+# ─────────────────────────────────────────────────────
+
+@supply_chain_bp.route("/abc/run", methods=["POST"])
+@login_required
+def run_abc():
+    """Manually trigger ABC classification and policy assignment."""
+    uid = get_uid()
+    classify_abc_items(uid)
+    assign_default_policies(uid, override_existing=False)
+    flash("ABC classification and policies updated.", "success")
+    return redirect(url_for("supply_chain_bp.decision_dashboard"))
+
+
+@supply_chain_bp.route("/decision/run", methods=["POST"])
+@login_required
+def run_decision():
+    """Manually trigger the decision engine to generate purchase suggestions."""
+    uid = get_uid()
+    results = run_decision_engine(uid)
+    flash(f"Decision engine finished. {len(results)} suggested orders created.", "info")
+    return redirect(url_for("supply_chain_bp.decision_dashboard"))
+
+
+@supply_chain_bp.route("/decision/dashboard")
+@login_required
+def decision_dashboard():
+    """Show pending suggestions, current stock status, and control panel."""
+    uid = get_uid()
+    with DB_ENGINE.connect() as conn:
+        # Pending suggestions
+        suggestions = conn.execute(text("""
+            SELECT s.*, i.name as item_name, i.sku
+            FROM scm_suggested_orders s
+            JOIN scm_inventory_items i ON s.item_id = i.id
+            WHERE s.status = 'pending' AND i.user_id = :uid
+            ORDER BY s.created_at DESC
+        """), {"uid": uid}).mappings().all()
+
+        # Items below ROP (for monitoring)
+        # We compute ROP on the fly using the engine – but for simplicity, we'll list items with stock <= ROP
+        # We'll call a helper per item; for dashboard we may precompute.
+        # Instead, we fetch all items and compute quickly.
+        items = conn.execute(text("""
+            SELECT id, name, sku, auto_reorder, abc_class
+            FROM scm_inventory_items WHERE user_id = :uid
+        """), {"uid": uid}).mappings().all()
+
+    low_stock = []
+    for it in items:
+        stock = get_current_stock(it["id"], uid)
+        # Compute ROP using engine (simplify: fetch ROP from stored value if we had it, but we can compute)
+        # We'll compute ROP quickly via compute_reorder_params
+        from .abc_engine import compute_reorder_params
+        _, rop, _ = compute_reorder_params(it["id"], uid)
+        if rop and stock <= rop:
+            low_stock.append({
+                "name": it["name"],
+                "sku": it["sku"],
+                "stock": stock,
+                "rop": int(rop),
+                "abc": it["abc_class"]
+            })
+
+    return render_template(
+        "supply_chain/decision_dashboard.html",
+        suggestions=suggestions,
+        low_stock=low_stock
+    )
+
+
+@supply_chain_bp.route("/decision/suggestion/<int:sug_id>/approve", methods=["POST"])
+@login_required
+def approve_suggestion(sug_id):
+    """Approve a suggested order, create a real purchase order (draft)."""
+    uid = get_uid()
+    with DB_ENGINE.begin() as conn:
+        sug = conn.execute(text("""
+            SELECT s.*, i.name, i.sku, i.user_id
+            FROM scm_suggested_orders s
+            JOIN scm_inventory_items i ON s.item_id = i.id
+            WHERE s.id = :sug_id AND i.user_id = :uid
+        """), {"sug_id": sug_id, "uid": uid}).mappings().first()
+        if not sug:
+            flash("Suggestion not found.", "danger")
+            return redirect(url_for("supply_chain_bp.decision_dashboard"))
+
+        # Create a purchase order (draft)
+        # You may have a purchase_orders table in your schema. We'll insert a draft.
+        conn.execute(text("""
+            INSERT INTO purchase_orders (user_id, supplier_id, supplier_name, order_date, expected_delivery_date, status)
+            VALUES (:uid, :sup_id, :sup_name, CURRENT_DATE, CURRENT_DATE + INTERVAL '7 days', 'draft')
+        """), {
+            "uid": uid,
+            "sup_id": sug["supplier_id"],
+            "sup_name": sug["supplier_name"]
+        })
+        # Update suggestion status
+        conn.execute(text("""
+            UPDATE scm_suggested_orders SET status = 'approved' WHERE id = :id
+        """), {"id": sug_id})
+
+    flash(f"Purchase order created for {sug['name']} (quantity {sug['suggested_quantity']}).", "success")
+    return redirect(url_for("supply_chain_bp.decision_dashboard"))
+
+
+@supply_chain_bp.route("/decision/suggestion/<int:sug_id>/reject", methods=["POST"])
+@login_required
+def reject_suggestion(sug_id):
+    """Reject a suggested order."""
+    uid = get_uid()
+    with DB_ENGINE.begin() as conn:
+        conn.execute(text("""
+            UPDATE scm_suggested_orders
+            SET status = 'rejected'
+            WHERE id = :id AND item_id IN (SELECT id FROM scm_inventory_items WHERE user_id = :uid)
+        """), {"id": sug_id, "uid": uid})
+    flash("Suggestion rejected.", "info")
+    return redirect(url_for("supply_chain_bp.decision_dashboard"))

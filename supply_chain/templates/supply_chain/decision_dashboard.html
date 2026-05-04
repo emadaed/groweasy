@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}ABC Decision Engine — GrowEasy{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>🧠 Inventory Intelligence Hub</h4>
+    <div>
+      <form method="POST" action="{{ url_for('supply_chain.run_abc') }}" style="display:inline;">
+        <button type="submit" class="btn btn-outline-primary me-2">1. Run ABC Classification</button>
+      </form>
+      <form method="POST" action="{{ url_for('supply_chain_bp.run_decision') }}" style="display:inline;">
+        <button type="submit" class="btn btn-primary">2. Run Decision Engine</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pending Suggestions -->
+  <div class="card mb-4">
+    <div class="card-header bg-transparent fw-semibold">📦 Pending Purchase Suggestions</div>
+    <div class="card-body p-0">
+      {% if suggestions %}
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>Item</th><th>SKU</th><th>Suggested Qty</th><th>Supplier</th><th>Reason</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for s in suggestions %}
+            <tr>
+              <td>{{ s.item_name }}</td>
+              <td>{{ s.sku }}</td>
+              <td>{{ s.suggested_quantity }}</td>
+              <td>{{ s.supplier_name or 'Auto' }}</td>
+              <td>{{ s.reason }}</td>
+              <td>
+                <form method="POST" action="{{ url_for('supply_chain.approve_suggestion', sug_id=s.id) }}" style="display:inline;">
+                  <button class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Approve</button>
+                </form>
+                <form method="POST" action="{{ url_for('supply_chain.reject_suggestion', sug_id=s.id) }}" style="display:inline;">
+                  <button class="btn btn-sm btn-danger"><i class="bi bi-x-lg"></i> Reject</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="p-3 text-muted">No pending suggestions. Run the decision engine.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Items Below Reorder Point -->
+  <div class="card">
+    <div class="card-header bg-transparent fw-semibold">⚠️ Items Below Reorder Point</div>
+    <div class="card-body p-0">
+      {% if low_stock %}
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Item</th><th>SKU</th><th>ABC</th><th>Current Stock</th><th>ROP</th></tr></thead>
+          <tbody>
+            {% for item in low_stock %}
+            <tr>
+              <td>{{ item.name }}</td>
+              <td>{{ item.sku }}</td>
+              <td><span class="badge bg-secondary">{{ item.abc }}</span></td>
+              <td class="text-danger">{{ item.stock }}</td>
+              <td>{{ item.rop }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="p-3 text-muted">All items are above reorder point 👍</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
