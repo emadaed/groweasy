@@ -657,7 +657,7 @@ def landed_cost_calculate(lc_id=None):
             # ✅ Render template with both result and new_id
             return render_template(
                 "supply_chain/landed_cost_calculate.html",
-                form=form, result=result, existing=existing, lc_id=None
+                form=form, result=result, existing=existing, lc_id=new_id
             )
 
 
