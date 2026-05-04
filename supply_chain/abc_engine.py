@@ -1,6 +1,9 @@
+#groweasy.supply_chain.abc_engine.py
 from sqlalchemy import text
 from app.services.db import DB_ENGINE
 from datetime import datetime
+from decimal import Decimal
+from statistics import stdev
 import logging
 
 logger = logging.getLogger(__name__)
@@ -101,7 +104,7 @@ def get_demand_stats(item_id: int, user_id: int, days: int = 90):
             JOIN user_invoices ui ON ii.invoice_id = ui.id
             WHERE ii.product_id = :inv_item_id
               AND ui.user_id = :user_id
-              AND ui.created_at >= NOW() - INTERVAL ':days days'
+              AND ui.created_at >= NOW() - INTERVAL '1 day' * :days
         """), {"inv_item_id": inv_item_id, "user_id": user_id, "days": days}).mappings().all()
 
         if not demand_rows:
@@ -127,8 +130,8 @@ def compute_reorder_params(item_id: int, user_id: int):
 
     D = s["annual_demand"]
     S = s["ordering_cost"]
-    H = s["unit_cost"] * s["holding_cost_pct"]
-    eoq = int((2 * D * S / H) ** 0.5) if H > 0 else 0
+    H = s["unit_cost"] * s["holding_cost_pct"]  
+    eoq = int((2 * D * S / H) ** Decimal('0.5')) if H > 0 else 0
 
     avg_demand, std_demand, lead_time = get_demand_stats(item_id, user_id)
     if avg_demand == 0:
@@ -136,7 +139,7 @@ def compute_reorder_params(item_id: int, user_id: int):
 
     z_map = {0.85:1.036, 0.90:1.282, 0.95:1.645, 0.98:2.054}
     z = z_map.get(s["policy_service_level"], 1.645)
-    ss = z * (lead_time ** 0.5) * std_demand * s["policy_safety_stock_multiplier"]
+    ss = z * (lead_time ** 0.5) * std_demand * float(s["policy_safety_stock_multiplier"])
     rop = int(avg_demand * lead_time + ss)
     safety_stock = int(ss)
     return eoq, rop, safety_stock
