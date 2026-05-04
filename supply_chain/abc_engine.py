@@ -165,7 +165,7 @@ def select_best_supplier(item_id: int, user_id: int):
                 FROM landed_costs GROUP BY user_id
             ) lc ON lc.user_id = s.user_id
             WHERE s.user_id = :uid
-            ORDER BY kpi / NULLIF(landed_cost, 0) DESC
+            ORDER BY COALESCE(sk.composite_score, 50) / NULLIF(COALESCE(lc.avg_landed_cost, 100), 0) DESC
             LIMIT 1
         """), {"uid": user_id}).first()
         if rows:
