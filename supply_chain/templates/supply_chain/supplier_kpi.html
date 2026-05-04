@@ -9,10 +9,14 @@
       <h5 class="fw-bold mb-0">Supplier KPI Dashboard</h5>
       <small class="text-muted">Score, track and compare your suppliers</small>
     </div>
+    <a href="{{ url_for('supply_chain.supplier_export_csv') }}" class="btn btn-outline-success me-2">
+      <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+    </a>
     <a href="{{ url_for('supply_chain.supplier_save') }}" class="btn btn-primary">
       <i class="bi bi-plus-lg me-1"></i>Add Supplier
     </a>
   </div>
+</div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in messages %}

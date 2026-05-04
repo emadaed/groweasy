@@ -316,42 +316,42 @@ from flask import Response
 @supply_chain_bp.route('/suppliers/export/csv')
 @login_required
 def supplier_export_csv():
-    """Export all supplier KPI records to CSV."""
-    from .models import SupplierKPI  # adjust import to your actual model
-    kpis = SupplierKPI.query.order_by(SupplierKPI.supplier_name).all()
-    
-    # Create CSV in memory
+    """Export all supplier KPI records to CSV using raw SQL."""
+    uid = get_uid()
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(['Supplier Name', 'Supplier Code', 'Period', 'Category', 'Composite Score', 'Grade'])
-    
-    for k in kpis:
-        score = float(k.composite_score) if k.composite_score else 0
-        # Determine grade (same logic as in template)
-        if score >= 90:
-            grade = 'A+'
-        elif score >= 80:
-            grade = 'A'
-        elif score >= 70:
-            grade = 'B'
-        elif score >= 60:
-            grade = 'C'
-        else:
-            grade = 'D'
-        
+
+    with DB_ENGINE.connect() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT supplier_name, supplier_code, period, category, composite_score
+                FROM supplier_kpis
+                WHERE user_id = :uid
+                ORDER BY supplier_name
+            """),
+            {"uid": uid}
+        ).mappings().all()
+
+    for row in rows:
+        score = float(row["composite_score"] or 0)
+        if score >= 90:   grade = 'A+'
+        elif score >= 80: grade = 'A'
+        elif score >= 70: grade = 'B'
+        elif score >= 60: grade = 'C'
+        else:             grade = 'D'
+
         writer.writerow([
-            k.supplier_name,
-            k.supplier_code or '',
-            k.period,
-            k.category or '',
+            row["supplier_name"],
+            row["supplier_code"] or '',
+            row["period"],
+            row["category"] or '',
             f"{score:.1f}",
             grade
         ])
-    
-    # Return as downloadable file
+
     csv_output = output.getvalue()
     output.close()
-    
     return Response(
         csv_output,
         mimetype='text/csv',
@@ -561,99 +561,104 @@ def landed_cost_calculate(lc_id=None):
                 else:
                     field.data = v
 
-    if form.validate_on_submit():
-        result = calc_landed_cost(
-            product_cost        = form.product_cost.data,
-            quantity            = form.quantity.data,
-            exchange_rate       = form.exchange_rate.data,
-            freight_cost        = form.freight_cost.data or 0,
-            insurance_cost      = form.insurance_cost.data or 0,
-            customs_duty_pct    = (form.customs_duty_pct.data or 0) / 100,
-            additional_duty_pct = (form.additional_duty_pct.data or 0) / 100,
-            sales_tax_pct       = (form.sales_tax_pct.data or 17) / 100,
-            withholding_tax_pct = (form.withholding_tax_pct.data or 0) / 100,
-            clearing_charges    = form.clearing_charges.data or 0,
-            port_handling       = form.port_handling.data or 0,
-            inland_freight      = form.inland_freight.data or 0,
-            other_charges       = form.other_charges.data or 0,
-        )
+        if form.validate_on_submit():
+            result = calc_landed_cost(
+                product_cost        = form.product_cost.data,
+                quantity            = form.quantity.data,
+                exchange_rate       = form.exchange_rate.data,
+                freight_cost        = form.freight_cost.data or 0,
+                insurance_cost      = form.insurance_cost.data or 0,
+                customs_duty_pct    = (form.customs_duty_pct.data or 0) / 100,
+                additional_duty_pct = (form.additional_duty_pct.data or 0) / 100,
+                sales_tax_pct       = (form.sales_tax_pct.data or 17) / 100,
+                withholding_tax_pct = (form.withholding_tax_pct.data or 0) / 100,
+                clearing_charges    = form.clearing_charges.data or 0,
+                port_handling       = form.port_handling.data or 0,
+                inland_freight      = form.inland_freight.data or 0,
+                other_charges       = form.other_charges.data or 0,
+            )
 
-        params = {
-            "uid":               uid,
-            "reference_no":      form.reference_no.data,
-            "description":       form.description.data,
-            "currency":          form.currency.data,
-            "exchange_rate":     form.exchange_rate.data,
-            "product_cost":      form.product_cost.data,
-            "quantity":          form.quantity.data,
-            "freight_cost":      form.freight_cost.data or 0,
-            "insurance_cost":    form.insurance_cost.data or 0,
-            "customs_duty_pct":  (form.customs_duty_pct.data or 0) / 100,
-            "additional_duty_pct": (form.additional_duty_pct.data or 0) / 100,
-            "sales_tax_pct":     (form.sales_tax_pct.data or 17) / 100,
-            "withholding_tax_pct": (form.withholding_tax_pct.data or 0) / 100,
-            "clearing_charges":  form.clearing_charges.data or 0,
-            "port_handling":     form.port_handling.data or 0,
-            "inland_freight":    form.inland_freight.data or 0,
-            "other_charges":     form.other_charges.data or 0,
-            "total_landed_cost":    result.total_landed_cost,
-            "landed_cost_per_unit": result.landed_cost_per_unit,
-            "duty_amount":   result.customs_duty + result.additional_duty,
-            "tax_amount":    result.sales_tax + result.withholding_tax,
-        }
+            params = {
+                "uid":               uid,
+                "reference_no":      form.reference_no.data,
+                "description":       form.description.data,
+                "currency":          form.currency.data,
+                "exchange_rate":     form.exchange_rate.data,
+                "product_cost":      form.product_cost.data,
+                "quantity":          form.quantity.data,
+                "freight_cost":      form.freight_cost.data or 0,
+                "insurance_cost":    form.insurance_cost.data or 0,
+                "customs_duty_pct":  (form.customs_duty_pct.data or 0) / 100,
+                "additional_duty_pct": (form.additional_duty_pct.data or 0) / 100,
+                "sales_tax_pct":     (form.sales_tax_pct.data or 17) / 100,
+                "withholding_tax_pct": (form.withholding_tax_pct.data or 0) / 100,
+                "clearing_charges":  form.clearing_charges.data or 0,
+                "port_handling":     form.port_handling.data or 0,
+                "inland_freight":    form.inland_freight.data or 0,
+                "other_charges":     form.other_charges.data or 0,
+                "total_landed_cost":    result.total_landed_cost,
+                "landed_cost_per_unit": result.landed_cost_per_unit,
+                "duty_amount":   result.customs_duty + result.additional_duty,
+                "tax_amount":    result.sales_tax + result.withholding_tax,
+            }
 
-        with DB_ENGINE.begin() as conn:
-            if existing:
-                params["id"] = lc_id
-                conn.execute(text("""
-                    UPDATE landed_costs SET
-                        reference_no = :reference_no, description = :description,
-                        currency = :currency, exchange_rate = :exchange_rate,
-                        product_cost = :product_cost, quantity = :quantity,
-                        freight_cost = :freight_cost, insurance_cost = :insurance_cost,
-                        customs_duty_pct = :customs_duty_pct,
-                        additional_duty_pct = :additional_duty_pct,
-                        sales_tax_pct = :sales_tax_pct,
-                        withholding_tax_pct = :withholding_tax_pct,
-                        clearing_charges = :clearing_charges,
-                        port_handling = :port_handling,
-                        inland_freight = :inland_freight,
-                        other_charges = :other_charges,
-                        total_landed_cost = :total_landed_cost,
-                        landed_cost_per_unit = :landed_cost_per_unit,
-                        duty_amount = :duty_amount, tax_amount = :tax_amount,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = :id AND user_id = :uid
-                """), params)
-            else:
-                conn.execute(text("""
-                    INSERT INTO landed_costs (
-                        user_id, reference_no, description, currency, exchange_rate,
-                        product_cost, quantity, freight_cost, insurance_cost,
-                        customs_duty_pct, additional_duty_pct, sales_tax_pct,
-                        withholding_tax_pct, clearing_charges, port_handling,
-                        inland_freight, other_charges,
-                        total_landed_cost, landed_cost_per_unit, duty_amount, tax_amount
-                    ) VALUES (
-                        :uid, :reference_no, :description, :currency, :exchange_rate,
-                        :product_cost, :quantity, :freight_cost, :insurance_cost,
-                        :customs_duty_pct, :additional_duty_pct, :sales_tax_pct,
-                        :withholding_tax_pct, :clearing_charges, :port_handling,
-                        :inland_freight, :other_charges,
-                        :total_landed_cost, :landed_cost_per_unit, :duty_amount, :tax_amount
-                    )
-                """), params)
+            new_id = None
+            with DB_ENGINE.begin() as conn:
+                if existing:
+                    params["id"] = lc_id
+                    conn.execute(text("""
+                        UPDATE landed_costs SET
+                            reference_no = :reference_no, description = :description,
+                            currency = :currency, exchange_rate = :exchange_rate,
+                            product_cost = :product_cost, quantity = :quantity,
+                            freight_cost = :freight_cost, insurance_cost = :insurance_cost,
+                            customs_duty_pct = :customs_duty_pct,
+                            additional_duty_pct = :additional_duty_pct,
+                            sales_tax_pct = :sales_tax_pct,
+                            withholding_tax_pct = :withholding_tax_pct,
+                            clearing_charges = :clearing_charges,
+                            port_handling = :port_handling,
+                            inland_freight = :inland_freight,
+                            other_charges = :other_charges,
+                            total_landed_cost = :total_landed_cost,
+                            landed_cost_per_unit = :landed_cost_per_unit,
+                            duty_amount = :duty_amount, tax_amount = :tax_amount,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = :id AND user_id = :uid
+                    """), params)
+                    new_id = lc_id
+                else:
+                    # Insert and get the new ID using RETURNING
+                    res = conn.execute(text("""
+                        INSERT INTO landed_costs (
+                            user_id, reference_no, description, currency, exchange_rate,
+                            product_cost, quantity, freight_cost, insurance_cost,
+                            customs_duty_pct, additional_duty_pct, sales_tax_pct,
+                            withholding_tax_pct, clearing_charges, port_handling,
+                            inland_freight, other_charges,
+                            total_landed_cost, landed_cost_per_unit, duty_amount, tax_amount
+                        ) VALUES (
+                            :uid, :reference_no, :description, :currency, :exchange_rate,
+                            :product_cost, :quantity, :freight_cost, :insurance_cost,
+                            :customs_duty_pct, :additional_duty_pct, :sales_tax_pct,
+                            :withholding_tax_pct, :clearing_charges, :port_handling,
+                            :inland_freight, :other_charges,
+                            :total_landed_cost, :landed_cost_per_unit, :duty_amount, :tax_amount
+                        ) RETURNING id
+                    """), params)
+                    new_id = res.fetchone()[0]
 
-        flash(
-            f"Saved — Total: PKR {result.total_landed_cost:,.2f} | "
-            f"Per unit: PKR {result.landed_cost_per_unit:,.4f}",
-            "success"
-        )
+            flash(
+                f"Saved — Total: PKR {result.total_landed_cost:,.2f} | "
+                f"Per unit: PKR {result.landed_cost_per_unit:,.4f}",
+                "success"
+            )
 
-    return render_template(
-        "supply_chain/landed_cost_calculate.html",
-        form=form, result=result, existing=existing,
-    )
+            # ✅ Render template with both result and new_id
+            return render_template(
+                "supply_chain/landed_cost_calculate.html",
+                form=form, result=result, existing=existing, lc_id=None
+            )
 
 
 @supply_chain_bp.route("/landed-cost/<int:lc_id>/delete", methods=["POST"])
@@ -708,28 +713,34 @@ def landed_cost_breakdown_json(lc_id):
 @supply_chain_bp.route('/landed-cost/<int:lc_id>/pdf')
 @login_required
 def landed_cost_pdf(lc_id):
-    """Generate PDF for a landed cost calculation."""
-    from app.models import LandedCost  # adjust import
-    lc = LandedCost.query.get_or_404(lc_id)
-    
-    # If cost_breakdown is stored as JSON string, parse it
-    if isinstance(lc.cost_breakdown, str):
-        cost_breakdown = json.loads(lc.cost_breakdown)
-    else:
-        cost_breakdown = lc.cost_breakdown or {}
-    
-    # Render HTML template
+    """Generate PDF for a landed cost calculation using raw SQL."""
+    uid = get_uid()
+    with DB_ENGINE.connect() as conn:
+        row = conn.execute(
+            text("SELECT * FROM landed_costs WHERE id = :id AND user_id = :uid"),
+            {"id": lc_id, "uid": uid}
+        ).mappings().first()
+        if not row:
+            flash("Record not found.", "danger")
+            return redirect(url_for("supply_chain.landed_cost_list"))
+
+    # Build a simple company dict (adjust to your actual company details function)
+    company = {
+        "name": "GrowEasy",
+        "address": "Your Business Address",
+        "tax_id": "0000000"
+    }
+    # Optionally try to get real company details from your settings table
+    # company = get_company_details()  # if you have such a function
+
     rendered = render_template(
         'supply_chain/landed_cost_pdf.html',
-        lc=lc,
-        cost_breakdown=cost_breakdown,
-        company=get_company_details()  # you likely have a function for company info
+        lc=row,
+        cost_breakdown=json.loads(row.get("cost_breakdown") or "{}"),
+        company=company
     )
-    
-    # Generate PDF
     pdf = HTML(string=rendered).write_pdf()
-    
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'inline; filename=landed_cost_{lc.reference_no or lc.id}.pdf'
+    response.headers['Content-Disposition'] = f'inline; filename=landed_cost_{row["reference_no"] or lc_id}.pdf'
     return response
