@@ -848,7 +848,6 @@ def decision_dashboard():
 @supply_chain_bp.route("/decision/suggestion/<int:sug_id>/approve", methods=["POST"])
 @login_required
 def approve_suggestion(sug_id):
-    """Approve a suggested order, create a real purchase order (draft)."""
     uid = get_uid()
     with DB_ENGINE.begin() as conn:
         sug = conn.execute(text("""
@@ -861,24 +860,15 @@ def approve_suggestion(sug_id):
             flash("Suggestion not found.", "danger")
             return redirect(url_for("supply_chain.decision_dashboard"))
 
-        # Create a purchase order (draft)
-        # You may have a purchase_orders table in your schema. We'll insert a draft.
-        po_number = NumberGenerator.generate_po_number(uid)
-        conn.execute(text("""
-            INSERT INTO purchase_orders (user_id, supplier_id, supplier_name, order_date, expected_delivery_date, status, po_number)
-            VALUES (:uid, :sup_id, :sup_name, CURRENT_DATE, CURRENT_DATE + INTERVAL '7 days', 'draft', :po_number)
-        """), {
-            "uid": uid,
-            "sup_id": sug["supplier_id"],
-            "sup_name": sug["supplier_name"],
-            "po_number": po_number
-        })
-        # Update suggestion status
         conn.execute(text("""
             UPDATE scm_suggested_orders SET status = 'approved' WHERE id = :id
         """), {"id": sug_id})
 
-    flash(f"Purchase order created for {sug['name']} (quantity {sug['suggested_quantity']}).", "success")
+    flash(
+        f"Suggestion approved for {sug['name']} (qty: {sug['suggested_quantity']}). "
+        f"Create a Purchase Order from the Purchases module.",
+        "success"
+    )
     return redirect(url_for("supply_chain.decision_dashboard"))
 
 
