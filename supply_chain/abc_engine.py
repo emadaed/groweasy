@@ -176,9 +176,10 @@ def evaluate_item(item_id: int, user_id: int, force: bool = False):
     """Decision for a single scm_inventory_items record."""
     with DB_ENGINE.connect() as conn:
         s = conn.execute(text("""
-            SELECT auto_reorder, approval_required
-            FROM scm_inventory_items
-            WHERE id = :item_id AND user_id = :uid
+            SELECT s.auto_reorder, s.approval_required 
+            FROM scm_inventory_items s
+            JOIN inventory_items i ON s.inventory_item_id = i.id
+            WHERE s.id = :item_id AND s.user_id = :uid AND i.is_active = TRUE
         """), {"item_id": item_id, "uid": user_id}).first()
         if not s:
             return {"error": "Item not found"}
@@ -204,7 +205,11 @@ def evaluate_item(item_id: int, user_id: int, force: bool = False):
 
 def run_decision_engine(user_id: int):
     with DB_ENGINE.connect() as conn:
-        items = conn.execute(text("SELECT id FROM scm_inventory_items WHERE user_id = :uid"), {"uid": user_id}).mappings().all()
+        items = conn.execute(text("""
+            SELECT s.id FROM scm_inventory_items s
+            JOIN inventory_items i ON s.inventory_item_id = i.id
+            WHERE s.user_id = :uid AND i.is_active = TRUE
+        """), {"uid": user_id}).mappings().all()
     results = []
     for it in items:
         res = evaluate_item(it["id"], user_id)

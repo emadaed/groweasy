@@ -14,7 +14,7 @@ import json
 from weasyprint import HTML
 from functools import wraps
 from sqlalchemy import text
-
+from app.services.number_generator import NumberGenerator
 from app.services.db import DB_ENGINE
 from .abc_engine import classify_abc_items, assign_default_policies, run_decision_engine, get_current_stock, evaluate_item
 from . import supply_chain_bp
@@ -816,8 +816,10 @@ def decision_dashboard():
         # We'll call a helper per item; for dashboard we may precompute.
         # Instead, we fetch all items and compute quickly.
         items = conn.execute(text("""
-            SELECT id, name, sku, auto_reorder, abc_class
-            FROM scm_inventory_items WHERE user_id = :uid
+            SELECT s.id, s.name, s.sku, s.auto_reorder, s.abc_class 
+            FROM scm_inventory_items s
+            JOIN inventory_items i ON s.inventory_item_id = i.id
+            WHERE s.user_id = :uid AND i.is_active = TRUE
         """), {"uid": uid}).mappings().all()
 
     low_stock = []
@@ -861,13 +863,15 @@ def approve_suggestion(sug_id):
 
         # Create a purchase order (draft)
         # You may have a purchase_orders table in your schema. We'll insert a draft.
+        po_number = NumberGenerator.generate_po_number(uid)
         conn.execute(text("""
-            INSERT INTO purchase_orders (user_id, supplier_id, supplier_name, order_date, expected_delivery_date, status)
-            VALUES (:uid, :sup_id, :sup_name, CURRENT_DATE, CURRENT_DATE + INTERVAL '7 days', 'draft')
+            INSERT INTO purchase_orders (user_id, supplier_id, supplier_name, order_date, expected_delivery_date, status, po_number)
+            VALUES (:uid, :sup_id, :sup_name, CURRENT_DATE, CURRENT_DATE + INTERVAL '7 days', 'draft', :po_number)
         """), {
             "uid": uid,
             "sup_id": sug["supplier_id"],
-            "sup_name": sug["supplier_name"]
+            "sup_name": sug["supplier_name"],
+            "po_number": po_number
         })
         # Update suggestion status
         conn.execute(text("""
