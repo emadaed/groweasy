@@ -141,7 +141,7 @@ def compute_reorder_params(item_id: int, user_id: int):
 
     z_map = {0.85:1.036, 0.90:1.282, 0.95:1.645, 0.98:2.054}
     z = z_map.get(float(s["policy_service_level"]), 1.645)
-    ss = z * (lead_time ** 0.5) * std_demand * float(s["policy_safety_stock_multiplier"])
+    ss = z * (float(lead_time) ** 0.5) * std_demand * float(s["policy_safety_stock_multiplier"])
     rop = int(float(avg_demand) * lead_time + ss)
     safety_stock = int(ss)
     return eoq, rop, safety_stock

@@ -857,7 +857,7 @@ def approve_suggestion(sug_id):
         """), {"sug_id": sug_id, "uid": uid}).mappings().first()
         if not sug:
             flash("Suggestion not found.", "danger")
-            return redirect(url_for("supply_chain_bp.decision_dashboard"))
+            return redirect(url_for("supply_chain.decision_dashboard"))
 
         # Create a purchase order (draft)
         # You may have a purchase_orders table in your schema. We'll insert a draft.
@@ -875,7 +875,7 @@ def approve_suggestion(sug_id):
         """), {"id": sug_id})
 
     flash(f"Purchase order created for {sug['name']} (quantity {sug['suggested_quantity']}).", "success")
-    return redirect(url_for("supply_chain_bp.decision_dashboard"))
+    return redirect(url_for("supply_chain.decision_dashboard"))
 
 
 @supply_chain_bp.route("/decision/suggestion/<int:sug_id>/reject", methods=["POST"])
@@ -890,4 +890,4 @@ def reject_suggestion(sug_id):
             WHERE id = :id AND item_id IN (SELECT id FROM scm_inventory_items WHERE user_id = :uid)
         """), {"id": sug_id, "uid": uid})
     flash("Suggestion rejected.", "info")
-    return redirect(url_for("supply_chain_bp.decision_dashboard"))
+    return redirect(url_for("supply_chain.decision_dashboard"))
