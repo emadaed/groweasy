@@ -25,18 +25,31 @@ def classify_abc_items(user_id: int, alpha: float = 1.0, beta: float = 0.0):
             return
 
         total = sum(r["revenue"] for r in rows)
-        rows.sort(key=lambda x: x["revenue"], reverse=True)
+        sorted_rows = sorted(rows, key=lambda x: x["revenue"], reverse=True)
 
+        # Compute ABC class for each item in Python
+        item_ids = []
+        abc_classes = []
         cum = Decimal('0')
-        for row in rows:
+        for row in sorted_rows:
             cum += row["revenue"] / total * 100
             abc = 'A' if cum <= 70 else ('B' if cum <= 90 else 'C')
-            # Update scm_inventory_items via the linked inventory_item_id
-            conn.execute(text("""
-                UPDATE scm_inventory_items
-                SET abc_class = :abc
-                WHERE inventory_item_id = :item_id AND user_id = :user_id
-            """), {"abc": abc, "item_id": row["item_id"], "user_id": user_id})
+            item_ids.append(row["item_id"])
+            abc_classes.append(abc)
+
+        # Single batched UPDATE using unnest — replaces N individual UPDATEs
+        conn.execute(text("""
+            UPDATE scm_inventory_items AS s
+            SET abc_class = v.abc
+            FROM unnest(:item_ids, :abc_classes) AS v(inventory_item_id, abc)
+            WHERE s.inventory_item_id = v.inventory_item_id
+              AND s.user_id = :user_id
+        """), {
+            "item_ids": item_ids,
+            "abc_classes": abc_classes,
+            "user_id": user_id
+        })
+
 
 def assign_default_policies(user_id: int, override_existing: bool = False):
     policies = {
