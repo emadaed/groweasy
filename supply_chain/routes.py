@@ -105,7 +105,7 @@ def dashboard():
 # MODULE 1 — INVENTORY TOOLS (EOQ / ROP / Safety Stock)
 # ═══════════════════════════════════════════════════════
 
-@@supply_chain_bp.route("/inventory")
+@supply_chain_bp.route("/inventory")
 @login_required
 def inventory_list():
     uid = get_uid()
