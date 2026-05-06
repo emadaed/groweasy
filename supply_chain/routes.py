@@ -105,24 +105,27 @@ def dashboard():
 # MODULE 1 — INVENTORY TOOLS (EOQ / ROP / Safety Stock)
 # ═══════════════════════════════════════════════════════
 
-@supply_chain_bp.route("/inventory")
+@@supply_chain_bp.route("/inventory")
 @login_required
 def inventory_list():
     uid = get_uid()
     with DB_ENGINE.connect() as conn:
         items = conn.execute(
             text("""
-                SELECT id, name, sku, unit, eoq, rop, safety_stock, total_cost, updated_at
-                FROM scm_inventory_items
-                WHERE user_id = :uid
-                ORDER BY updated_at DESC
+                SELECT id, name, sku, unit,
+                       eoq, rop, safety_stock, total_cost,
+                       COALESCE(current_stock, 0) AS current_stock,
+                       abc_class,
+                       updated_at
+                FROM   scm_inventory_items
+                WHERE  user_id = :uid
+                ORDER  BY updated_at DESC
             """),
             {"uid": uid}
         ).mappings().all()
 
     return render_template("supply_chain/inventory_tools.html",
                            items=items, form=InventoryItemForm())
-
 
 @supply_chain_bp.route("/inventory/calculate", methods=["GET", "POST"])
 @supply_chain_bp.route("/inventory/<int:item_id>/edit", methods=["GET", "POST"])
@@ -145,21 +148,21 @@ def inventory_calculate(item_id=None):
 
     form = InventoryItemForm()
 
-    # Pre-fill form for edit
+    # Pre-fill form for edit (GET)
     if request.method == "GET" and existing:
-        form.name.data             = existing["name"]
-        form.sku.data              = existing.get("sku", "")
-        form.unit.data             = existing.get("unit", "pcs")
-        form.annual_demand.data    = float(existing["annual_demand"])
-        form.daily_demand_avg.data = float(existing.get("daily_demand_avg") or 0)
-        form.daily_demand_std.data = float(existing.get("daily_demand_std") or 0)
-        form.ordering_cost.data    = float(existing["ordering_cost"])
-        form.unit_cost.data        = float(existing["unit_cost"])
-        # stored as fraction, form shows percentage
-        form.holding_cost_pct.data = float(existing["holding_cost_pct"]) * 100
+        form.name.data              = existing["name"]
+        form.sku.data               = existing.get("sku", "")
+        form.unit.data              = existing.get("unit", "pcs")
+        form.current_stock.data     = float(existing.get("current_stock") or 0)
+        form.annual_demand.data     = float(existing["annual_demand"])
+        form.daily_demand_avg.data  = float(existing.get("daily_demand_avg") or 0)
+        form.daily_demand_std.data  = float(existing.get("daily_demand_std") or 0)
+        form.ordering_cost.data     = float(existing["ordering_cost"])
+        form.unit_cost.data         = float(existing["unit_cost"])
+        form.holding_cost_pct.data  = float(existing["holding_cost_pct"]) * 100  # stored as fraction
         form.lead_time_days_avg.data = float(existing["lead_time_days_avg"])
         form.lead_time_days_std.data = float(existing.get("lead_time_days_std") or 0)
-        form.service_level_z.data  = str(existing.get("service_level_z", "1.645"))
+        form.service_level_z.data   = str(existing.get("service_level_z", "1.645"))
 
     if form.validate_on_submit():
         z    = float(form.service_level_z.data)
@@ -187,6 +190,7 @@ def inventory_calculate(item_id=None):
                 conn.execute(text("""
                     UPDATE scm_inventory_items SET
                         name = :name, sku = :sku, unit = :unit,
+                        current_stock = :current_stock,
                         annual_demand = :annual_demand,
                         daily_demand_avg = :daily_demand_avg,
                         daily_demand_std = :daily_demand_std,
@@ -205,12 +209,14 @@ def inventory_calculate(item_id=None):
                 """), {
                     "name": form.name.data, "sku": form.sku.data,
                     "unit": form.unit.data,
+                    "current_stock": form.current_stock.data or 0,
                     "annual_demand": form.annual_demand.data,
                     "daily_demand_avg": form.daily_demand_avg.data,
                     "daily_demand_std": form.daily_demand_std.data or 0,
                     "ordering_cost": form.ordering_cost.data,
                     "unit_cost": form.unit_cost.data,
-                    "holding_cost_pct": hpct, "service_level_z": z,
+                    "holding_cost_pct": hpct,
+                    "service_level_z": z,
                     "lead_time_days_avg": form.lead_time_days_avg.data,
                     "lead_time_days_std": form.lead_time_days_std.data or 0,
                     "eoq": result.eoq, "rop": result.rop,
@@ -224,6 +230,7 @@ def inventory_calculate(item_id=None):
                 conn.execute(text("""
                     INSERT INTO scm_inventory_items (
                         user_id, name, sku, unit,
+                        current_stock,
                         annual_demand, daily_demand_avg, daily_demand_std,
                         ordering_cost, unit_cost, holding_cost_pct,
                         lead_time_days_avg, lead_time_days_std, service_level_z,
@@ -231,6 +238,7 @@ def inventory_calculate(item_id=None):
                         annual_order_cost, annual_hold_cost, total_cost
                     ) VALUES (
                         :uid, :name, :sku, :unit,
+                        :current_stock,
                         :annual_demand, :daily_demand_avg, :daily_demand_std,
                         :ordering_cost, :unit_cost, :holding_cost_pct,
                         :lead_time_days_avg, :lead_time_days_std, :service_level_z,
@@ -241,12 +249,14 @@ def inventory_calculate(item_id=None):
                     "uid": uid,
                     "name": form.name.data, "sku": form.sku.data,
                     "unit": form.unit.data,
+                    "current_stock": form.current_stock.data or 0,
                     "annual_demand": form.annual_demand.data,
                     "daily_demand_avg": form.daily_demand_avg.data,
                     "daily_demand_std": form.daily_demand_std.data or 0,
                     "ordering_cost": form.ordering_cost.data,
                     "unit_cost": form.unit_cost.data,
-                    "holding_cost_pct": hpct, "service_level_z": z,
+                    "holding_cost_pct": hpct,
+                    "service_level_z": z,
                     "lead_time_days_avg": form.lead_time_days_avg.data,
                     "lead_time_days_std": form.lead_time_days_std.data or 0,
                     "eoq": result.eoq, "rop": result.rop,
@@ -778,99 +788,81 @@ def landed_cost_pdf(lc_id):
 @supply_chain_bp.route("/abc/run", methods=["POST"])
 @login_required
 def run_abc():
-    """Manually trigger ABC classification and policy assignment."""
     uid = get_uid()
-    classify_abc_items(uid)
+    count = classify_abc_items(uid)
     assign_default_policies(uid, override_existing=True)
-    flash("ABC classification and policies updated.", "success")
+    flash(f"ABC classification complete — {count} items classified. Policies updated.", "success")
     return redirect(url_for("supply_chain.decision_dashboard"))
 
 
 @supply_chain_bp.route("/decision/run", methods=["POST"])
 @login_required
 def run_decision():
-    """Manually trigger the decision engine to generate purchase suggestions."""
     uid = get_uid()
-    results = run_decision_engine(uid)
-    flash(f"Decision engine finished. {len(results)} suggested orders created.", "info")
+    # force=True — manual dashboard run overrides auto_reorder flag
+    results = run_decision_engine(uid, force=True)
+    flash(f"Decision engine finished — {len(results)} purchase suggestion(s) created.", "info")
     return redirect(url_for("supply_chain.decision_dashboard"))
+
 
 
 @supply_chain_bp.route("/decision/dashboard")
 @login_required
 def decision_dashboard():
-    """Show pending suggestions, current stock status, and control panel."""
     uid = get_uid()
     with DB_ENGINE.connect() as conn:
-        # Pending suggestions
+
+        # Pending suggestions (JOIN only to scm_inventory_items — correct)
         suggestions = conn.execute(text("""
-            SELECT s.*, i.name as item_name, i.sku
-            FROM scm_suggested_orders s
-            JOIN scm_inventory_items i ON s.item_id = i.id
-            WHERE s.status = 'pending' AND i.user_id = :uid
-            ORDER BY s.created_at DESC
+            SELECT s.id, s.suggested_quantity, s.supplier_name, s.reason, s.created_at,
+                   i.name AS item_name, i.sku, i.abc_class
+            FROM   scm_suggested_orders s
+            JOIN   scm_inventory_items  i ON s.item_id = i.id
+            WHERE  s.status = 'pending' AND i.user_id = :uid
+            ORDER  BY
+                CASE i.abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
+                s.created_at DESC
         """), {"uid": uid}).mappings().all()
 
-        # Items below ROP (for monitoring)
-        # We compute ROP on the fly using the engine – but for simplicity, we'll list items with stock <= ROP
-        # We'll call a helper per item; for dashboard we may precompute.
-        # Instead, we fetch all items and compute quickly.
-        items = conn.execute(text("""
-            SELECT s.id, s.name, s.sku, s.auto_reorder, s.abc_class 
-            FROM scm_inventory_items s
-            JOIN inventory_items i ON s.inventory_item_id = i.id
-            WHERE s.user_id = :uid AND i.is_active = TRUE
+        # Items below reorder point — single query using stored rop column
+        # No N+1 loop — rop is computed and stored when user runs Calculate
+        low_stock = conn.execute(text("""
+            SELECT id, name, sku, abc_class,
+                   COALESCE(current_stock, 0) AS stock,
+                   rop
+            FROM   scm_inventory_items
+            WHERE  user_id = :uid
+              AND  rop IS NOT NULL
+              AND  COALESCE(current_stock, 0) <= rop
+            ORDER  BY
+                CASE abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
+                name
         """), {"uid": uid}).mappings().all()
 
-    low_stock = []
-    for it in items:
-        stock = get_current_stock(it["id"], uid)
-        # Compute ROP using engine (simplify: fetch ROP from stored value if we had it, but we can compute)
-        # We'll compute ROP quickly via compute_reorder_params
-        from .abc_engine import compute_reorder_params
-        _, rop, _ = compute_reorder_params(it["id"], uid)
-        if rop and stock <= rop:
-            low_stock.append({
-                "name": it["name"],
-                "sku": it["sku"],
-                "stock": stock,
-                "rop": int(rop),
-                "abc": it["abc_class"]
-            })
+        # ABC classification summary for the dashboard header
+        abc_rows = conn.execute(text("""
+            SELECT abc_class, COUNT(*) AS cnt
+            FROM   scm_inventory_items
+            WHERE  user_id = :uid AND abc_class IS NOT NULL
+            GROUP  BY abc_class
+            ORDER  BY abc_class
+        """), {"uid": uid}).mappings().all()
+
+        total_items = conn.execute(text("""
+            SELECT COUNT(*) FROM scm_inventory_items WHERE user_id = :uid
+        """), {"uid": uid}).scalar()
+
+    abc_summary = {r["abc_class"]: r["cnt"] for r in abc_rows}
+    classified   = sum(abc_summary.values())
 
     return render_template(
         "supply_chain/decision_dashboard.html",
-        suggestions=suggestions,
-        low_stock=low_stock
+        suggestions   = suggestions,
+        low_stock     = list(low_stock),
+        abc_summary   = abc_summary,      # {'A': 12, 'B': 34, 'C': 56}
+        classified    = classified,
+        total_items   = total_items,
     )
-
-
-@supply_chain_bp.route("/decision/suggestion/<int:sug_id>/approve", methods=["POST"])
-@login_required
-def approve_suggestion(sug_id):
-    uid = get_uid()
-    with DB_ENGINE.begin() as conn:
-        sug = conn.execute(text("""
-            SELECT s.*, i.name, i.sku, i.user_id
-            FROM scm_suggested_orders s
-            JOIN scm_inventory_items i ON s.item_id = i.id
-            WHERE s.id = :sug_id AND i.user_id = :uid
-        """), {"sug_id": sug_id, "uid": uid}).mappings().first()
-        if not sug:
-            flash("Suggestion not found.", "danger")
-            return redirect(url_for("supply_chain.decision_dashboard"))
-
-        conn.execute(text("""
-            UPDATE scm_suggested_orders SET status = 'approved' WHERE id = :id
-        """), {"id": sug_id})
-
-    flash(
-        f"Suggestion approved for {sug['name']} (qty: {sug['suggested_quantity']}). "
-        f"Create a Purchase Order from the Purchases module.",
-        "success"
-    )
-    return redirect(url_for("supply_chain.decision_dashboard"))
-
 
 @supply_chain_bp.route("/decision/suggestion/<int:sug_id>/reject", methods=["POST"])
 @login_required

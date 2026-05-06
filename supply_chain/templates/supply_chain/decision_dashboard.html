@@ -3,80 +3,257 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+
+  {# ── Header ── #}
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4>🧠 Inventory Intelligence Hub</h4>
     <div>
-      <form method="POST" action="{{ url_for('supply_chain.run_abc') }}" style="display:inline;">
+      <h4 class="fw-bold mb-0">🧠 Inventory Intelligence Hub</h4>
+      <small class="text-muted">Classify → Control → Compute → Decide → Act</small>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="POST" action="{{ url_for('supply_chain.run_abc') }}" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-outline-primary me-2">1. Run ABC Classification</button>
+        <button type="submit" class="btn btn-outline-primary">
+          <i class="bi bi-diagram-3 me-1"></i>1. Run ABC Classification
+        </button>
       </form>
-      <form method="POST" action="{{ url_for('supply_chain.run_decision') }}" style="display:inline;">
+      <form method="POST" action="{{ url_for('supply_chain.run_decision') }}" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-primary">2. Run Decision Engine</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-cpu me-1"></i>2. Run Decision Engine
+        </button>
       </form>
     </div>
   </div>
 
-  <!-- Pending Suggestions -->
-  <div class="card mb-4">
-    <div class="card-header bg-transparent fw-semibold">📦 Pending Purchase Suggestions</div>
+  {# ── ABC Classification Status ── #}
+  <div class="row g-3 mb-4">
+
+    {# A items #}
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <div class="fs-1 fw-bold text-danger">{{ abc_summary.get('A', 0) }}</div>
+          <div class="fw-semibold">Class A Items</div>
+          <small class="text-muted">Top 70% of inventory value</small>
+          <div class="mt-2">
+            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1 small">
+              Daily review · 95% SL · Human approval
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# B items #}
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <div class="fs-1 fw-bold text-warning">{{ abc_summary.get('B', 0) }}</div>
+          <div class="fw-semibold">Class B Items</div>
+          <small class="text-muted">Next 20% of inventory value</small>
+          <div class="mt-2">
+            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-1 small">
+              Weekly review · 90% SL · Auto-reorder
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# C items #}
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <div class="fs-1 fw-bold text-success">{{ abc_summary.get('C', 0) }}</div>
+          <div class="fw-semibold">Class C Items</div>
+          <small class="text-muted">Bottom 10% of inventory value</small>
+          <div class="mt-2">
+            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1 small">
+              Monthly review · 85% SL · Manual order
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Classification status #}
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <div class="fs-1 fw-bold text-primary">{{ classified }} / {{ total_items }}</div>
+          <div class="fw-semibold">Items Classified</div>
+          {% if total_items > 0 and classified < total_items %}
+            <small class="text-danger">
+              <i class="bi bi-exclamation-circle"></i>
+              {{ total_items - classified }} unclassified — Run ABC first
+            </small>
+          {% elif classified == total_items and classified > 0 %}
+            <small class="text-success">
+              <i class="bi bi-check-circle"></i> All items classified
+            </small>
+          {% else %}
+            <small class="text-muted">No items yet</small>
+          {% endif %}
+          <div class="mt-2">
+            <a href="{{ url_for('supply_chain.inventory_list') }}" class="btn btn-sm btn-outline-secondary">
+              Manage Items
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Pending Suggestions ── #}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">📦 Pending Purchase Suggestions</span>
+      {% if suggestions %}
+        <span class="badge bg-primary rounded-pill">{{ suggestions | length }}</span>
+      {% endif %}
+    </div>
     <div class="card-body p-0">
       {% if suggestions %}
-        <table class="table table-hover mb-0">
-          <thead>
-            <tr><th>Item</th><th>SKU</th><th>Suggested Qty</th><th>Supplier</th><th>Reason</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for s in suggestions %}
-            <tr>
-              <td>{{ s.item_name }}</td>
-              <td>{{ s.sku }}</td>
-              <td>{{ s.suggested_quantity }}</td>
-              <td>{{ s.supplier_name or 'Auto' }}</td>
-              <td>{{ s.reason }}</td>
-              <td>
-                <form method="POST" action="{{ url_for('supply_chain.approve_suggestion', sug_id=s.id) }}" style="display:inline;">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Approve</button>
-                </form>
-                <form method="POST" action="{{ url_for('supply_chain.reject_suggestion', sug_id=s.id) }}" style="display:inline;">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="btn btn-sm btn-danger"><i class="bi bi-x-lg"></i> Reject</button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Item</th>
+                <th class="text-center">ABC</th>
+                <th class="text-end">Suggested Qty</th>
+                <th>Supplier</th>
+                <th>Reason</th>
+                <th>Created</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in suggestions %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ s.item_name }}</div>
+                  <small class="text-muted">{{ s.sku or "" }}</small>
+                </td>
+                <td class="text-center">
+                  {% if s.abc_class %}
+                  <span class="badge rounded-pill
+                    {% if s.abc_class == 'A' %}bg-danger
+                    {% elif s.abc_class == 'B' %}bg-warning text-dark
+                    {% else %}bg-success{% endif %}">
+                    {{ s.abc_class }}
+                  </span>
+                  {% else %}
+                  <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="text-end fw-semibold">{{ s.suggested_quantity }}</td>
+                <td>{{ s.supplier_name or '<span class="text-muted">Auto</span>' | safe }}</td>
+                <td><small class="text-muted">{{ s.reason }}</small></td>
+                <td><small class="text-muted">{{ s.created_at.strftime('%d %b') if s.created_at else '' }}</small></td>
+                <td class="text-end">
+                  <form method="POST"
+                        action="{{ url_for('supply_chain.approve_suggestion', sug_id=s.id) }}"
+                        class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-success me-1">
+                      <i class="bi bi-check-lg"></i> Approve
+                    </button>
+                  </form>
+                  <form method="POST"
+                        action="{{ url_for('supply_chain.reject_suggestion', sug_id=s.id) }}"
+                        class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-danger">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       {% else %}
-        <div class="p-3 text-muted">No pending suggestions. Run the decision engine.</div>
+        <div class="p-4 text-center text-muted">
+          <i class="bi bi-inbox fs-2 d-block mb-2 opacity-25"></i>
+          No pending suggestions.
+          {% if classified == 0 %}
+            <div class="mt-1 small">Run <strong>1. ABC Classification</strong> first, then <strong>2. Decision Engine</strong>.</div>
+          {% else %}
+            <div class="mt-1 small">All items are above reorder point, or run the decision engine.</div>
+          {% endif %}
+        </div>
       {% endif %}
     </div>
   </div>
 
-  <!-- Items Below Reorder Point -->
-  <div class="card">
-    <div class="card-header bg-transparent fw-semibold">⚠️ Items Below Reorder Point</div>
-    <div class="card-body p-0">
+  {# ── Items Below Reorder Point ── #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">⚠️ Items Below Reorder Point</span>
       {% if low_stock %}
-        <table class="table table-sm mb-0">
-          <thead><tr><th>Item</th><th>SKU</th><th>ABC</th><th>Current Stock</th><th>ROP</th></tr></thead>
-          <tbody>
-            {% for item in low_stock %}
-            <tr>
-              <td>{{ item.name }}</td>
-              <td>{{ item.sku }}</td>
-              <td><span class="badge bg-secondary">{{ item.abc }}</span></td>
-              <td class="text-danger">{{ item.stock }}</td>
-              <td>{{ item.rop }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="p-3 text-muted">All items are above reorder point 👍</div>
+        <span class="badge bg-warning text-dark rounded-pill">{{ low_stock | length }}</span>
       {% endif %}
     </div>
+    <div class="card-body p-0">
+      {% if low_stock %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Item</th>
+                <th class="text-center">ABC</th>
+                <th class="text-end">Current Stock</th>
+                <th class="text-end">ROP</th>
+                <th class="text-end">Deficit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in low_stock %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ item.name }}</div>
+                  <small class="text-muted">{{ item.sku or "" }}</small>
+                </td>
+                <td class="text-center">
+                  <span class="badge rounded-pill
+                    {% if item.abc_class == 'A' %}bg-danger
+                    {% elif item.abc_class == 'B' %}bg-warning text-dark
+                    {% else %}bg-success{% endif %}">
+                    {{ item.abc_class or "?" }}
+                  </span>
+                </td>
+                <td class="text-end text-danger fw-semibold">
+                  {{ "{:,.0f}".format(item.stock | float) }}
+                </td>
+                <td class="text-end">
+                  {{ "{:,.0f}".format(item.rop | float) }}
+                </td>
+                <td class="text-end text-danger">
+                  {{ "{:,.0f}".format((item.rop | float) - (item.stock | float)) }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-4 text-center text-muted">
+          <i class="bi bi-check-circle fs-2 d-block mb-2 opacity-25"></i>
+          All items with known ROP are above their reorder point 👍
+        </div>
+      {% endif %}
+    </div>
+    {% if low_stock %}
+    <div class="card-footer bg-transparent text-muted small">
+      <i class="bi bi-info-circle me-1"></i>
+      This list uses the stored ROP from your EOQ calculations.
+      Update <strong>Current Stock</strong> on each item to keep this accurate.
+    </div>
+    {% endif %}
   </div>
+
 </div>
 {% endblock %}

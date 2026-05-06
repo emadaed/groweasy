@@ -4,11 +4,11 @@ supply_chain/models.py
 NO Flask-SQLAlchemy ORM here — GrowEasy uses raw SQL with DB_ENGINE.
 
 This file contains:
-  1. The CREATE TABLE SQL strings (called from db.py)
+  1. The CREATE TABLE SQL strings (called from db.py create_all_tables)
   2. Python dataclasses as typed return containers (no DB dependency)
-  3. CRUD helper functions that use DB_ENGINE + text()
 
-Import pattern matches the rest of GrowEasy exactly.
+IMPORTANT: If your tables already exist, run migration_scm_v2.sql instead
+of dropping and recreating — it uses ALTER TABLE IF NOT EXISTS.
 """
 
 from dataclasses import dataclass
@@ -16,36 +16,67 @@ from typing import Optional
 from datetime import datetime
 
 
-# ─────────────────────────────────────────────
-# Table creation SQL — paste these into
-# app/services/db.py → create_all_tables()
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────
+# Table creation SQL
+# ─────────────────────────────────────────────────────────
 
 CREATE_SCM_INVENTORY_ITEMS = """
     CREATE TABLE IF NOT EXISTS scm_inventory_items (
         id               SERIAL PRIMARY KEY,
         user_id          INTEGER NOT NULL,
+
+        -- Item identity
         name             TEXT NOT NULL,
         sku              TEXT,
         unit             TEXT DEFAULT 'pcs',
+
+        -- Demand inputs (entered via EOQ form)
         annual_demand    NUMERIC(14,4) NOT NULL,
         daily_demand_avg NUMERIC(14,4),
         daily_demand_std NUMERIC(14,4) DEFAULT 0,
+
+        -- Cost inputs
         ordering_cost    NUMERIC(14,2) NOT NULL,
-        holding_cost_pct NUMERIC(6,4)  NOT NULL,
+        holding_cost_pct NUMERIC(6,4)  NOT NULL,   -- stored as fraction e.g. 0.20
         unit_cost        NUMERIC(14,2) NOT NULL,
+
+        -- Lead time inputs
         lead_time_days_avg  NUMERIC(10,2) NOT NULL,
         lead_time_days_std  NUMERIC(10,2) DEFAULT 0,
+
+        -- Service level (z-score, e.g. 1.645 = 95%)
         service_level_z  NUMERIC(6,4)  DEFAULT 1.645,
+
+        -- Computed results (stored after Calculate)
         eoq              NUMERIC(14,4),
         rop              NUMERIC(14,4),
         safety_stock     NUMERIC(14,4),
         annual_order_cost NUMERIC(14,2),
         annual_hold_cost  NUMERIC(14,2),
         total_cost        NUMERIC(14,2),
+
+        -- Live stock (updated by user or future sync)
+        current_stock    NUMERIC(14,4) DEFAULT 0,
+
+        -- ABC classification (set by classify_abc_items)
+        abc_class        TEXT,  -- 'A', 'B', or 'C'
+
+        -- Policy (set by assign_default_policies, can be overridden)
+        auto_reorder                   BOOLEAN DEFAULT TRUE,
+        approval_required              BOOLEAN DEFAULT FALSE,
+        policy_service_level           NUMERIC(6,4),
+        policy_safety_stock_multiplier NUMERIC(6,4) DEFAULT 1.0,
+        review_frequency_days          INTEGER,
+
         created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE INDEX IF NOT EXISTS idx_scm_inv_user_abc
+        ON scm_inventory_items (user_id, abc_class);
+
+    CREATE INDEX IF NOT EXISTS idx_scm_inv_user_stock
+        ON scm_inventory_items (user_id, current_stock, rop);
 """
 
 CREATE_SUPPLIER_KPIS = """
@@ -98,11 +129,26 @@ CREATE_LANDED_COSTS = """
     );
 """
 
+CREATE_SCM_SUGGESTED_ORDERS = """
+    CREATE TABLE IF NOT EXISTS scm_suggested_orders (
+        id                  SERIAL PRIMARY KEY,
+        item_id             INTEGER NOT NULL REFERENCES scm_inventory_items(id),
+        suggested_quantity  INTEGER NOT NULL,
+        supplier_id         INTEGER,
+        supplier_name       TEXT,
+        reason              TEXT,
+        status              TEXT DEFAULT 'pending',  -- pending | approved | rejected
+        created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-# ─────────────────────────────────────────────
-# Typed row containers (replaces ORM model objects)
-# Routes return these instead of ORM instances
-# ─────────────────────────────────────────────
+    CREATE INDEX IF NOT EXISTS idx_scm_sug_item_status
+        ON scm_suggested_orders (item_id, status);
+"""
+
+
+# ─────────────────────────────────────────────────────────
+# Typed row containers
+# ─────────────────────────────────────────────────────────
 
 @dataclass
 class SCMInventoryRow:
@@ -126,12 +172,18 @@ class SCMInventoryRow:
     annual_order_cost: Optional[float]
     annual_hold_cost: Optional[float]
     total_cost: Optional[float]
+    current_stock: Optional[float]
+    abc_class: Optional[str]
+    auto_reorder: Optional[bool]
+    approval_required: Optional[bool]
+    policy_service_level: Optional[float]
+    policy_safety_stock_multiplier: Optional[float]
+    review_frequency_days: Optional[int]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
     @classmethod
     def from_row(cls, row):
-        """Build from a SQLAlchemy Core Row object."""
         return cls(**{k: row._mapping[k] for k in row._fields})
 
 

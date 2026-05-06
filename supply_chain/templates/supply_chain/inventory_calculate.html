@@ -31,6 +31,7 @@
           <form method="POST" novalidate>
             {{ form.hidden_tag() }}
 
+            {# Item name + SKU #}
             <div class="row g-2 mb-3">
               <div class="col-8">
                 <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
@@ -43,6 +44,17 @@
               </div>
             </div>
 
+            {# Current stock — feeds the decision engine #}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                {{ form.current_stock.label.text }}
+                <span class="badge bg-primary bg-opacity-10 text-primary ms-1 small fw-normal">Used by Decision Engine</span>
+              </label>
+              {{ form.current_stock(class="form-control", placeholder="0") }}
+              <div class="form-text">Keep this updated so the engine can compare against ROP.</div>
+            </div>
+
+            {# Demand #}
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label class="form-label fw-semibold">{{ form.annual_demand.label.text }}</label>
@@ -55,6 +67,7 @@
               </div>
             </div>
 
+            {# Cost #}
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label class="form-label fw-semibold">{{ form.ordering_cost.label.text }}</label>
@@ -71,6 +84,7 @@
               {{ form.holding_cost_pct(class="form-control", placeholder="e.g. 20") }}
             </div>
 
+            {# Lead time + service level #}
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label class="form-label fw-semibold">{{ form.lead_time_days_avg.label.text }}</label>
@@ -82,6 +96,7 @@
               </div>
             </div>
 
+            {# Advanced std devs #}
             <details class="mb-3">
               <summary class="text-muted small cursor-pointer">Advanced (std deviations)</summary>
               <div class="row g-2 mt-2">
@@ -156,6 +171,10 @@
         <div class="text-center text-muted p-5">
           <i class="bi bi-graph-up fs-1 mb-3 d-block opacity-25"></i>
           <p>Fill in the parameters and click <strong>Calculate</strong> to see results.</p>
+          <p class="small text-muted">
+            💡 Set <strong>Current Stock</strong> accurately — the decision engine uses it
+            to compare against the ROP and trigger purchase suggestions.
+          </p>
         </div>
       </div>
       {% endif %}
@@ -164,7 +183,6 @@
   </div>
 </div>
 
-{# ========== CHART (only when result exists) ========== #}
 {% if result %}
 <script src="{{ url_for('static', filename='js/chart.umd.js') }}" nonce="{{ nonce }}"></script>
 <script nonce="{{ nonce }}">

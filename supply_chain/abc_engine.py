@@ -1,231 +1,377 @@
-#groweasy.supply_chain.abc_engine.py
+"""
+supply_chain/abc_engine.py
+───────────────────────────
+Inventory Intelligence Engine — Classify → Control → Compute → Decide → Act
+
+ARCHITECTURE NOTE:
+  scm_inventory_items is a STANDALONE table (data entered via EOQ form).
+  It has NO FK to inventory_items.  This engine works entirely from
+  scm_inventory_items columns — no JOINs to other modules.
+
+STAGES:
+  1. classify_abc_items()      → ABC class by inventory value (Pareto)
+  2. assign_default_policies() → set service-level / reorder policy per class
+  3. compute_reorder_params()  → EOQ / ROP / SS using utils.py math + policy
+  4. evaluate_item()           → compare stock vs ROP, create suggestion
+  5. run_decision_engine()     → batch run for all user items (A→B→C order)
+"""
+
+import logging
+from decimal import Decimal
 from sqlalchemy import text
 from app.services.db import DB_ENGINE
-from decimal import Decimal
-from statistics import stdev
-import logging
 
 logger = logging.getLogger(__name__)
 
-def classify_abc_items(user_id: int, alpha: float = 1.0, beta: float = 0.0):
-    """Classify using revenue from invoice_items (linked via inventory_items.id)."""
+
+# ═══════════════════════════════════════════════════════
+# STAGE 1 — CLASSIFY  (ABC Layer)
+# ═══════════════════════════════════════════════════════
+
+def classify_abc_items(user_id: int) -> int:
+    """
+    Classify all user items by inventory value = annual_demand × unit_cost.
+    Sorted descending → cumulative share → A (top 70%), B (next 20%), C (last 10%).
+
+    Uses a simple per-row UPDATE loop — reliable, readable, debuggable.
+    Returns count of items classified.
+    """
     with DB_ENGINE.begin() as conn:
         rows = conn.execute(text("""
-            SELECT i.id AS item_id,
-                   SUM(ii.quantity * ii.unit_price) AS revenue
-            FROM inventory_items i
-            JOIN invoice_items ii ON i.id = ii.product_id
-            JOIN user_invoices ui ON ii.invoice_id = ui.id
-            WHERE i.user_id = :user_id
-              AND ui.created_at >= NOW() - INTERVAL '12 months'
-            GROUP BY i.id
-        """), {"user_id": user_id}).mappings().all()
+            SELECT id,
+                   COALESCE(annual_demand, 0) * COALESCE(unit_cost, 0) AS inv_value
+            FROM   scm_inventory_items
+            WHERE  user_id = :uid
+        """), {"uid": user_id}).mappings().all()
 
         if not rows:
-            return
+            logger.warning("classify_abc: no items for user_id=%s", user_id)
+            return 0
 
-        total = sum(r["revenue"] for r in rows)
-        sorted_rows = sorted(rows, key=lambda x: x["revenue"], reverse=True)
+        total = sum(Decimal(str(r["inv_value"])) for r in rows)
 
-        # Compute ABC class for each item in Python
-        item_ids = []
-        abc_classes = []
-        cum = Decimal('0')
+        if total == 0:
+            # No value data yet — tag everything C so policies still apply
+            for row in rows:
+                conn.execute(text("""
+                    UPDATE scm_inventory_items SET abc_class = 'C'
+                    WHERE  id = :id AND user_id = :uid
+                """), {"id": row["id"], "uid": user_id})
+            logger.warning("classify_abc: all items have 0 value — tagged C for user_id=%s", user_id)
+            return len(rows)
+
+        sorted_rows = sorted(rows, key=lambda x: x["inv_value"], reverse=True)
+
+        cum = Decimal("0")
         for row in sorted_rows:
-            cum += row["revenue"] / total * 100
-            abc = 'A' if cum <= 70 else ('B' if cum <= 90 else 'C')
-            item_ids.append(row["item_id"])
-            abc_classes.append(abc)
+            cum += Decimal(str(row["inv_value"])) / total * 100
+            abc = "A" if cum <= 70 else ("B" if cum <= 90 else "C")
+            conn.execute(text("""
+                UPDATE scm_inventory_items
+                SET    abc_class = :abc
+                WHERE  id = :id AND user_id = :uid
+            """), {"abc": abc, "id": row["id"], "uid": user_id})
 
-        # Single batched UPDATE using unnest — replaces N individual UPDATEs
-        conn.execute(text("""
-            UPDATE scm_inventory_items AS s
-            SET abc_class = v.abc
-            FROM unnest(:item_ids, :abc_classes) AS v(inventory_item_id, abc)
-            WHERE s.inventory_item_id = v.inventory_item_id
-              AND s.user_id = :user_id
-        """), {
-            "item_ids": item_ids,
-            "abc_classes": abc_classes,
-            "user_id": user_id
-        })
+    logger.info("classify_abc: classified %d items for user_id=%s", len(sorted_rows), user_id)
+    return len(sorted_rows)
 
 
-def assign_default_policies(user_id: int, override_existing: bool = False):
-    policies = {
-        'A': (0.95, 1.0, 7, True, True),
-        'B': (0.90, 1.2, 15, True, False),
-        'C': (0.85, 1.5, 30, False, False)
-    }
+# ═══════════════════════════════════════════════════════
+# STAGE 2 — CONTROL BEHAVIOR  (Policy Layer)
+# ═══════════════════════════════════════════════════════
+
+_ABC_POLICIES = {
+    "A": {
+        "service_level":           0.95,   # z ≈ 1.645
+        "safety_stock_multiplier": 1.0,
+        "review_frequency_days":   7,
+        "auto_reorder":            True,
+        "approval_required":       True,   # high-value: human approves PO
+    },
+    "B": {
+        "service_level":           0.90,   # z ≈ 1.282
+        "safety_stock_multiplier": 1.2,
+        "review_frequency_days":   15,
+        "auto_reorder":            True,
+        "approval_required":       False,
+    },
+    "C": {
+        "service_level":           0.85,   # z ≈ 1.036
+        "safety_stock_multiplier": 1.5,    # bulk buffer, low monitoring cost
+        "review_frequency_days":   30,
+        "auto_reorder":            False,  # manual decision for low-value items
+        "approval_required":       False,
+    },
+}
+
+
+def assign_default_policies(user_id: int, override_existing: bool = False) -> int:
+    """
+    Write policy defaults to scm_inventory_items based on abc_class.
+    override_existing=False  → safe: fills NULLs only (production default).
+    override_existing=True   → replaces all policies (run after fresh re-classify).
+    Returns total rows updated.
+    """
+    updated = 0
     with DB_ENGINE.begin() as conn:
-        for abc, (sl, ssm, rfd, ar, apr) in policies.items():
+        for abc, p in _ABC_POLICIES.items():
+            params = {
+                "sl":  p["service_level"],
+                "ssm": p["safety_stock_multiplier"],
+                "rfd": p["review_frequency_days"],
+                "ar":  p["auto_reorder"],
+                "apr": p["approval_required"],
+                "uid": user_id,
+                "abc": abc,
+            }
             if override_existing:
-                conn.execute(text("""
+                result = conn.execute(text("""
                     UPDATE scm_inventory_items
-                    SET policy_service_level = :sl,
-                        policy_safety_stock_multiplier = :ssm,
-                        review_frequency_days = :rfd,
-                        auto_reorder = :ar,
-                        approval_required = :apr
-                    WHERE user_id = :uid AND abc_class = :abc
-                """), {"sl": sl, "ssm": ssm, "rfd": rfd, "ar": ar, "apr": apr, "uid": user_id, "abc": abc})
+                    SET    policy_service_level           = :sl,
+                           policy_safety_stock_multiplier = :ssm,
+                           review_frequency_days          = :rfd,
+                           auto_reorder                   = :ar,
+                           approval_required              = :apr
+                    WHERE  user_id = :uid AND abc_class = :abc
+                """), params)
             else:
-                conn.execute(text("""
+                result = conn.execute(text("""
                     UPDATE scm_inventory_items
-                    SET policy_service_level = COALESCE(policy_service_level, :sl),
-                        policy_safety_stock_multiplier = COALESCE(policy_safety_stock_multiplier, :ssm),
-                        review_frequency_days = COALESCE(review_frequency_days, :rfd),
-                        auto_reorder = COALESCE(auto_reorder, :ar),
-                        approval_required = COALESCE(approval_required, :apr)
-                    WHERE user_id = :uid AND abc_class = :abc
-                """), {"sl": sl, "ssm": ssm, "rfd": rfd, "ar": ar, "apr": apr, "uid": user_id, "abc": abc})
+                    SET    policy_service_level           = COALESCE(policy_service_level, :sl),
+                           policy_safety_stock_multiplier = COALESCE(policy_safety_stock_multiplier, :ssm),
+                           review_frequency_days          = COALESCE(review_frequency_days, :rfd),
+                           auto_reorder                   = COALESCE(auto_reorder, :ar),
+                           approval_required              = COALESCE(approval_required, :apr)
+                    WHERE  user_id = :uid AND abc_class = :abc
+                """), params)
+            updated += result.rowcount
 
-def get_current_stock(item_id: int, user_id: int) -> int:
-    """Get current stock from inventory_items (linked via inventory_item_id)."""
+    logger.info("assign_policies: %d rows updated for user_id=%s", updated, user_id)
+    return updated
+
+
+# ═══════════════════════════════════════════════════════
+# STAGE 3 — COMPUTE  (Math Layer)
+# ═══════════════════════════════════════════════════════
+
+def get_current_stock(item_id: int, user_id: int) -> float:
+    """Read current_stock from scm_inventory_items directly."""
     with DB_ENGINE.connect() as conn:
         row = conn.execute(text("""
-            SELECT i.current_stock
-            FROM inventory_items i
-            JOIN scm_inventory_items s ON i.id = s.inventory_item_id
-            WHERE s.id = :item_id AND i.user_id = :user_id
-        """), {"item_id": item_id, "user_id": user_id}).first()
-        return int(row[0]) if row else 0
+            SELECT COALESCE(current_stock, 0)
+            FROM   scm_inventory_items
+            WHERE  id = :id AND user_id = :uid
+        """), {"id": item_id, "uid": user_id}).first()
+    return float(row[0]) if row else 0.0
 
-def get_demand_stats(item_id: int, user_id: int, days: int = 90):
-    """Get avg daily demand and std dev from invoice_items."""
-    with DB_ENGINE.connect() as conn:
-        # Get lead time from scm_inventory_items
-        lead_row = conn.execute(text("""
-            SELECT lead_time_days_avg FROM scm_inventory_items
-            WHERE id = :item_id AND user_id = :user_id
-        """), {"item_id": item_id, "user_id": user_id}).first()
-        lead_time = float(lead_row[0]) if lead_row else 5.0
-
-        # Get the linked inventory_item_id
-        inv_item_id = conn.execute(text("""
-            SELECT inventory_item_id FROM scm_inventory_items
-            WHERE id = :item_id AND user_id = :user_id
-        """), {"item_id": item_id, "user_id": user_id}).scalar()
-        if not inv_item_id:
-            return 0.0, 0.0, lead_time
-
-        # Demand from invoice_items
-        demand_rows = conn.execute(text("""
-            SELECT ii.quantity, ui.created_at
-            FROM invoice_items ii
-            JOIN user_invoices ui ON ii.invoice_id = ui.id
-            WHERE ii.product_id = :inv_item_id
-              AND ui.user_id = :user_id
-              AND ui.created_at >= NOW() - INTERVAL '1 day' * :days
-        """), {"inv_item_id": inv_item_id, "user_id": user_id, "days": days}).mappings().all()
-
-        if not demand_rows:
-            return 0.0, 0.0, lead_time
-
-        total_qty = sum(r["quantity"] for r in demand_rows)
-        avg_daily = float(total_qty) / days
-        quantities = [float(r["quantity"]) for r in demand_rows]
-        std_daily = stdev(quantities) if len(quantities) > 1 else 0.0
-        return avg_daily, std_daily, lead_time
 
 def compute_reorder_params(item_id: int, user_id: int):
-    """Use scm_inventory_items fields + compute EOQ/ROP with policy."""
+    """
+    Compute (eoq, rop, safety_stock) from stored scm_inventory_items columns.
+
+    Policy columns take precedence over manual z-score:
+      effective_z  = policy_service_level  → else service_level_z → else 1.645
+      ss_mult      = policy_safety_stock_multiplier → else 1.0
+
+    Returns (eoq, rop, ss)  or  (None, None, None) if data is insufficient.
+    """
+    from .utils import calc_eoq, calc_safety_stock, calc_rop
+
     with DB_ENGINE.connect() as conn:
         s = conn.execute(text("""
-            SELECT annual_demand, ordering_cost, unit_cost, holding_cost_pct,
-                   policy_service_level, policy_safety_stock_multiplier
+            SELECT
+                COALESCE(annual_demand, 0)          AS annual_demand,
+                COALESCE(ordering_cost, 0)          AS ordering_cost,
+                COALESCE(unit_cost, 0)              AS unit_cost,
+                COALESCE(holding_cost_pct, 0)       AS holding_cost_pct,
+                COALESCE(daily_demand_avg, 0)       AS daily_demand_avg,
+                COALESCE(daily_demand_std, 0)       AS daily_demand_std,
+                COALESCE(lead_time_days_avg, 0)     AS lead_time_days_avg,
+                COALESCE(lead_time_days_std, 0)     AS lead_time_days_std,
+                COALESCE(policy_service_level,
+                         service_level_z,
+                         1.645)                     AS effective_z,
+                COALESCE(policy_safety_stock_multiplier, 1.0) AS ss_mult
             FROM scm_inventory_items
-            WHERE id = :item_id AND user_id = :user_id
-        """), {"item_id": item_id, "user_id": user_id}).mappings().first()
-        if not s:
-            return None, None, None
+            WHERE id = :id AND user_id = :uid
+        """), {"id": item_id, "uid": user_id}).mappings().first()
 
-    D = s["annual_demand"]
-    S = s["ordering_cost"]
-    H = s["unit_cost"] * s["holding_cost_pct"]  
-    eoq = int((2 * D * S / H) ** Decimal('0.5')) if H > 0 else 0
+    if not s:
+        return None, None, None
 
-    avg_demand, std_demand, lead_time = get_demand_stats(item_id, user_id)
-    if avg_demand == 0:
-        return eoq, None, None
+    D = float(s["annual_demand"])
+    S = float(s["ordering_cost"])
+    C = float(s["unit_cost"])
+    H = float(s["holding_cost_pct"])
 
-    if s["policy_service_level"] is None or s["policy_safety_stock_multiplier"] is None:
-        return eoq, None, None
+    if D <= 0 or H <= 0 or C <= 0:
+        return None, None, None
 
-    z_map = {0.85:1.036, 0.90:1.282, 0.95:1.645, 0.98:2.054}
-    z = z_map.get(float(s["policy_service_level"]), 1.645)
-    ss = z * (float(lead_time) ** 0.5) * std_demand * float(s["policy_safety_stock_multiplier"])
-    rop = int(float(avg_demand) * lead_time + ss)
-    safety_stock = int(ss)
-    return eoq, rop, safety_stock
+    try:
+        eoq = calc_eoq(D, S, C, H)
+    except ValueError as e:
+        logger.debug("calc_eoq failed item_id=%s: %s", item_id, e)
+        return None, None, None
 
-def select_best_supplier(item_id: int, user_id: int):
-    """Simplified: get highest KPI supplier with lowest landed cost."""
+    d_avg  = float(s["daily_demand_avg"])
+    d_std  = float(s["daily_demand_std"])
+    lt_avg = float(s["lead_time_days_avg"])
+    lt_std = float(s["lead_time_days_std"])
+    z      = float(s["effective_z"])
+    mult   = float(s["ss_mult"])
+
+    if d_avg <= 0 or lt_avg <= 0:
+        # EOQ calculable but ROP/SS not — return partial result
+        return int(eoq), None, None
+
+    ss  = calc_safety_stock(z, lt_avg, lt_std, d_avg, d_std) * mult
+    rop = calc_rop(d_avg, lt_avg, ss)
+
+    return int(eoq), round(rop, 2), round(ss, 2)
+
+
+# ═══════════════════════════════════════════════════════
+# STAGE 4 — DECIDE  (Decision Layer)
+# ═══════════════════════════════════════════════════════
+
+def select_best_supplier(user_id: int) -> tuple:
+    """
+    Return (supplier_id=None, supplier_name) of the highest-KPI supplier.
+    Uses supplier_kpis table — native to this SCM module.
+    Returns (None, None) if no KPI data exists.
+    """
     with DB_ENGINE.connect() as conn:
-        # Get all suppliers with KPI score (latest) and average landed cost
-        rows = conn.execute(text("""
-            SELECT s.id, s.name,
-                   COALESCE(sk.composite_score, 50) AS kpi,
-                   COALESCE(lc.avg_landed_cost, 100) AS landed_cost
-            FROM suppliers s
-            LEFT JOIN (
-                SELECT DISTINCT ON (supplier_name) supplier_name, composite_score
-                FROM supplier_kpis WHERE user_id = :uid
-                ORDER BY supplier_name, created_at DESC
-            ) sk ON sk.supplier_name = s.name
-            LEFT JOIN (
-                SELECT user_id, AVG(landed_cost_per_unit) AS avg_landed_cost
-                FROM landed_costs GROUP BY user_id
-            ) lc ON lc.user_id = s.user_id
-            WHERE s.user_id = :uid
-            ORDER BY COALESCE(sk.composite_score, 50) / NULLIF(COALESCE(lc.avg_landed_cost, 100), 0) DESC
-            LIMIT 1
+        row = conn.execute(text("""
+            SELECT DISTINCT ON (supplier_name)
+                supplier_name,
+                composite_score
+            FROM   supplier_kpis
+            WHERE  user_id = :uid
+            ORDER  BY supplier_name, composite_score DESC NULLS LAST
         """), {"uid": user_id}).first()
-        if rows:
-            return (rows[0], rows[1])
+
+    if row:
+        return (None, row[0])
     return (None, None)
 
-def evaluate_item(item_id: int, user_id: int, force: bool = False):
-    """Decision for a single scm_inventory_items record."""
+
+def evaluate_item(item_id: int, user_id: int, force: bool = False) -> dict:
+    """
+    Evaluate one item.  Creates a pending suggestion if stock ≤ ROP.
+
+    force=True  → ignores auto_reorder flag (used for manual dashboard runs).
+    Duplicate guard: won't insert if a 'pending' suggestion already exists.
+
+    Returns a result dict with should_reorder bool + details.
+    """
     with DB_ENGINE.connect() as conn:
         s = conn.execute(text("""
-            SELECT s.auto_reorder, s.approval_required 
-            FROM scm_inventory_items s
-            JOIN inventory_items i ON s.inventory_item_id = i.id
-            WHERE s.id = :item_id AND s.user_id = :uid AND i.is_active = TRUE
-        """), {"item_id": item_id, "uid": user_id}).first()
-        if not s:
-            return {"error": "Item not found"}
-    if not force and not s[0]:
+            SELECT name, sku,
+                   COALESCE(auto_reorder, TRUE)      AS auto_reorder,
+                   COALESCE(approval_required, FALSE) AS approval_required
+            FROM   scm_inventory_items
+            WHERE  id = :id AND user_id = :uid
+        """), {"id": item_id, "uid": user_id}).mappings().first()
+
+    if not s:
+        return {"should_reorder": False, "reason": "Item not found"}
+
+    if not force and not s["auto_reorder"]:
         return {"should_reorder": False, "reason": "Auto-reorder disabled"}
 
     stock = get_current_stock(item_id, user_id)
     eoq, rop, ss = compute_reorder_params(item_id, user_id)
+
     if rop is None:
-        return {"should_reorder": False, "reason": "Missing demand data"}
+        return {
+            "should_reorder": False,
+            "reason": "Insufficient data — set daily_demand_avg and lead_time_days_avg",
+        }
 
     if stock <= rop:
-        suggested_qty = max(eoq, rop - stock + 1)
-        sup_id, sup_name = select_best_supplier(item_id, user_id)
-        with DB_ENGINE.begin() as conn:
-            conn.execute(text("""
-                INSERT INTO scm_suggested_orders (item_id, suggested_quantity, supplier_id, supplier_name, reason, status)
-                VALUES (:item_id, :qty, :sup_id, :sup_name, :reason, 'pending')
-            """), {"item_id": item_id, "qty": suggested_qty, "sup_id": sup_id, "sup_name": sup_name,
-                  "reason": f"Stock {stock} ≤ ROP {rop}"})
-        return {"should_reorder": True, "suggested_quantity": suggested_qty, "supplier_id": sup_id, "supplier_name": sup_name}
-    return {"should_reorder": False, "reason": f"Stock {stock} > ROP {rop}"}
+        sup_id, sup_name = select_best_supplier(user_id)
 
-def run_decision_engine(user_id: int):
+        # Duplicate guard — avoid spamming suggestions
+        with DB_ENGINE.connect() as conn:
+            already_pending = conn.execute(text("""
+                SELECT id FROM scm_suggested_orders
+                WHERE  item_id = :item_id AND status = 'pending'
+                LIMIT  1
+            """), {"item_id": item_id}).first()
+
+        if not already_pending:
+            with DB_ENGINE.begin() as conn:
+                conn.execute(text("""
+                    INSERT INTO scm_suggested_orders
+                        (item_id, suggested_quantity, supplier_id, supplier_name, reason, status)
+                    VALUES
+                        (:item_id, :qty, :sup_id, :sup_name, :reason, 'pending')
+                """), {
+                    "item_id":  item_id,
+                    "qty":      eoq,
+                    "sup_id":   sup_id,
+                    "sup_name": sup_name,
+                    "reason":   f"Stock {stock:.0f} ≤ ROP {rop:.0f}",
+                })
+
+        return {
+            "should_reorder":     True,
+            "item_id":            item_id,
+            "item_name":          s["name"],
+            "current_stock":      stock,
+            "rop":                rop,
+            "suggested_quantity": eoq,
+            "supplier_name":      sup_name,
+            "approval_required":  s["approval_required"],
+        }
+
+    return {
+        "should_reorder": False,
+        "reason": f"Stock {stock:.0f} > ROP {rop:.0f}",
+    }
+
+
+# ═══════════════════════════════════════════════════════
+# STAGE 5 — ACT  (Batch Run)
+# ═══════════════════════════════════════════════════════
+
+def run_decision_engine(user_id: int, force: bool = False) -> list:
+    """
+    Run the full decision cycle for all items belonging to user_id.
+    Items are processed in ABC priority order (A first — highest value risk).
+
+    force=True  → evaluates all items regardless of auto_reorder flag.
+                  Use for manual dashboard runs.
+
+    Returns list of dicts for items that triggered a reorder suggestion.
+    """
     with DB_ENGINE.connect() as conn:
         items = conn.execute(text("""
-            SELECT s.id FROM scm_inventory_items s
-            JOIN inventory_items i ON s.inventory_item_id = i.id
-            WHERE s.user_id = :uid AND i.is_active = TRUE
+            SELECT id FROM scm_inventory_items
+            WHERE  user_id = :uid
+            ORDER  BY
+                CASE abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
+                id
         """), {"uid": user_id}).mappings().all()
+
+    if not items:
+        logger.warning("run_decision_engine: no items for user_id=%s", user_id)
+        return []
+
     results = []
+    errors  = 0
     for it in items:
-        res = evaluate_item(it["id"], user_id)
-        if res.get("should_reorder"):
-            results.append(res)
+        try:
+            res = evaluate_item(it["id"], user_id, force=force)
+            if res.get("should_reorder"):
+                results.append(res)
+        except Exception as exc:
+            errors += 1
+            logger.error("evaluate_item failed item_id=%s user_id=%s: %s",
+                         it["id"], user_id, exc, exc_info=True)
+
+    logger.info(
+        "run_decision_engine: user_id=%s | items=%d | suggestions=%d | errors=%d",
+        user_id, len(items), len(results), errors
+    )
     return results
