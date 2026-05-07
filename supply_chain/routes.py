@@ -789,9 +789,12 @@ def landed_cost_pdf(lc_id):
 @login_required
 def run_abc():
     uid = get_uid()
-    count = classify_abc_items(uid)
-    assign_default_policies(uid, override_existing=True)
-    flash(f"ABC classification complete — {count} items classified. Policies updated.", "success")
+    log = build_decision_engine().run(uid, triggered_by="manual", force=False)
+    if log.errors:
+        flash(f"ABC complete with {len(log.errors)} warning(s). "
+              f"{log.items_processed} items processed.", "warning")
+    else:
+        flash(f"ABC classification complete — {log.items_processed} items classified.", "success")
     return redirect(url_for("supply_chain.decision_dashboard"))
 
 
@@ -799,11 +802,13 @@ def run_abc():
 @login_required
 def run_decision():
     uid = get_uid()
-    # force=True — manual dashboard run overrides auto_reorder flag
-    results = run_decision_engine(uid, force=True)
-    flash(f"Decision engine finished — {len(results)} purchase suggestion(s) created.", "info")
+    log = build_decision_engine().run(uid, triggered_by="manual", force=True)
+    if log.errors:
+        flash(f"Engine finished with {len(log.errors)} error(s). "
+              f"{log.suggestions_created} suggestion(s) created.", "warning")
+    else:
+        flash(f"Decision engine complete — {log.suggestions_created} suggestion(s) created.", "info")
     return redirect(url_for("supply_chain.decision_dashboard"))
-
 
 
 @supply_chain_bp.route("/decision/dashboard")
@@ -811,69 +816,135 @@ def run_decision():
 def decision_dashboard():
     uid = get_uid()
     with DB_ENGINE.connect() as conn:
-
-        # Pending suggestions (JOIN only to scm_inventory_items — correct)
+ 
+        # Pending suggestions — JOIN to inventory_items (not scm_inventory_items)
         suggestions = conn.execute(text("""
-            SELECT s.id, s.suggested_quantity, s.supplier_name, s.reason, s.created_at,
-                   i.name AS item_name, i.sku, i.abc_class
+            SELECT
+                s.id, s.suggested_quantity, s.supplier_name,
+                s.reason, s.reason_code, s.abc_class,
+                s.confidence_score, s.days_of_stock,
+                s.rop, s.eoq, s.current_stock_at_suggestion,
+                s.created_at,
+                i.name AS item_name, i.sku
             FROM   scm_suggested_orders s
-            JOIN   scm_inventory_items  i ON s.item_id = i.id
-            WHERE  s.status = 'pending' AND i.user_id = :uid
+            JOIN   inventory_items      i ON s.item_id = i.id
+            WHERE  s.user_id  = :uid
+              AND  s.status   = 'pending'
             ORDER  BY
-                CASE i.abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
+                CASE s.abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2
+                                 WHEN 'C' THEN 3 ELSE 4 END,
                 s.created_at DESC
         """), {"uid": uid}).mappings().all()
-
-        # Items below reorder point — single query using stored rop column
-        # No N+1 loop — rop is computed and stored when user runs Calculate
-        low_stock = conn.execute(text("""
-            SELECT id, name, sku, abc_class,
-                   COALESCE(current_stock, 0) AS stock,
-                   rop
-            FROM   scm_inventory_items
-            WHERE  user_id = :uid
-              AND  rop IS NOT NULL
-              AND  COALESCE(current_stock, 0) <= rop
-            ORDER  BY
-                CASE abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
-                name
-        """), {"uid": uid}).mappings().all()
-
-        # ABC classification summary for the dashboard header
+ 
+        # ABC summary from classifications
         abc_rows = conn.execute(text("""
             SELECT abc_class, COUNT(*) AS cnt
-            FROM   scm_inventory_items
-            WHERE  user_id = :uid AND abc_class IS NOT NULL
+            FROM   scm_item_classifications
+            WHERE  user_id = :uid
             GROUP  BY abc_class
-            ORDER  BY abc_class
         """), {"uid": uid}).mappings().all()
-
+ 
+        # Total active items in inventory
         total_items = conn.execute(text("""
-            SELECT COUNT(*) FROM scm_inventory_items WHERE user_id = :uid
+            SELECT COUNT(*) FROM inventory_items
+            WHERE user_id = :uid AND is_active = TRUE
         """), {"uid": uid}).scalar()
-
+ 
+        # Last engine run
+        last_run = conn.execute(text("""
+            SELECT started_at, items_processed, suggestions_created,
+                   triggered_by, model_version
+            FROM   scm_engine_run_logs
+            WHERE  user_id = :uid
+            ORDER  BY started_at DESC
+            LIMIT  1
+        """), {"uid": uid}).mappings().first()
+ 
+        # Items below min_stock_level — always visible, no engine required
+        # Falls back to min_stock_level when classifications don't exist yet
+        low_stock = conn.execute(text("""
+            SELECT
+                i.id, i.name, i.sku,
+                COALESCE(i.current_stock, 0)  AS stock,
+                i.min_stock_level             AS min_level,
+                c.abc_class,
+                c.avg_daily_demand
+            FROM   inventory_items i
+            LEFT   JOIN scm_item_classifications c
+                   ON c.inventory_item_id = i.id AND c.user_id = :uid
+            WHERE  i.user_id = :uid
+              AND  i.is_active = TRUE
+              AND  COALESCE(i.current_stock, 0) <= COALESCE(i.min_stock_level, 5)
+            ORDER  BY
+                CASE c.abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2
+                                 WHEN 'C' THEN 3 ELSE 4 END NULLS LAST,
+                i.name
+            LIMIT  50
+        """), {"uid": uid}).mappings().all()
+ 
     abc_summary = {r["abc_class"]: r["cnt"] for r in abc_rows}
-    classified   = sum(abc_summary.values())
-
+    classified  = sum(abc_summary.values())
+ 
     return render_template(
         "supply_chain/decision_dashboard.html",
-        suggestions   = suggestions,
-        low_stock     = list(low_stock),
-        abc_summary   = abc_summary,      # {'A': 12, 'B': 34, 'C': 56}
-        classified    = classified,
-        total_items   = total_items,
+        suggestions  = list(suggestions),
+        low_stock    = list(low_stock),
+        abc_summary  = abc_summary,
+        classified   = classified,
+        total_items  = total_items,
+        last_run     = last_run,
     )
 
+@supply_chain_bp.route("/decision/suggestion/<int:sug_id>/approve", methods=["POST"])
+@login_required
+def approve_suggestion(sug_id):
+    uid = get_uid()
+    with DB_ENGINE.begin() as conn:
+        sug = conn.execute(text("""
+            SELECT s.id, s.suggested_quantity, s.abc_class,
+                   s.reason, s.eoq, s.rop,
+                   i.name, i.sku
+            FROM   scm_suggested_orders s
+            JOIN   inventory_items      i ON s.item_id = i.id
+            WHERE  s.id      = :sid
+              AND  s.user_id = :uid
+              AND  s.status  = 'pending'
+        """), {"sid": sug_id, "uid": uid}).mappings().first()
+ 
+        if not sug:
+            flash("Suggestion not found or already actioned.", "danger")
+            return redirect(url_for("supply_chain.decision_dashboard"))
+ 
+        conn.execute(text("""
+            UPDATE scm_suggested_orders
+            SET    status = 'approved'
+            WHERE  id = :sid
+        """), {"sid": sug_id})
+ 
+    flash(
+        f"✓ Approved — {sug['name']} ({sug['sku'] or 'no SKU'}): "
+        f"order {sug['suggested_quantity']} units. "
+        f"Create a Purchase Order from the Purchases module.",
+        "success"
+    )
+    return redirect(url_for("supply_chain.decision_dashboard"))
+ 
 @supply_chain_bp.route("/decision/suggestion/<int:sug_id>/reject", methods=["POST"])
 @login_required
 def reject_suggestion(sug_id):
-    """Reject a suggested order."""
     uid = get_uid()
     with DB_ENGINE.begin() as conn:
-        conn.execute(text("""
+        result = conn.execute(text("""
             UPDATE scm_suggested_orders
-            SET status = 'rejected'
-            WHERE id = :id AND item_id IN (SELECT id FROM scm_inventory_items WHERE user_id = :uid)
-        """), {"id": sug_id, "uid": uid})
-    flash("Suggestion rejected.", "info")
+            SET    status = 'rejected'
+            WHERE  id      = :sid
+              AND  user_id = :uid
+              AND  status  = 'pending'
+        """), {"sid": sug_id, "uid": uid})
+ 
+    if result.rowcount == 0:
+        flash("Suggestion not found or already actioned.", "warning")
+    else:
+        flash("Suggestion rejected.", "info")
+ 
     return redirect(url_for("supply_chain.decision_dashboard"))
