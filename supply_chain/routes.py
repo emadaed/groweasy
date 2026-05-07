@@ -823,6 +823,7 @@ def decision_dashboard():
         # ─────────────────────────────────────────
         suggestions = conn.execute(text("""
             SELECT
+                s.id AS id,
                 i.name AS name,
                 i.sku AS sku,
                 COALESCE(i.current_stock, 0) AS stock,
@@ -909,36 +910,55 @@ def decision_dashboard():
 @login_required
 def approve_suggestion(sug_id):
     uid = get_uid()
+
     with DB_ENGINE.begin() as conn:
+
+        # ───────────────────────────────
+        # 1. Fetch suggestion (FIXED JOIN)
+        # ───────────────────────────────
         sug = conn.execute(text("""
-            SELECT s.id, s.suggested_quantity, s.abc_class,
-                   s.reason, s.eoq, s.rop,
-                   i.name, i.sku
-            FROM   scm_suggested_orders s
-            JOIN   inventory_items      i ON s.item_id = i.id
-            WHERE  s.id      = :sid
-              AND  s.user_id = :uid
-              AND  s.status  = 'pending'
+            SELECT
+                s.id,
+                s.suggested_quantity,
+                s.abc_class,
+                s.reason,
+                s.eoq,
+                s.rop,
+                i.name,
+                i.sku
+            FROM scm_suggested_orders s
+            JOIN scm_inventory_items i ON s.item_id = i.id
+            WHERE s.id = :sid
+              AND s.user_id = :uid
+              AND s.status = 'pending'
         """), {"sid": sug_id, "uid": uid}).mappings().first()
- 
+
         if not sug:
             flash("Suggestion not found or already actioned.", "danger")
             return redirect(url_for("supply_chain.decision_dashboard"))
- 
+
+        # ───────────────────────────────
+        # 2. Update status safely
+        # ───────────────────────────────
         conn.execute(text("""
             UPDATE scm_suggested_orders
-            SET    status = 'approved'
-            WHERE  id = :sid
-        """), {"sid": sug_id})
- 
+            SET status = 'approved'
+            WHERE id = :sid
+              AND user_id = :uid
+        """), {"sid": sug_id, "uid": uid})
+
+    # ───────────────────────────────
+    # 3. Safe flash message
+    # ───────────────────────────────
     flash(
         f"✓ Approved — {sug['name']} ({sug['sku'] or 'no SKU'}): "
         f"order {sug['suggested_quantity']} units. "
-        f"Create a Purchase Order from the Purchases module.",
+        f"Create PO in Purchases module.",
         "success"
     )
+
     return redirect(url_for("supply_chain.decision_dashboard"))
- 
+
 @supply_chain_bp.route("/decision/suggestion/<int:sug_id>/reject", methods=["POST"])
 @login_required
 def reject_suggestion(sug_id):
