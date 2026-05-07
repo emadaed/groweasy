@@ -684,7 +684,7 @@ class ABCDecisionEngine:
                     items_processed, suggestions_created, errors, model_version
                 ) VALUES (
                     :rid, :uid, :trigger, :started, :finished,
-                    :processed, :created, :errors::jsonb, :model
+                    :processed, :created, CAST(:errors AS jsonb), :model
                 )
                 ON CONFLICT (run_id) DO NOTHING
             """), {

@@ -820,20 +820,12 @@ def decision_dashboard():
         # Pending suggestions — JOIN to inventory_items (not scm_inventory_items)
         suggestions = conn.execute(text("""
             SELECT
-                s.id, s.suggested_quantity, s.supplier_name,
-                s.reason, s.reason_code, s.abc_class,
-                s.confidence_score, s.days_of_stock,
-                s.rop, s.eoq, s.current_stock_at_suggestion,
-                s.created_at,
-                i.name AS item_name, i.sku
-            FROM   scm_suggested_orders s
-            JOIN   inventory_items      i ON s.item_id = i.id
-            WHERE  s.user_id  = :uid
-              AND  s.status   = 'pending'
-            ORDER  BY
-                CASE s.abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2
-                                 WHEN 'C' THEN 3 ELSE 4 END,
-                s.created_at DESC
+                COALESCE(name, 'Unknown') AS name,
+                COALESCE(rop, 0) AS rop,
+                COALESCE(eoq, 0) AS eoq,
+                COALESCE(stock, 0) AS stock
+            FROM scm_suggestions
+            WHERE user_id = :uid
         """), {"uid": uid}).mappings().all()
  
         # ABC summary from classifications
@@ -864,26 +856,21 @@ def decision_dashboard():
         # Falls back to min_stock_level when classifications don't exist yet
         low_stock = conn.execute(text("""
             SELECT
-                i.id, i.name, i.sku,
-                COALESCE(i.current_stock, 0)  AS stock,
-                i.min_stock_level             AS min_level,
-                c.abc_class,
-                c.avg_daily_demand
-            FROM   inventory_items i
-            LEFT   JOIN scm_item_classifications c
-                   ON c.inventory_item_id = i.id AND c.user_id = :uid
-            WHERE  i.user_id = :uid
-              AND  i.is_active = TRUE
-              AND  COALESCE(i.current_stock, 0) <= COALESCE(i.min_stock_level, 5)
-            ORDER  BY
-                CASE c.abc_class WHEN 'A' THEN 1 WHEN 'B' THEN 2
-                                 WHEN 'C' THEN 3 ELSE 4 END NULLS LAST,
-                i.name
-            LIMIT  50
+                COALESCE(name, 'Unknown') AS name,
+                COALESCE(sku, '') AS sku,
+                COALESCE(abc_class, '?') AS abc_class,
+                COALESCE(stock, 0) AS stock,
+                COALESCE(rop, 0) AS rop
+            FROM scm_inventory_items
+            WHERE user_id = :uid
+              AND COALESCE(stock, 0) < COALESCE(rop, 0)
+            ORDER BY (COALESCE(rop, 0) - COALESCE(stock, 0)) DESC
         """), {"uid": uid}).mappings().all()
- 
+         
     abc_summary = {r["abc_class"]: r["cnt"] for r in abc_rows}
     classified  = sum(abc_summary.values())
+    low_stock = low_stock or []
+    suggestions = suggestions or []
  
     return render_template(
         "supply_chain/decision_dashboard.html",

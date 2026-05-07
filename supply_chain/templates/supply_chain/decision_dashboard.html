@@ -229,7 +229,7 @@
                   {{ "{:,.0f}".format(item.stock | float) }}
                 </td>
                 <td class="text-end">
-                  {{ "{:,.0f}".format(item.rop | float) }}
+                  {{ "{:,.0f}".format((item.get('rop', 0) or 0) | float) }}
                 </td>
                 <td class="text-end text-danger">
                   {{ "{:,.0f}".format((item.rop | float) - (item.stock | float)) }}
