@@ -824,7 +824,7 @@ def decision_dashboard():
                 COALESCE(rop, 0) AS rop,
                 COALESCE(eoq, 0) AS eoq,
                 COALESCE(stock, 0) AS stock
-            FROM scm_suggestions
+            FROM scm_suggested_orders
             WHERE user_id = :uid
         """), {"uid": uid}).mappings().all()
  
