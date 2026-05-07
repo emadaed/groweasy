@@ -815,71 +815,94 @@ def run_decision():
 @login_required
 def decision_dashboard():
     uid = get_uid()
+
     with DB_ENGINE.connect() as conn:
- 
-        # Pending suggestions — JOIN to inventory_items (not scm_inventory_items)
+
+        # ─────────────────────────────────────────
+        # 1. Suggestions (FIXED JOIN + SAFE FIELDS)
+        # ─────────────────────────────────────────
         suggestions = conn.execute(text("""
             SELECT
-                COALESCE(name, 'Unknown') AS name,
-                COALESCE(rop, 0) AS rop,
-                COALESCE(eoq, 0) AS eoq,
-                COALESCE(stock, 0) AS stock
-            FROM scm_suggested_orders
-            WHERE user_id = :uid
+                i.name AS name,
+                i.sku AS sku,
+                COALESCE(i.current_stock, 0) AS stock,
+                COALESCE(s.rop, 0) AS rop,
+                COALESCE(s.eoq, 0) AS eoq,
+                COALESCE(s.suggested_quantity, 0) AS suggested_quantity,
+                COALESCE(s.status, 'pending') AS status
+            FROM scm_suggested_orders s
+            JOIN scm_inventory_items i ON s.item_id = i.id
+            WHERE s.user_id = :uid
+            ORDER BY s.id DESC
         """), {"uid": uid}).mappings().all()
- 
-        # ABC summary from classifications
+
+        # ─────────────────────────────────────────
+        # 2. ABC summary (stable aggregation)
+        # ─────────────────────────────────────────
         abc_rows = conn.execute(text("""
-            SELECT abc_class, COUNT(*) AS cnt
-            FROM   scm_item_classifications
-            WHERE  user_id = :uid
-            GROUP  BY abc_class
+            SELECT
+                COALESCE(abc_class, 'UNCLASSIFIED') AS abc_class,
+                COUNT(*) AS cnt
+            FROM scm_item_classifications
+            WHERE user_id = :uid
+            GROUP BY abc_class
         """), {"uid": uid}).mappings().all()
- 
-        # Total active items in inventory
+
+        abc_summary = {r["abc_class"]: r["cnt"] for r in abc_rows}
+        classified = sum(abc_summary.values())
+
+        # ─────────────────────────────────────────
+        # 3. Inventory count (FIXED TABLE NAME)
+        # ─────────────────────────────────────────
         total_items = conn.execute(text("""
-            SELECT COUNT(*) FROM inventory_items
-            WHERE user_id = :uid AND is_active = TRUE
+            SELECT COUNT(*)
+            FROM scm_inventory_items
+            WHERE user_id = :uid
         """), {"uid": uid}).scalar()
- 
-        # Last engine run
+
+        # ─────────────────────────────────────────
+        # 4. Last engine run (safe nullable handling)
+        # ─────────────────────────────────────────
         last_run = conn.execute(text("""
-            SELECT started_at, items_processed, suggestions_created,
-                   triggered_by, model_version
-            FROM   scm_engine_run_logs
-            WHERE  user_id = :uid
-            ORDER  BY started_at DESC
-            LIMIT  1
+            SELECT
+                started_at,
+                items_processed,
+                suggestions_created,
+                triggered_by,
+                model_version
+            FROM scm_engine_run_logs
+            WHERE user_id = :uid
+            ORDER BY started_at DESC
+            LIMIT 1
         """), {"uid": uid}).mappings().first()
- 
-        # Items below min_stock_level — always visible, no engine required
-        # Falls back to min_stock_level when classifications don't exist yet
+
+        # ─────────────────────────────────────────
+        # 5. Low stock alert (SAFE LOGIC)
+        # ─────────────────────────────────────────
         low_stock = conn.execute(text("""
             SELECT
-                COALESCE(name, 'Unknown') AS name,
-                COALESCE(sku, '') AS sku,
+                name,
+                sku,
                 COALESCE(abc_class, '?') AS abc_class,
-                COALESCE(stock, 0) AS stock,
+                COALESCE(current_stock, 0) AS stock,
                 COALESCE(rop, 0) AS rop
             FROM scm_inventory_items
             WHERE user_id = :uid
-              AND COALESCE(stock, 0) < COALESCE(rop, 0)
-            ORDER BY (COALESCE(rop, 0) - COALESCE(stock, 0)) DESC
+              AND COALESCE(current_stock, 0) < COALESCE(rop, 0)
+            ORDER BY (COALESCE(rop, 0) - COALESCE(current_stock, 0)) DESC
         """), {"uid": uid}).mappings().all()
-         
-    abc_summary = {r["abc_class"]: r["cnt"] for r in abc_rows}
-    classified  = sum(abc_summary.values())
-    low_stock = low_stock or []
-    suggestions = suggestions or []
- 
+
+    # ─────────────────────────────────────────
+    # SAFE FALLBACKS (avoid None crashes)
+    # ─────────────────────────────────────────
     return render_template(
         "supply_chain/decision_dashboard.html",
-        suggestions  = list(suggestions),
-        low_stock    = list(low_stock),
-        abc_summary  = abc_summary,
-        classified   = classified,
-        total_items  = total_items,
-        last_run     = last_run,
+        suggestions=suggestions or [],
+        low_stock=low_stock or [],
+        abc_summary=abc_summary,
+        classified=classified,
+        total_items=total_items or 0,
+        last_run=last_run,
     )
 
 @supply_chain_bp.route("/decision/suggestion/<int:sug_id>/approve", methods=["POST"])

@@ -214,25 +214,37 @@
               {% for item in low_stock %}
               <tr>
                 <td>
-                  <div class="fw-semibold">{{ item.name }}</div>
-                  <small class="text-muted">{{ item.sku or "" }}</small>
+                  <div class="fw-semibold">
+                    {{ item.get('name', 'Unknown Item') }}
+                  </div>
+                  <small class="text-muted">
+                    {{ item.get('sku', '') }}
+                  </small>
                 </td>
+
                 <td class="text-center">
                   <span class="badge rounded-pill
-                    {% if item.abc_class == 'A' %}bg-danger
-                    {% elif item.abc_class == 'B' %}bg-warning text-dark
+                    {% if item.get('abc_class') == 'A' %}bg-danger
+                    {% elif item.get('abc_class') == 'B' %}bg-warning text-dark
                     {% else %}bg-success{% endif %}">
-                    {{ item.abc_class or "?" }}
+                    {{ item.get('abc_class', '?') }}
                   </span>
                 </td>
+
                 <td class="text-end text-danger fw-semibold">
-                  {{ "{:,.0f}".format(item.stock | float) }}
+                  {{ "{:,.0f}".format((item.get('stock', 0) or 0) | float) }}
                 </td>
+
                 <td class="text-end">
                   {{ "{:,.0f}".format((item.get('rop', 0) or 0) | float) }}
                 </td>
+
                 <td class="text-end text-danger">
-                  {{ "{:,.0f}".format((item.rop | float) - (item.stock | float)) }}
+                  {{ "{:,.0f}".format(
+                    ((item.get('rop', 0) or 0) | float)
+                    -
+                    ((item.get('stock', 0) or 0) | float)
+                  ) }}
                 </td>
               </tr>
               {% endfor %}
