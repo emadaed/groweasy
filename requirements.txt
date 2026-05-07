@@ -12,6 +12,7 @@ Flask-WTF
 Flask-SQLAlchemy==3.1.1
 psycopg2-binary==2.9.11
 numpy==2.1.1
+scipy==1.14.1
 
 # Sessions & Cache
 Flask-Session==0.8.0
