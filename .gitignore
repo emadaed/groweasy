@@ -132,6 +132,7 @@ celerybeat.pid
 .Trashes
 ehthumbs.db
 Thumbs.db
+users.db
 
 # Railway
 railway.toml
